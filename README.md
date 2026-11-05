@@ -8,17 +8,28 @@ From this repository, run `npm start` (Node/npm and Python 3 required), then ope
 
 Use **+ New** to create a person, select them in the directory, and enter notes with Enter or Add. Notes appear oldest first, with timestamps displayed in the device's timezone. **Export JSON** downloads a backup. No sample health records are included.
 
+## People and attached folders
+
+The New person form has last name, first name, preferred name, and separate month/day/year birth-date boxes. At least one name must contain text; all other fields are optional, including individual birth-date boxes. Impossible dates are rejected. Preferred name is used for display when present, with the full legal name below it. Existing records from earlier versions are retained, including their original names and notes. Location is no longer requested or displayed.
+
+Each person's **Drive folders → Attach folder…** supports multiple folder links. Paste a Google Drive folder URL and optional label, or browse using Google's folder picker after connecting. Links persist locally and sync in the directory JSON; attaching a folder does not upload files, move records, grant access, or change folder sharing. Each folder opens in Google Drive in a separate tab. Folder links from both copies are retained during merges.
+
 ## Google Drive setup
 
-1. Create a Google Cloud project and enable **Google Drive API**.
-2. Configure its OAuth consent screen. For testing, add your Google account as a test user. Create an **OAuth 2.0 Web application** client.
-3. Register the exact deployed origin under **Authorized JavaScript origins** (including the port for localhost). No client secret is used or needed.
-4. Create or choose a writable Google Drive folder. Copy its ID from the folder URL.
-5. Open **Google Drive…**, enter the web client ID and folder ID, then choose **Connect & sync**. Complete Google consent in the popup.
+The normal connection flow is **Google Drive… → Continue with Google → Choose directory folder… → Sync directory**. Account selection and consent use Google's actual OAuth popup; folder selection uses Google's actual Picker. Both need one-time application registration by the site administrator. A static site cannot supply its own valid Google client identity automatically.
 
-Sync finds `people_directory.json` in the chosen folder, validates it, merges people and notes by stable IDs, and uploads the result. A missing file is created; duplicate filenames and conflicting note IDs stop sync. People metadata uses its newest `updatedAt`. Existing note text is immutable. Tokens remain in memory, while the client and folder IDs are remembered locally. Disconnect clears the token; revoke the grant in Google Account permissions when needed.
+1. Create a Google Cloud project; enable **Google Drive API** and **Google Picker API**.
+2. Configure the OAuth consent screen and add test users while the app is in testing. Create an **OAuth 2.0 Web application** client.
+3. Add the exact deployed origin to **Authorized JavaScript origins**. For this GitHub Pages deployment use `https://pearibou.github.io` (no repository path). Add `http://localhost:8000` for local development if needed.
+4. Create an API key restricted to the Google Picker API and appropriate website referrers (for example `https://pearibou.github.io/*`). Find the project's numeric **project number**, not its text project ID.
+5. Put the public client ID, Picker API key, and project number in `config.js`, then commit/deploy. These are public application identifiers; never put an OAuth client secret or access token in source. Alternatively use the dialog's collapsed **Connection settings** to save these identifiers only on the current device.
+6. Open Google Drive, continue with Google, choose a writable directory folder, then sync. If Picker is unavailable, Connection settings also accepts a directory folder link or ID. Per-person folder URLs can be attached without any Google setup.
 
-The app requests the full `drive` OAuth scope so it can find an existing JSON file in an arbitrary folder. Public distribution can require Google's verification/security review for this restricted scope. A production alternative is a Google Picker flow with `drive.file`, which is outside this initial version. Drive authentication requires a connection; the app shell and local note entry work offline.
+Sign-in requires a direct click and opens Google's standard popup. Popup cancellation, network errors, or missing configuration are reported without deleting local records. The app itself keeps its retro design; Google's account and picker windows use Google's own interface.
+
+Sync finds `people_directory.json` in the chosen directory folder, validates it, merges people and notes by stable IDs, and uploads the result. A missing file is created; duplicate filenames and conflicting note IDs stop sync. People metadata uses its newest `updatedAt`. Existing note text is immutable. Tokens remain in memory, while public configuration and selected directory folder are remembered locally. Disconnect clears the token; revoke the grant in Google Account permissions when needed.
+
+The app requests the full `drive` OAuth scope so it can find an existing JSON file in an arbitrary folder. Public distribution can require Google's verification/security review for this restricted scope. A production alternative is a `drive.file` implementation with access limited to explicitly selected files. Drive authentication requires a connection; the app shell and local note entry work offline.
 
 Sync is manual and is **not transactional across devices**. Avoid simultaneous sync by multiple users: the second read narrows the race window but cannot prevent a concurrent write. Export backups and enable Drive version history. No automatic background sync or deletion propagation is implemented. OAuth failures and rejected writes leave local records intact.
 
@@ -30,14 +41,15 @@ On iOS Safari, use Share → Add to Home Screen. On supported Android/desktop br
 
 Records are stored unencrypted in this browser's localStorage and, only after explicit sync, your selected Google Drive folder. This prototype has no application login, access controls, audit enforcement, or encryption at rest under app control. Use synthetic data for evaluation; deployment with real health records needs an approved security/privacy design and organizational review. Local persistence failures are reported rather than silently discarding records. Other open tabs are blocked from editing after a storage change until reloaded.
 
-JSON format: `{ "version": 1, "people": [...] }`. Each person contains `id`, `name`, `room`, `info`, ISO `updatedAt`, and `notes`. Each note contains `id`, `text`, and ISO `createdAt`.
+JSON format: `{ "version": 1, "people": [...] }`. Each person contains `id`, a compatible display `name`, `firstName`, `lastName`, `preferredName`, `birthDate` (`month`, `day`, `year`, each optional), `driveFolders` (`id`, `name`), `info`, ISO `updatedAt`, and `notes`. Legacy `room` values are preserved but not displayed. Each note contains `id`, `text`, and ISO `createdAt`.
 
 ## Validate
 
 - `npm test`: model and mocked Drive API tests.
+- With the server running: `python tests/person_drive_browser.py` checks names, birth dates, folder-link persistence, and mocked Google sign-in/Picker interactions. `python tests/clock_browser.py` checks the header.
 - `npm run check`: JavaScript syntax checks.
 - With the server running: `python tests/browser_smoke.py` uses Python Playwright and `/usr/bin/chromium`. Tests person creation, notes, safe text rendering, persistence, search, offline entry, and mobile overflow. Screenshots go to ignored `artifacts/`.
 
-No package installation is needed for the app or Node tests. Browser-test tooling is a development-only prerequisite. Real Google OAuth and sync require your configured client and account and are not covered by mocked API tests.
+No package installation is needed for the app or Node tests. Browser-test tooling is a development-only prerequisite. Real Google OAuth, Picker, and sync require your configured Google project and account and are not covered by mocked API tests.
 
 Future tasks should use this existing isolated checkout; no extra Git worktree is necessary. Start the static server again in a new session. Increment the service-worker cache version when changing the offline asset set.

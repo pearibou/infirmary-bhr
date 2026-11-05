@@ -1,5 +1,12 @@
 # Version history
 
+## 0.2.0 — 2026-11-05
+
+- Added friendly Google sign-in flow, native Google folder picker, and collapsed administrator settings with deployment-wide public configuration.
+- Added multiple per-person Drive folder links, picker attachment, and attachment-preserving merges.
+- Replaced location/full-name entry with last, first, preferred names and optional separate birth-date boxes; only one name is required.
+- Preserved legacy directory records; added validation and browser coverage for new forms and mocked Google interactions.
+
 ## 0.1.3 — 2026-11-05
 
 - Switched the live clock to 12-hour time with AM/PM and bold time text.

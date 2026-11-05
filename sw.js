@@ -1,5 +1,5 @@
-const CACHE='infirmary-shell-v4';
-const ASSETS=['./','./index.html','./styles.css?v=0.1.3','./clock.js?v=0.1.3','./app.js?v=0.1.3','./model.js','./drive.js','./manifest.webmanifest','./icons/icon.svg','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE='infirmary-shell-v5';
+const ASSETS=['./','./index.html','./styles.css?v=0.2.0','./clock.js?v=0.2.0','./app.js?v=0.2.0','./model.js?v=0.2.0','./drive.js?v=0.2.0','./config.js?v=0.2.0','./manifest.webmanifest','./icons/icon.svg','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('infirmary-shell-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(event.request.method!=='GET'||url.origin!==self.location.origin)return;
