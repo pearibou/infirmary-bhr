@@ -43,6 +43,9 @@ with sync_playwright() as p:
     page.locator('#drive-open').click()
     page.get_by_role('button',name='Continue with Google').click()
     assert page.evaluate('window.oauthCalls')==1
+    page.get_by_role('button',name='Use My Drive (root)').click()
+    assert page.locator('#sync-folder-name').inner_text()=='My Drive (root)'
+    assert page.evaluate("JSON.parse(localStorage.getItem('infirmary.drive')).folder")=='root'
     page.get_by_role('button',name='Choose directory folder…').click()
     assert page.locator('#sync-folder-name').inner_text()=='Chosen in Google'
     page.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()

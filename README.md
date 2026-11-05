@@ -18,6 +18,8 @@ Each person's **Drive folders → Attach folder…** supports multiple folder li
 
 Until the client ID is configured in `config.js`, actual Google sign-in cannot run. The app explains that setup is missing rather than silently leaving a disabled sign-in button.
 
+To store `people_directory.json` at the top level of your own Drive, sign in, click **Use My Drive (root)**, then **Sync directory**. This choice is remembered and does not require opening the folder picker. It refers to My Drive, not a shared-drive root.
+
 The normal connection flow is **Google Drive… → Continue with Google → Choose directory folder… → Sync directory**. Account selection and consent use Google's actual OAuth popup; folder selection uses Google's actual Picker. Both need one-time application registration by the site administrator. The connection screen does not expose technical configuration fields. A static site cannot supply its own valid Google client identity automatically.
 
 1. Create a Google Cloud project; enable **Google Drive API** and **Google Picker API**.

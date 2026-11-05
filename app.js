@@ -1,5 +1,5 @@
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder} from './model.js?v=0.2.3';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder} from './drive.js?v=0.2.3';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder} from './model.js?v=0.2.4';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder} from './drive.js?v=0.2.4';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
 let data=emptyDirectory(),selected,storageFailed=false;
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,6000);}
@@ -51,6 +51,7 @@ function fillSettings(){
   $('#google-connect').disabled=connecting;
   $('#google-connect').setAttribute('aria-busy',String(connecting));
   $('#choose-sync-folder').disabled=!connected||!pickerReady;
+  $('#use-drive-root').disabled=!connected;
   $('#sync').disabled=!connected||!driveConfig.folder;
 }
 fillSettings();
@@ -72,7 +73,7 @@ $('#google-connect').onclick=async()=>{
   // A ready SDK lets OAuth open directly from this click, avoiding popup blockers.
   if(!googleReady){await readyGoogle();return;}
   connecting=true;fillSettings();$('#drive-status').textContent='Complete sign-in in the Google window. Close it to cancel.';
-  try{await authorize(driveConfig.clientId);connected=true;$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Google folder browsing still needs administrator configuration.';}
+  try{await authorize(driveConfig.clientId);connected=true;$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Use My Drive (root), or configure Google folder browsing.';}
   catch(error){connected=false;$('#drive-status').textContent=error.message;}
   finally{connecting=false;fillSettings();}
 };
@@ -81,6 +82,7 @@ async function chooseFolder(dialog){
   dialog.close();try{return await pickFolder(driveConfig);}finally{dialog.showModal();}
 }
 $('#choose-sync-folder').onclick=async()=>{try{await authorize(driveConfig.clientId);const folder=await chooseFolder($('#drive-dialog'));if(folder){driveConfig.folder=folder.id;driveConfig.folderName=folder.name;rememberSettings();fillSettings();$('#drive-status').textContent='Directory folder selected. Choose Sync directory to merge your records.';}}catch(error){$('#drive-status').textContent=error.message;}};
+$('#use-drive-root').onclick=()=>{driveConfig.folder='root';driveConfig.folderName='My Drive (root)';rememberSettings();fillSettings();$('#drive-status').textContent='My Drive selected. Sync directory will save people_directory.json at the top level of My Drive.';};
 $('#disconnect').onclick=()=>{disconnect();connected=false;fillSettings();$('#connection').textContent='Local workspace';$('#drive-status').textContent='Disconnected. Local records and attached folder links are retained.';};
 $('#sync').onclick=async()=>{
   if(storageFailed){$('#drive-status').textContent='Resolve local storage before syncing.';return;}
