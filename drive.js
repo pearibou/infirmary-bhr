@@ -1,4 +1,4 @@
-import {validateDirectory,mergeDirectories} from './model.js?v=0.2.4';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.3.0';
 let token,expires=0,loading,authorizedClient;
 export function disconnect(){token=undefined;expires=0;authorizedClient=undefined;}
 function loadGoogle(){
@@ -13,8 +13,14 @@ export function authorize(clientId){
     google.accounts.oauth2.initTokenClient({client_id:clientId,scope:'https://www.googleapis.com/auth/drive',callback:r=>{if(r.error){reject(new Error(r.error_description||r.error));return;}token=r.access_token;authorizedClient=clientId;expires=Date.now()+(Number(r.expires_in)-60)*1000;resolve();},error_callback:r=>reject(new Error(r.type==='popup_closed'?'Sign-in window closed.':r.message||'Google sign-in failed.'))}).requestAccessToken({prompt:''});
   });
 }
+async function driveFetch(url,options={},timeout=30000){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
+  try{return await fetch(url,{...options,signal:controller.signal});}
+  catch(error){if(error.name==='AbortError')throw new Error('Google Drive request timed out. Local records are retained; sync will retry.');throw error;}
+  finally{clearTimeout(timer);}
+}
 async function api(path,options={}){
-  const response=await fetch('https://www.googleapis.com/drive/v3/'+path,{...options,headers:{Authorization:`Bearer ${token}`,...options.headers}});
+  const response=await driveFetch('https://www.googleapis.com/drive/v3/'+path,{...options,headers:{Authorization:`Bearer ${token}`,...options.headers}});
   if(!response.ok){if(response.status===401)disconnect();let message;try{message=(await response.json()).error?.message;}catch{}throw new Error(message||`Google Drive request failed (${response.status}).`);}return response;
 }
 export async function syncDirectory(folder,local){
@@ -28,10 +34,10 @@ export async function syncDirectory(folder,local){
   if(file){const response=await api(`files/${file.id}?alt=media&supportsAllDrives=true`);merged=mergeDirectories(local,validateDirectory(await response.json()));
     // A second read reduces the race window; Drive media updates are not transactional.
     const latest=await(await api(`files/${file.id}?alt=media&supportsAllDrives=true`)).json();merged=mergeDirectories(merged,validateDirectory(latest));
-    const responseWrite=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${file.id}?uploadType=media&supportsAllDrives=true`,{method:'PATCH',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(merged)});if(!responseWrite.ok)throw new Error(`Drive upload failed (${responseWrite.status}). Local notes remain saved.`);
+    const responseWrite=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${file.id}?uploadType=media&supportsAllDrives=true`,{method:'PATCH',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(merged)});if(!responseWrite.ok)throw new Error(`Drive upload failed (${responseWrite.status}). Local notes remain saved.`);
   }else{
     const boundary='infirmary_'+crypto.randomUUID();const body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name:'people_directory.json',parents:[folder],mimeType:'application/json'})}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(merged)}\r\n--${boundary}--`;
-    const response=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`},body});if(!response.ok)throw new Error(`Drive file creation failed (${response.status}). Local notes remain saved.`);
+    const response=await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`},body});if(!response.ok)throw new Error(`Drive file creation failed (${response.status}). Local notes remain saved.`);
   }return merged;
 }
 
@@ -58,4 +64,24 @@ export function pickFolder({pickerApiKey,projectNumber}){
       else if(result.action===picker.Action.CANCEL)resolve(null);
     }).build().setVisible(true);
   });
+}
+
+export function hasDriveAccess(){return Boolean(token && Date.now()<expires);}
+
+export async function uploadPersonFile(folder,file){
+  if(!hasDriveAccess())throw new Error('Reconnect Google Drive before uploading.');
+  if(!/^[\w-]+$/.test(folder))throw new Error('Choose a valid attached folder.');
+  const metadata=await(await api(`files/${encodeURIComponent(folder)}?fields=id,mimeType,capabilities(canAddChildren)&supportsAllDrives=true`)).json();
+  if(metadata.mimeType!=='application/vnd.google-apps.folder'||!metadata.capabilities?.canAddChildren)throw new Error('The attached folder is not writable by this Google account.');
+  const mimeType=file.type||'application/octet-stream';
+  const session=await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json','X-Upload-Content-Type':mimeType,'X-Upload-Content-Length':String(file.size)},body:JSON.stringify({name:file.name,parents:[folder],mimeType})});
+  if(!session.ok)throw new Error(`Could not start Drive upload (${session.status}).`);
+  const location=session.headers.get('Location');
+  if(!location)throw new Error('Google did not return an upload destination.');
+  const target=new URL(location);
+  if(target.protocol!=='https:'||target.hostname!=='www.googleapis.com'||!target.pathname.startsWith('/upload/drive/'))throw new Error('Unexpected Google upload destination. Upload stopped.');
+  // Stream the browser File directly; no local persistence, app server or GitHub route.
+  const result=await driveFetch(target.href,{method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':mimeType},body:file},300000);
+  if(!result.ok)throw new Error(`Drive upload failed (${result.status}). Check the destination before retrying.`);
+  return result.json();
 }

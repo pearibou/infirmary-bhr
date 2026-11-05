@@ -28,3 +28,15 @@ test('person folder attachments survive merging and old directory validation',()
  const merged=mergeDirectories({version:1,people:[a]},{version:1,people:[b]});assert.equal(merged.people[0].driveFolders.length,2);validateDirectory(merged);
  assert.throws(()=>validateDirectory({version:1,people:[{...person(),driveFolders:[{id:'javascript:bad',name:'Bad'}]}]}));
 });
+
+import {calculateAge} from '../model.js';
+test('age follows local birthday boundaries and rejects incomplete/future dates',()=>{
+ const birth={month:'11',day:'5',year:'1940'};
+ assert.equal(calculateAge(birth,new Date(2026,10,4)),85);
+ assert.equal(calculateAge(birth,new Date(2026,10,5)),86);
+ assert.equal(calculateAge(birth,new Date(2026,10,6)),86);
+ assert.equal(calculateAge({year:'1940'},new Date(2026,10,5)),null);
+ assert.equal(calculateAge({year:'2030',month:'1',day:'1'},new Date(2026,10,5)),null);
+ assert.equal(calculateAge({year:'2000',month:'2',day:'29'},new Date(2025,1,28)),24);
+ assert.equal(calculateAge({year:'2000',month:'2',day:'29'},new Date(2025,2,1)),25);
+});

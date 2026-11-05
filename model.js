@@ -53,3 +53,11 @@ export function parseFolder(value){
   try{const url=new URL(input);if(url.protocol!=='https:'||url.hostname!=='drive.google.com')throw new Error();const match=url.pathname.match(/^\/drive\/(?:u\/\d+\/)?folders\/([\w-]+)\/?$/);if(match)return match[1];}catch{}
   throw new Error('Use a Google Drive folder link or folder ID.');
 }
+
+export function calculateAge(birth,today=new Date()){
+  if(!birth || !birth.month || !birth.day || !birth.year || birthDateError(birth))return null;
+  const year=Number(birth.year),month=Number(birth.month),day=Number(birth.day);
+  let age=today.getFullYear()-year;
+  if(today.getMonth()+1<month || (today.getMonth()+1===month && today.getDate()<day))age--;
+  return age<0?null:age;
+}
