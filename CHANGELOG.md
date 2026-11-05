@@ -1,5 +1,11 @@
 # Version history
 
+## 0.1.2 — 2026-11-05
+
+- Isolated the live clock from application/module startup failures.
+- Versioned header assets to avoid stale mobile styles hiding the clock.
+- Kept the date/time on a separate header row through tablet widths.
+
 ## 0.1.1 — 2026-11-05
 
 - Renamed the top-left label to Mepkin Infirmary.

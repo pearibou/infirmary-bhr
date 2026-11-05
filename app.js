@@ -38,14 +38,4 @@ $('#drive-form').onsubmit=async event=>{event.preventDefault();if(!googleReady){
 };
 window.addEventListener('storage',event=>{if(event.key===KEY){toast('Records changed in another tab. Reload this tab before editing.');storageFailed=true;$('.workspace').inert=true;}});
 function connection(){if(!navigator.onLine)$('#connection').textContent='Offline · local notes available';else if($('#connection').textContent.startsWith('Offline'))$('#connection').textContent='Local workspace';}window.addEventListener('online',connection);window.addEventListener('offline',connection);connection();
-function updateClock(){
-  const now=new Date(),pad=value=>String(value).padStart(2,'0');
-  const weekday=now.toLocaleDateString('en-US',{weekday:'long'});
-  const month=now.toLocaleDateString('en-US',{month:'long'});
-  $('#clock').textContent=`${weekday}, ${pad(now.getDate())} ${month} ${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-  $('#clock').dateTime=now.toISOString();
-}
-updateClock();
-setInterval(updateClock,1000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateClock();});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>toast('Offline caching unavailable. Use HTTPS or localhost.'));
