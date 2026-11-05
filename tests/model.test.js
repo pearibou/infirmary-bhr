@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {emptyDirectory,validateDirectory,mergeDirectories} from '../model.js';
+const date='2026-11-05T12:00:00Z';
+const person=(notes=[])=>({id:'p1',name:'Brother Example',room:'1',info:'',updatedAt:date,notes});
+const note=(id,text='A note')=>({id,text,createdAt:date});
+test('empty directory is valid',()=>assert.deepEqual(validateDirectory(emptyDirectory()),{version:1,people:[]}));
+test('merge retains local and remote notes and is repeatable',()=>{const a={version:1,people:[person([note('a')])]},b={version:1,people:[person([note('b')])]};const merged=mergeDirectories(a,b);assert.equal(merged.people[0].notes.length,2);assert.deepEqual(mergeDirectories(merged,b),merged);assert.equal(a.people[0].notes.length,1);});
+test('rejects corrupt data and duplicate IDs',()=>{assert.throws(()=>validateDirectory({version:2,people:[]}));assert.throws(()=>validateDirectory({version:1,people:[person([note('a'),note('a')])]}));assert.throws(()=>validateDirectory({version:1,people:[{...person(),updatedAt:'bad'}]}));});
+test('conflicting notes stop sync instead of overwriting',()=>assert.throws(()=>mergeDirectories({version:1,people:[person([note('a')])]},{version:1,people:[person([note('a','Different')])]}),/Conflicting/));
+test('newer person details win without dropping old notes',()=>{const merged=mergeDirectories({version:1,people:[person([note('a')])]},{version:1,people:[{...person([note('b')]),room:'2',updatedAt:'2026-11-06T12:00:00Z'}]});assert.equal(merged.people[0].room,'2');assert.equal(merged.people[0].notes.length,2);});
