@@ -1,5 +1,9 @@
 # Version history
 
+## 0.2.4 — 2026-11-05
+
+- Added Use My Drive (root) for backend directory storage without selecting a child folder.
+
 ## 0.2.3 — 2026-11-05
 
 - Configured the supplied public Google Picker API key and project number.
