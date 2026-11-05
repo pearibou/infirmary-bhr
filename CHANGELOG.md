@@ -1,5 +1,10 @@
 # Version history
 
+## 0.2.3 — 2026-11-05
+
+- Configured the supplied public Google Picker API key and project number.
+- Refreshed versioned assets and offline cache so deployments load the completed Google configuration.
+
 ## 0.2.2 — 2026-11-05
 
 - Configured the supplied public Google OAuth web client ID.

@@ -1,5 +1,5 @@
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder} from './model.js?v=0.2.2';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder} from './drive.js?v=0.2.2';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder} from './model.js?v=0.2.3';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder} from './drive.js?v=0.2.3';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
 let data=emptyDirectory(),selected,storageFailed=false;
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,6000);}
