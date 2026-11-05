@@ -8,8 +8,9 @@ with sync_playwright() as p:
         if blocked:
             page.route('**/app.js*',lambda route:route.abort())
         page.goto('http://127.0.0.1:8000')
-        assert page.locator('.menubar strong').inner_text()=='Mepkin Infirmary'
-        page.wait_for_function("/^[A-Za-z]+, \\d{2} [A-Za-z]+ \\d{4} \\d{2}:\\d{2}:\\d{2}$/.test(document.querySelector('#clock').textContent)")
+        assert page.locator('.menubar > strong').inner_text()=='Mepkin Infirmary'
+        page.wait_for_function("/^[A-Za-z]+, \\d{2} [A-Za-z]+ \\d{4} \\d{2}:\\d{2}:\\d{2} (AM|PM)$/.test(document.querySelector('#clock').textContent)")
+        assert page.locator('.clock-time').evaluate('(el)=>getComputedStyle(el).fontWeight')=='700'
         first=page.locator('#clock').inner_text()
         page.wait_for_function('(old)=>document.querySelector("#clock").textContent!==old',arg=first)
         for width in (1280,900,820,768,701,700,390,375,320):
