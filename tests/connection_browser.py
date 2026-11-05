@@ -8,6 +8,8 @@ with sync_playwright() as p:
         if configured:
             page.route('**/config.js*',lambda route:route.fulfill(content_type='application/javascript',body="window.INFIRMARY_CONFIG={clientId:'test.apps.googleusercontent.com'}"))
             page.route('https://accounts.google.com/**',lambda route:route.abort())
+        else:
+            page.route('**/config.js*',lambda route:route.fulfill(content_type='application/javascript',body='window.INFIRMARY_CONFIG={}'))
         page.goto('http://127.0.0.1:8000')
         page.locator('#drive-open').click()
         connect=page.locator('#google-connect')

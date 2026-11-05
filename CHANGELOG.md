@@ -1,5 +1,11 @@
 # Version history
 
+## 0.2.2 — 2026-11-05
+
+- Configured the supplied public Google OAuth web client ID.
+- Deployment identifiers now override stale remembered settings while retaining selected folders.
+- Picker API key and project number remain unconfigured; live consent requires account-side verification.
+
 ## 0.2.1 — 2026-11-05
 
 - Removed technical connection settings from the user dialog.
