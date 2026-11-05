@@ -1,4 +1,4 @@
-import {validateDirectory,mergeDirectories} from './model.js?v=0.2.0';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.2.1';
 let token,expires=0,loading,authorizedClient;
 export function disconnect(){token=undefined;expires=0;authorizedClient=undefined;}
 function loadGoogle(){

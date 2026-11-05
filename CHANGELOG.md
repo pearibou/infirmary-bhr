@@ -1,5 +1,11 @@
 # Version history
 
+## 0.2.1 — 2026-11-05
+
+- Removed technical connection settings from the user dialog.
+- Fixed misleading hourglass and permanently disabled sign-in state; missing deployment setup is explained explicitly, and SDK failures can be retried.
+- Google connection still requires real deployment application identifiers; no credentials or OAuth client IDs are invented.
+
 ## 0.2.0 — 2026-11-05
 
 - Added friendly Google sign-in flow, native Google folder picker, and collapsed administrator settings with deployment-wide public configuration.
