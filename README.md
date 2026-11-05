@@ -16,14 +16,16 @@ Each person's **Drive folders → Attach folder…** supports multiple folder li
 
 ## Google Drive setup
 
-The normal connection flow is **Google Drive… → Continue with Google → Choose directory folder… → Sync directory**. Account selection and consent use Google's actual OAuth popup; folder selection uses Google's actual Picker. Both need one-time application registration by the site administrator. A static site cannot supply its own valid Google client identity automatically.
+Until the client ID is configured in `config.js`, actual Google sign-in cannot run. The app explains that setup is missing rather than silently leaving a disabled sign-in button.
+
+The normal connection flow is **Google Drive… → Continue with Google → Choose directory folder… → Sync directory**. Account selection and consent use Google's actual OAuth popup; folder selection uses Google's actual Picker. Both need one-time application registration by the site administrator. The connection screen does not expose technical configuration fields. A static site cannot supply its own valid Google client identity automatically.
 
 1. Create a Google Cloud project; enable **Google Drive API** and **Google Picker API**.
 2. Configure the OAuth consent screen and add test users while the app is in testing. Create an **OAuth 2.0 Web application** client.
 3. Add the exact deployed origin to **Authorized JavaScript origins**. For this GitHub Pages deployment use `https://pearibou.github.io` (no repository path). Add `http://localhost:8000` for local development if needed.
 4. Create an API key restricted to the Google Picker API and appropriate website referrers (for example `https://pearibou.github.io/*`). Find the project's numeric **project number**, not its text project ID.
-5. Put the public client ID, Picker API key, and project number in `config.js`, then commit/deploy. These are public application identifiers; never put an OAuth client secret or access token in source. Alternatively use the dialog's collapsed **Connection settings** to save these identifiers only on the current device.
-6. Open Google Drive, continue with Google, choose a writable directory folder, then sync. If Picker is unavailable, Connection settings also accepts a directory folder link or ID. Per-person folder URLs can be attached without any Google setup.
+5. Put the public client ID, Picker API key, and project number in `config.js`, then commit/deploy. These are public application identifiers; never put an OAuth client secret or access token in source. Connection configuration belongs to the deployment, not the sign-in dialog.
+6. After configuring and deploying these identifiers, open Google Drive, continue with Google, choose a writable directory folder, then sync. Per-person folder URLs can be attached without any Google setup.
 
 Sign-in requires a direct click and opens Google's standard popup. Popup cancellation, network errors, or missing configuration are reported without deleting local records. The app itself keeps its retro design; Google's account and picker windows use Google's own interface.
 

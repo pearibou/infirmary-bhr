@@ -1,5 +1,5 @@
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder} from './model.js?v=0.2.0';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder} from './drive.js?v=0.2.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder} from './model.js?v=0.2.3';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder} from './drive.js?v=0.2.3';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
 let data=emptyDirectory(),selected,storageFailed=false;
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,6000);}
@@ -41,35 +41,40 @@ $('#person-form').onsubmit=e=>{
 };
 for(const button of document.querySelectorAll('[data-close]'))button.onclick=()=>document.getElementById(button.dataset.close).close();
 $('#export').onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=element('a');link.href=url;link.download='people_directory.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-let driveConfig={...window.INFIRMARY_CONFIG},googleReady=false,connected=false,pickerReady=false,folderTarget;
-try{driveConfig={...driveConfig,...JSON.parse(localStorage.getItem('infirmary.drive')||'{}')};}catch{}
+let driveConfig={...window.INFIRMARY_CONFIG},googleReady=false,googleLoading=false,connecting=false,connected=false,pickerReady=false,folderTarget;
+try{
+  const remembered=JSON.parse(localStorage.getItem('infirmary.drive')||'{}');
+  driveConfig={...remembered,...Object.fromEntries(Object.entries(driveConfig).filter(([,value])=>value))};
+}catch{}
 function fillSettings(){
-  $('#client-id').value=driveConfig.clientId||'';$('#picker-key').value=driveConfig.pickerApiKey||'';$('#project-id').value=driveConfig.projectNumber||'';$('#folder-id').value=driveConfig.folder||'';
   $('#sync-folder-name').textContent=driveConfig.folder?(driveConfig.folderName||'Directory folder selected'):'No directory folder selected';
-  $('#google-connect').disabled=!googleReady||!driveConfig.clientId;
+  $('#google-connect').disabled=connecting;
+  $('#google-connect').setAttribute('aria-busy',String(connecting));
   $('#choose-sync-folder').disabled=!connected||!pickerReady;
   $('#sync').disabled=!connected||!driveConfig.folder;
 }
 fillSettings();
 function rememberSettings(){try{localStorage.setItem('infirmary.drive',JSON.stringify(driveConfig));}catch{toast('Connection settings could not be remembered on this device.');}}
+const missingGoogleSetup='Google Drive is not connected yet. The site administrator needs to finish Google sign-in setup. Your local records are still available.';
 async function readyGoogle(){
-  $('#drive-status').textContent='Preparing secure Google sign-in…';
-  try{await prepareGoogle();googleReady=true;$('#drive-status').textContent=driveConfig.clientId?'Ready. Continue with Google to sign in.':'Google sign-in needs one-time administrator setup in Connection settings.';
-    if(driveConfig.pickerApiKey&&driveConfig.projectNumber){try{await preparePicker();pickerReady=true;}catch(error){$('#drive-status').textContent=error.message;}}
-  }catch(error){$('#drive-status').textContent=error.message;}finally{fillSettings();}
+  if(googleLoading)return;
+  if(!driveConfig.clientId){$('#drive-status').textContent=missingGoogleSetup;return;}
+  googleLoading=true;$('#drive-status').textContent='Preparing Google sign-in…';
+  try{await prepareGoogle();googleReady=true;$('#drive-status').textContent=connected?'Connected to Google Drive.':'Ready. Continue with Google to sign in.';}
+  catch(error){$('#drive-status').textContent=error.message+' Click Continue with Google to retry.';}
+  finally{googleLoading=false;fillSettings();}
+  if(googleReady&&driveConfig.pickerApiKey&&driveConfig.projectNumber){try{await preparePicker();pickerReady=true;}catch(error){$('#drive-status').textContent=error.message;}fillSettings();}
 }
-$('#drive-open').onclick=()=>{$('#drive-dialog').showModal();fillSettings();if(!driveConfig.clientId)$('#drive-settings').open=true;readyGoogle();};
-$('#drive-settings-form').onsubmit=event=>{event.preventDefault();try{
-  const clientId=$('#client-id').value.trim();if(clientId&&!clientId.endsWith('.apps.googleusercontent.com'))throw new Error('Enter a Google OAuth web client ID.');
-  const folder=$('#folder-id').value.trim();const newFolder=folder?parseFolder(folder):'';
-  if(clientId!==driveConfig.clientId){disconnect();connected=false;}
-  driveConfig={clientId,pickerApiKey:$('#picker-key').value.trim(),projectNumber:$('#project-id').value.trim(),folder:newFolder,folderName:newFolder===driveConfig.folder?driveConfig.folderName:''};
-  rememberSettings();$('#drive-settings').open=false;readyGoogle();
-}catch(error){$('#drive-status').textContent=error.message;}};
+$('#drive-open').onclick=()=>{$('#drive-dialog').showModal();fillSettings();readyGoogle();};
 $('#google-connect').onclick=async()=>{
-  $('#google-connect').disabled=true;
-  try{await authorize(driveConfig.clientId);connected=true;$('#drive-status').textContent='Connected. Choose a directory folder, then sync.';}
-  catch(error){connected=false;$('#drive-status').textContent=error.message;}finally{fillSettings();}
+  if(!driveConfig.clientId){$('#drive-status').textContent=missingGoogleSetup;return;}
+  if(googleLoading){$('#drive-status').textContent='Google sign-in is loading. Please try again in a moment.';return;}
+  // A ready SDK lets OAuth open directly from this click, avoiding popup blockers.
+  if(!googleReady){await readyGoogle();return;}
+  connecting=true;fillSettings();$('#drive-status').textContent='Complete sign-in in the Google window. Close it to cancel.';
+  try{await authorize(driveConfig.clientId);connected=true;$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Google folder browsing still needs administrator configuration.';}
+  catch(error){connected=false;$('#drive-status').textContent=error.message;}
+  finally{connecting=false;fillSettings();}
 };
 async function chooseFolder(dialog){
   // Native Google Picker must appear above the app, outside a modal's top layer.
