@@ -8,6 +8,18 @@ From this repository, run `npm start` (Node/npm and Python 3 required), then ope
 
 Use **+ New** to create a person, select them in the directory, and enter notes with Enter or Add. Notes appear oldest first, with timestamps displayed in the device's timezone. **Export JSON** downloads a backup. No sample health records are included.
 
+## File uploads and protected information
+
+On a person's page choose **Upload file…**. Attach a Drive folder first and connect Google. With one attached folder it is selected automatically; with several, explicitly select the destination. The browser accepts any file type and sends the file directly to Google's Drive resumable upload endpoint. No application server, GitHub API, repository file, localStorage entry, or service-worker cache receives the file contents. Files remain in memory only as browser File handles during selection/upload. A duplicate name creates a separate Drive file, not an overwrite. Upload failures retain the selection for retry; check Drive first if a timeout leaves the outcome uncertain. Drive permissions, quotas and browser/network limits still apply. The upload timeout is five minutes. This version does not resume an interrupted transfer.
+
+Only frontend source, public configuration, documentation and synthetic test fixtures belong in this repository. All real person information, notes, birth dates, directory JSON and attachments are protected runtime data; never put them in source, fixtures, logs, screenshots, issue reports or commits. `people_directory.json`, `uploads/`, local environment files and logs are ignored as an additional guard, not an access-control mechanism. Browser directory storage remains unencrypted; attachments themselves are not persisted locally by the app. Google Drive authentication and server-side access controls must be part of the production login design.
+
+## Windows and ages
+
+Age appears below date of birth, calculated from a complete date in the device timezone; incomplete/invalid dates show no calculated age. Ages refresh while open. February 29 birthdays increment on March 1 in non-leap years.
+
+Drag a title bar to move the main window or a dialog, use its minus button to minimize, and click its button in the bottom dock to restore. Drag the lower-right resize corner to resize. Focus a title bar and use arrow keys to move it with the keyboard. The main window has a reset-size/position button. Resizing the browser resets positions so windows stay reachable. Mobile touch resizing depends on browser support.
+
 ## People and attached folders
 
 The New person form has last name, first name, preferred name, and separate month/day/year birth-date boxes. At least one name must contain text; all other fields are optional, including individual birth-date boxes. Impossible dates are rejected. Preferred name is used for display when present, with the full legal name below it. Existing records from earlier versions are retained, including their original names and notes. Location is no longer requested or displayed.
@@ -35,7 +47,7 @@ Sync finds `people_directory.json` in the chosen directory folder, validates it,
 
 The app requests the full `drive` OAuth scope so it can find an existing JSON file in an arbitrary folder. Public distribution can require Google's verification/security review for this restricted scope. A production alternative is a `drive.file` implementation with access limited to explicitly selected files. Drive authentication requires a connection; the app shell and local note entry work offline.
 
-Sync is manual and is **not transactional across devices**. Avoid simultaneous sync by multiple users: the second read narrows the race window but cannot prevent a concurrent write. Export backups and enable Drive version history. No automatic background sync or deletion propagation is implemented. OAuth failures and rejected writes leave local records intact.
+Sync runs every 10 seconds while the app is visible, online, connected to Google, and a backend folder is selected. The top-bar **↻** and **Sync directory** also trigger it manually. Requests never overlap in one tab; drafts and notes entered during a request are retained. Automatic sync never opens OAuth popups: reconnect manually when the in-memory access token expires. Google can throttle requests; sync failures leave local records intact. Sync is **not transactional across devices**. Avoid simultaneous sync by multiple users: the second read narrows the race window but cannot prevent a concurrent write. Export backups and enable Drive version history. Hidden/closed apps do not sync, and deletion propagation is not implemented. OAuth failures and rejected writes leave local records intact.
 
 ## Install on a home screen
 
@@ -43,13 +55,14 @@ On iOS Safari, use Share → Add to Home Screen. On supported Android/desktop br
 
 ## Data handling
 
-Records are stored unencrypted in this browser's localStorage and, only after explicit sync, your selected Google Drive folder. This prototype has no application login, access controls, audit enforcement, or encryption at rest under app control. Use synthetic data for evaluation; deployment with real health records needs an approved security/privacy design and organizational review. Local persistence failures are reported rather than silently discarding records. Other open tabs are blocked from editing after a storage change until reloaded.
+Records are stored unencrypted in this browser's localStorage and, after manual or automatic sync while connected, your selected Google Drive folder. This prototype has no application login, access controls, audit enforcement, or encryption at rest under app control. Use synthetic data for evaluation; deployment with real health records needs an approved security/privacy design and organizational review. Local persistence failures are reported rather than silently discarding records. Other open tabs are blocked from editing after a storage change until reloaded.
 
 JSON format: `{ "version": 1, "people": [...] }`. Each person contains `id`, a compatible display `name`, `firstName`, `lastName`, `preferredName`, `birthDate` (`month`, `day`, `year`, each optional), `driveFolders` (`id`, `name`), `info`, ISO `updatedAt`, and `notes`. Legacy `room` values are preserved but not displayed. Each note contains `id`, `text`, and ISO `createdAt`.
 
 ## Validate
 
-- `npm test`: model and mocked Drive API tests.
+- `npm test`: model and mocked Drive API tests, including age boundaries and direct binary upload validation.
+- `python tests/windows_sync_browser.py` checks desktop controls and 10-second sync; `python tests/upload_browser.py` checks direct Drive upload using synthetic bytes.
 - With the server running: `python tests/person_drive_browser.py` checks names, birth dates, folder-link persistence, and mocked Google sign-in/Picker interactions. `python tests/clock_browser.py` checks the header.
 - `npm run check`: JavaScript syntax checks.
 - With the server running: `python tests/browser_smoke.py` uses Python Playwright and `/usr/bin/chromium`. Tests person creation, notes, safe text rendering, persistence, search, offline entry, and mobile overflow. Screenshots go to ignored `artifacts/`.
@@ -57,3 +70,11 @@ JSON format: `{ "version": 1, "people": [...] }`. Each person contains `id`, a c
 No package installation is needed for the app or Node tests. Browser-test tooling is a development-only prerequisite. Real Google OAuth, Picker, and sync require your configured Google project and account and are not covered by mocked API tests.
 
 Future tasks should use this existing isolated checkout; no extra Git worktree is necessary. Start the static server again in a new session. Increment the service-worker cache version when changing the offline asset set.
+
+## Login architecture (proposal; not implemented)
+
+GitHub Pages publicly serves the frontend. A JavaScript-only password screen would not enforce access to the site or protect browser-stored health records. Google Drive authorization currently protects only access to Drive, not the page itself. API keys and OAuth client IDs are public identifiers, not login credentials.
+
+For a staff-only application, move the frontend behind an authenticated host/access gateway and use Google sign-in with an explicit allowlist of staff accounts. A small backend should verify identity tokens, issue secure HttpOnly sessions, enforce authorization on every data request, and manage the organization's Drive access server-side. The backend can retain refresh credentials securely so staff sign-in and the shared Drive connection are separate. Never embed refresh tokens or a shared account password in this repository. Choose the hosting/identity provider and authorized staff list before implementing this design.
+
+With login, the local/offline cache also needs an explicit policy: avoid unencrypted health records in localStorage on shared devices; clear or lock user data on sign-out, and determine whether authenticated offline use is allowed. Protecting the hosted URL alone does not revoke records already cached on a device.

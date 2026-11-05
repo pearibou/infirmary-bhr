@@ -1,5 +1,13 @@
 # Version history
 
+## 0.3.0 — 2026-11-05
+
+- Added derived ages with birthday-aware calculation and partial-DOB handling.
+- Added movable/resizable main window and dialogs, minimize/restore dock, and reset controls.
+- Added top-bar sync and 10-second visible-session autosync with overlap prevention, no automatic OAuth prompts, and draft/concurrent-note preservation.
+- Added arbitrary-type, direct browser-to-Drive file uploads to the selected person’s attached folder; file bytes are not saved to browser storage or GitHub.
+- Documented protected runtime-data boundaries and a proposed staff login/backend architecture; login is not implemented.
+
 ## 0.2.4 — 2026-11-05
 
 - Added Use My Drive (root) for backend directory storage without selecting a child folder.

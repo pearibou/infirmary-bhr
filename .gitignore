@@ -1,2 +1,9 @@
 artifacts/
 __pycache__/
+
+# Runtime records and user files must never be committed.
+people_directory.json
+uploads/
+.env
+.env.*
+*.log
