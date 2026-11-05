@@ -1,5 +1,10 @@
 # Version history
 
+## 0.1.1 — 2026-11-05
+
+- Renamed the top-left label to Mepkin Infirmary.
+- Added a live local clock: weekday, two-digit day, full month, year, and 24-hour time with seconds, visible on desktop and mobile.
+
 ## 0.1.0 — 2026-11-05
 
 - Added System 7 desktop styling, responsive directory, person details, and timestamped notes.
