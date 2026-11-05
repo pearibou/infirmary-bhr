@@ -10,3 +10,5 @@
  .menu-clock{grid-column:1 / -1;margin:0;padding:0 0 8px;text-align:right;font-size:11px}
 }
 @media(max-width:360px){.menubar{column-gap:8px;font-size:11px}}
+
+.clock-time{font-weight:700}

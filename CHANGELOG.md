@@ -1,5 +1,9 @@
 # Version history
 
+## 0.1.3 — 2026-11-05
+
+- Switched the live clock to 12-hour time with AM/PM and bold time text.
+
 ## 0.1.2 — 2026-11-05
 
 - Isolated the live clock from application/module startup failures.
