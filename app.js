@@ -1,12 +1,12 @@
-import {updateSessionPresence} from './presence.js?v=0.7.8';
-import {closeAppMenu} from './app-menu.js?v=0.7.8';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.8';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.8';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.7.8';
-import {validatePhoto} from './photos.js?v=0.7.8';
-import './windows.js?v=0.7.8';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.8';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.8';
+import {updateSessionPresence} from './presence.js?v=0.7.9';
+import {closeAppMenu} from './app-menu.js?v=0.7.9';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.9';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.9';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.7.9';
+import {validatePhoto} from './photos.js?v=0.7.9';
+import './windows.js?v=0.7.9';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.9';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.9';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
@@ -41,6 +41,8 @@ function render(){
   if(legalName && legalName!==personName(person))panel.append(element('p',legalName,'muted legal-name'));
   if(person.birthDate && Object.values(person.birthDate).some(Boolean)){const b=person.birthDate;panel.append(element('p',`Date of birth: ${b.month||'—'} / ${b.day||'—'} / ${b.year||'—'}`,'muted'));}
   const age=personAge(person);panel.append(element('p',`${person.deceased?'Age at death':'Age'}: ${age===null?'— (complete dates needed)':age+' years'}`,'muted age'));
+  if(person.noKnownAllergies)panel.append(element('p','No known allergies','allergies'));
+  else if(person.allergies?.trim())panel.append(element('p','Allergies: '+person.allergies.trim(),'allergies'));
   if(person.deceased)panel.append(element('p',`Date of death: ${formatDeathDate(person.deathDate)}`,'death-status'));
   const folderSection=element('section',undefined,'person-folders'),folderHeading=element('div',undefined,'notes-heading'),attach=element('button','Attach folder…');attach.type='button';attach.onclick=()=>openPersonFolder(person.id);const upload=element('button','Upload file…');upload.type='button';upload.onclick=()=>openUpload(person.id);folderHeading.append(element('h3','Drive folders'),attach,upload);folderSection.append(folderHeading);
   for(const folder of person.driveFolders||[]){const link=element('a',folder.name||'Drive folder','folder-link');link.href=`https://drive.google.com/drive/folders/${encodeURIComponent(folder.id)}`;link.target='_blank';link.rel='noopener noreferrer';folderSection.append(link);}
@@ -65,20 +67,23 @@ selected=data.people[0]?.id;render();
 $('#search').oninput=render;
 $('#add-person').onclick=()=>openPerson();
 let recordBaseline;
-const recordFields=person=>JSON.stringify(Object.fromEntries(['firstName','middleName','lastName','preferredName','name','birthDate','info','deceased','deathDate','photo'].map(key=>[key,person[key]])));
+const recordFields=person=>JSON.stringify(Object.fromEntries(['firstName','middleName','lastName','preferredName','name','birthDate','info','allergies','noKnownAllergies','deceased','deathDate','photo'].map(key=>[key,person[key]])));
 function openPerson(id=null){
   if(personSaveBusy){if(!$('#person-dialog').open)$('#person-dialog').showModal();return;}
   editPersonId=id;const person=data.people.find(p=>p.id===id),form=$('#person-form');form.reset();clearPhotoPreview();
   recordBaseline=person?recordFields(person):null;
   $('#person-dialog-title').textContent=person?'Edit record':'New person';$('#person-dialog .window-control').setAttribute('aria-label',person?'Minimize Edit record':'Minimize New person');$('#person-submit').textContent=person?'Save record':'Add person';$('#person-error').textContent='';
-  for(const key of ['firstName','middleName','lastName','preferredName','info'])form.elements.namedItem(key).value=person?.[key]||'';
+  for(const key of ['firstName','middleName','lastName','preferredName','info','allergies'])form.elements.namedItem(key).value=person?.[key]||'';
   if(person&&!person.firstName&&!person.lastName&&!person.preferredName)form.elements.namedItem('preferredName').value=person.name;
   for(const part of ['Month','Day','Year'])form.elements.namedItem('birth'+part).value=person?.birthDate?.[part.toLowerCase()]||'';
   const death=deathDateParts(person?.deathDate);for(const part of ['Month','Day','Year'])form.elements.namedItem('death'+part).value=death[part.toLowerCase()];
+  $('#person-no-known-allergies').checked=Boolean(person?.noKnownAllergies);updateAllergyFields();
   $('#person-deceased').checked=Boolean(person?.deceased);updateDeathFields();
   showPhotoPreview(person);
   if(!$('#person-dialog').open)$('#person-dialog').showModal();form.elements.namedItem('lastName').focus();
 }
+function updateAllergyFields(){const checked=$('#person-no-known-allergies').checked;$('#allergy-fields').disabled=checked;}
+$('#person-no-known-allergies').onchange=updateAllergyFields;
 function updateDeathFields(){const enabled=$('#person-deceased').checked;$('#death-fields').disabled=!enabled;$('#death-fields').classList.toggle('enabled',enabled);}
 $('#person-deceased').onchange=updateDeathFields;
 function clearPhotoPreview(){if(photoPreviewUrl)URL.revokeObjectURL(photoPreviewUrl);photoPreviewUrl=undefined;delete $('#person-photo-preview').dataset.photoFile;$('#person-photo-preview').replaceChildren();}
@@ -89,7 +94,7 @@ $('#person-form').onsubmit=async event=>{
   event.preventDefault();if(personSaveBusy)return;
   const form=new FormData(event.target),firstName=form.get('firstName').trim(),middleName=form.get('middleName').trim(),lastName=form.get('lastName').trim(),preferredName=form.get('preferredName').trim();
   const birthDate={month:form.get('birthMonth'),day:form.get('birthDay'),year:form.get('birthYear')},deceased=form.get('deceased')==='on',deathDate=deceased?{month:form.get('deathMonth'),day:form.get('deathDay'),year:form.get('deathYear')}:'';
-  const fields={firstName,middleName,lastName,preferredName,birthDate,deceased,deathDate,info:form.get('info').trim()};
+  const fields={firstName,middleName,lastName,preferredName,birthDate,deceased,deathDate,info:form.get('info').trim(),allergies:(form.get('allergies')||'').trim(),noKnownAllergies:form.get('noKnownAllergies')==='on'};
   const error=(!firstName&&!lastName&&!preferredName)?'Enter at least one name.':birthDateError(birthDate)||deathDateError(fields);
   $('#person-error').textContent=error;if(error)return;
   const id=editPersonId||crypto.randomUUID(),file=$('#person-photo').files[0];
@@ -107,7 +112,7 @@ $('#person-form').onsubmit=async event=>{
     if(person)next.people[next.people.findIndex(p=>p.id===id)]=updated;else next.people.push(updated);
     if(save(next)){selected=id;$('#search').value='';render();$('#person-dialog').close();event.target.reset();clearPhotoPreview();$('#person-error').textContent='';}
   }catch(error){if(saveEpoch===sessionEpoch)$('#person-error').textContent=error.message;}
-  finally{personSaveBusy=false;fillSettings();for(const control of $('#person-form').elements)control.disabled=false;updateDeathFields();}
+  finally{personSaveBusy=false;fillSettings();for(const control of $('#person-form').elements)control.disabled=false;updateDeathFields();updateAllergyFields();}
 };
 function formatTime(value){return new Date(value).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'});}
 function initials(person){return personName(person).split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();}
@@ -193,7 +198,7 @@ function clearProtectedWorkspace(removeStorage=true){
   data=emptyDirectory();selected=undefined;editPersonId=null;recordBaseline=undefined;noteEditTarget=undefined;folderTarget=undefined;uploadPersonId=undefined;trashTarget=undefined;
   for(const form of document.querySelectorAll('form'))form.reset();
   for(const input of document.querySelectorAll('input:not([type="checkbox"]),textarea'))input.value='';
-  $('#upload-folder').replaceChildren();$('#person-deceased').checked=false;updateDeathFields();
+  $('#upload-folder').replaceChildren();$('#person-deceased').checked=false;updateDeathFields();updateAllergyFields();
   for(const id of ['person-error','folder-error','upload-person-name','upload-status','note-edit-error','trash-entry-label','trash-error','sticky-error','current-user'])$('#'+id).textContent='';
   clearTimeout(toast.timer);$('#toast').textContent='';$('#toast').hidden=true;
   driveConfig={...window.INFIRMARY_CONFIG};
