@@ -1,5 +1,8 @@
 # Version history
 
+## 0.7.5
+- Move Google Drive and Export JSON into a keyboard-accessible System 7 application menu under Mepkin Abbey Infirmary.
+
 ## 0.7.4
 
 - Replaced the downscaled raster header emblem with a dedicated 28-pixel SVG, simplifying branches and strengthening the roof/water shapes without increasing display size.
