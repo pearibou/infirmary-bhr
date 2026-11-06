@@ -40,3 +40,33 @@ test('age follows local birthday boundaries and rejects incomplete/future dates'
  assert.equal(calculateAge({year:'2000',month:'2',day:'29'},new Date(2025,1,28)),24);
  assert.equal(calculateAge({year:'2000',month:'2',day:'29'},new Date(2025,2,1)),25);
 });
+
+import {editNote,currentNoteText,canEditNote,deathDateError,personAge} from '../model.js';
+const author={id:'google-author-a',name:'Synthetic Staff A'};
+const authored=()=>({...note('authored','Original'),authorId:author.id,authorName:author.name});
+test('only original author can edit; original content and timestamp remain immutable',()=>{
+ assert.equal(canEditNote(authored(),null),false);assert.equal(canEditNote(note('legacy'),author),false);
+ assert.throws(()=>editNote(authored(),{id:'other',name:'Other'},'Changed'),/Only/);
+ const edited=editNote(authored(),author,'Correction','2026-11-06T12:00:00Z');assert.equal(edited.text,'Original');assert.equal(edited.createdAt,date);assert.equal(currentNoteText(edited),'Correction');assert.equal(edited.edits[0].editorId,author.id);
+});
+test('note revisions sync in either direction without reverting an edit',()=>{
+ const edited=editNote(authored(),author,'Correction','2026-11-06T12:00:00Z'),second=editNote(edited,author,'Second correction','2026-11-06T13:00:00Z');
+ const directory=entry=>({version:1,people:[person([entry])]});
+ for(const [a,b] of [[authored(),second],[second,authored()],[edited,second],[second,edited]]){const merged=mergeDirectories(directory(a),directory(b));assert.equal(currentNoteText(merged.people[0].notes[0]),'Second correction');assert.equal(merged.people[0].notes[0].edits.length,2);}
+});
+test('concurrent note revisions and changed authors stop sync rather than discard history',()=>{
+ const a=editNote(authored(),author,'A'),b=editNote(authored(),author,'B'),directory=entry=>({version:1,people:[person([entry])]});
+ assert.throws(()=>mergeDirectories(directory(a),directory(b)),/Concurrent/);
+ assert.throws(()=>mergeDirectories(directory(authored()),directory({...authored(),authorId:'other'})),/Conflicting/);
+ const tampered=structuredClone(a);tampered.edits[0].editorId='other';assert.throws(()=>validateDirectory(directory(tampered)),/revision/);
+});
+test('deceased record validates dates and age is frozen at death',()=>{
+ const record={...person(),birthDate:{month:'1',day:'1',year:'1940'},deceased:true,deathDate:'2020-01-01'};
+ assert.equal(deathDateError(record),'');assert.equal(personAge(record,new Date(2026,10,6)),80);
+ assert.ok(deathDateError({...record,deathDate:'1930-01-01'}));assert.ok(deathDateError({...record,deathDate:'2020-02-30'}));assert.ok(deathDateError({...record,deathDate:'2999-01-01'}));
+ assert.equal(deathDateError({...record,deathDate:''}),'');assert.equal(personAge({...record,deathDate:''}),null);
+});
+test('photo references validate without storing image data',()=>{
+ const directory=entry=>({version:1,people:[entry]});validateDirectory(directory({...person(),photo:{fileId:'private-photo',folderId:'person-folder'}}));
+ assert.throws(()=>validateDirectory(directory({...person(),photo:{fileId:'data:image/png;base64,xyz',folderId:'folder'}})),/photo/);
+});

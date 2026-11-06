@@ -24,6 +24,6 @@ const main=document.querySelector('.window');main.id='records-window';movable(ma
 document.querySelector('#minimize-main').onclick=()=>minimize(main,'Brother Health Records');
 document.querySelector('#reset-main').onclick=()=>reset(main);
 for(const dialog of document.querySelectorAll('dialog')){
-  const title=dialog.querySelector('.dialog-title'),name=title.textContent,button=document.createElement('button');button.type='button';button.className='window-control';button.textContent='−';button.setAttribute('aria-label','Minimize '+name);button.onclick=()=>minimize(dialog,name);title.prepend(button);movable(dialog,title);
+  const title=dialog.querySelector('.dialog-title'),name=title.textContent,button=document.createElement('button');button.type='button';button.className='window-control';button.textContent='−';button.setAttribute('aria-label','Minimize '+name);button.onclick=()=>minimize(dialog,title.querySelector('#person-dialog-title')?.textContent||name);title.prepend(button);movable(dialog,title);
 }
 window.addEventListener('resize',()=>{reset(main);for(const dialog of document.querySelectorAll('dialog'))reset(dialog);});

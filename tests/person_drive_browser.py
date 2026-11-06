@@ -13,6 +13,7 @@ with sync_playwright() as p:
     class Builder{addView(){return this}setOAuthToken(){return this}setDeveloperKey(){return this}setAppId(){return this}setOrigin(){return this}setTitle(){return this}setCallback(cb){this.cb=cb;return this}build(){return this}setVisible(){this.cb({action:'picked',docs:[{id:'native-folder',name:'Chosen in Google'}]})}}
     window.google={accounts:{oauth2:{initTokenClient:opts=>({requestAccessToken:()=>{window.oauthCalls++;opts.callback({access_token:'test',expires_in:3600})}})}},picker:{DocsView:View,ViewId:{FOLDERS:'folders'},PickerBuilder:Builder,Action:{PICKED:'picked',CANCEL:'cancel'}}};
     ''')
+    page.route('https://www.googleapis.com/oauth2/v3/userinfo',lambda route:route.fulfill(json={'sub':'synthetic-staff','name':'Synthetic Staff'}))
     page.goto('http://127.0.0.1:8000')
     page.locator('#add-person').click()
     dialog=page.locator('#person-dialog')

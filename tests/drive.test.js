@@ -32,3 +32,13 @@ test('upload refuses unexpected destination and never sends file bytes there',as
  await signIn();let requests=0;globalThis.fetch=async(url,options={})=>{requests++;return options.method==='POST'?new Response('',{headers:{Location:'https://example.com/upload/drive/steal'}}):Response.json({mimeType:'application/vnd.google-apps.folder',capabilities:{canAddChildren:true}});};
  await assert.rejects(uploadPersonFile('folder',new File(['synthetic'],'test.dat')),/Unexpected/);assert.equal(requests,2);disconnect();
 });
+
+import {getCurrentUser,loadCurrentUser,readPersonPhoto} from '../drive.js';
+test('note identity comes from Google userinfo and is cleared on disconnect',async()=>{
+ await signIn();let reads=0;globalThis.fetch=async(url)=>{assert.equal(url,'https://www.googleapis.com/oauth2/v3/userinfo');reads++;return Response.json({sub:'stable-google-id',name:'Synthetic Staff'});};
+ assert.equal(getCurrentUser(),undefined);assert.deepEqual(await loadCurrentUser(),{id:'stable-google-id',name:'Synthetic Staff'});await loadCurrentUser();assert.equal(reads,1);disconnect();assert.equal(getCurrentUser(),null);
+});
+test('photos are read as authenticated blobs and reject nonimage media',async()=>{
+ await signIn();globalThis.fetch=async(url,opts)=>{assert.match(url,/files\/photo-file\?alt=media/);assert.equal(opts.headers.Authorization,'Bearer test-only');return new Response(new Uint8Array([1,2]),{headers:{'Content-Type':'image/png'}});};assert.equal((await readPersonPhoto('photo-file')).type,'image/png');
+ globalThis.fetch=async()=>new Response('<svg/>',{headers:{'Content-Type':'image/svg+xml'}});await assert.rejects(readPersonPhoto('photo-file'),/unsupported/);disconnect();
+});

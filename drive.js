@@ -1,6 +1,6 @@
-import {validateDirectory,mergeDirectories} from './model.js?v=0.3.0';
-let token,expires=0,loading,authorizedClient;
-export function disconnect(){token=undefined;expires=0;authorizedClient=undefined;}
+import {validateDirectory,mergeDirectories} from './model.js?v=0.4.0';
+let token,expires=0,loading,authorizedClient,currentUser;
+export function disconnect(){token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
 function loadGoogle(){
   if(globalThis.google?.accounts?.oauth2)return Promise.resolve();
   if(loading)return loading;
@@ -9,8 +9,9 @@ function loadGoogle(){
 export async function prepareGoogle(){await loadGoogle();}
 export function authorize(clientId){
   if(token && authorizedClient===clientId && Date.now()<expires)return Promise.resolve();
+  currentUser=undefined;
   return new Promise((resolve,reject)=>{
-    google.accounts.oauth2.initTokenClient({client_id:clientId,scope:'https://www.googleapis.com/auth/drive',callback:r=>{if(r.error){reject(new Error(r.error_description||r.error));return;}token=r.access_token;authorizedClient=clientId;expires=Date.now()+(Number(r.expires_in)-60)*1000;resolve();},error_callback:r=>reject(new Error(r.type==='popup_closed'?'Sign-in window closed.':r.message||'Google sign-in failed.'))}).requestAccessToken({prompt:''});
+    google.accounts.oauth2.initTokenClient({client_id:clientId,scope:'openid email profile https://www.googleapis.com/auth/drive',callback:r=>{if(r.error){reject(new Error(r.error_description||r.error));return;}token=r.access_token;authorizedClient=clientId;expires=Date.now()+(Number(r.expires_in)-60)*1000;resolve();},error_callback:r=>reject(new Error(r.type==='popup_closed'?'Sign-in window closed.':r.message||'Google sign-in failed.'))}).requestAccessToken({prompt:''});
   });
 }
 async function driveFetch(url,options={},timeout=30000){
@@ -84,4 +85,23 @@ export async function uploadPersonFile(folder,file){
   const result=await driveFetch(target.href,{method:'PUT',headers:{Authorization:`Bearer ${token}`,'Content-Type':mimeType},body:file},300000);
   if(!result.ok)throw new Error(`Drive upload failed (${result.status}). Check the destination before retrying.`);
   return result.json();
+}
+
+export function getCurrentUser(){return hasDriveAccess()?currentUser:null;}
+export async function loadCurrentUser(){
+  if(!hasDriveAccess())throw new Error('Connect Google before identifying the note author.');
+  if(currentUser)return currentUser;
+  const activeToken=token;
+  const response=await driveFetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:`Bearer ${activeToken}`}});
+  if(!response.ok)throw new Error('Could not identify the Google account. Reconnect to enable authored notes.');
+  const profile=await response.json();
+  if(!profile.sub||typeof profile.sub!=='string'||(!profile.name&&!profile.email))throw new Error('Google did not return an account identity.');
+  if(token!==activeToken)throw new Error('Google connection changed. Reconnect before editing notes.');
+  currentUser={id:profile.sub,name:profile.name||profile.email};return currentUser;
+}
+export async function readPersonPhoto(fileId){
+  if(!hasDriveAccess())throw new Error('Connect Google to view this photo.');
+  if(!/^[\w-]+$/.test(fileId))throw new Error('Invalid photo reference.');
+  const response=await api(`files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`),blob=await response.blob();
+  if(!['image/jpeg','image/png','image/webp','image/gif'].includes(blob.type)||blob.size>10*1024*1024)throw new Error('Photo format or size is unsupported.');return blob;
 }

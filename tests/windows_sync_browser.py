@@ -29,6 +29,7 @@ with sync_playwright() as p:
             route.fulfill(json={'files':[{'id':'file'}]})
     page.route('https://www.googleapis.com/**',drive)
     page.route('**/config.js*',lambda route:route.fulfill(content_type='application/javascript',body="window.INFIRMARY_CONFIG={clientId:'test.apps.googleusercontent.com'}"))
+    page.route('https://www.googleapis.com/oauth2/v3/userinfo',lambda route:route.fulfill(json={'sub':'synthetic-staff','name':'Synthetic Staff'}))
     page.goto('http://127.0.0.1:8000')
     assert 'years' in page.locator('.age').inner_text()
     window=page.locator('.window')
