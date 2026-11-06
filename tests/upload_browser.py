@@ -19,6 +19,7 @@ with sync_playwright() as p:
         else:
             route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
     page.route('https://www.googleapis.com/**',drive)
+    page.route('https://www.googleapis.com/oauth2/v3/userinfo',lambda route:route.fulfill(json={'sub':'synthetic-staff','name':'Synthetic Staff'}))
     page.goto('http://127.0.0.1:8000')
     page.locator('#drive-open').click()
     page.get_by_role('button',name='Continue with Google').click()

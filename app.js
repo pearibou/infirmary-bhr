@@ -1,8 +1,10 @@
-import './windows.js?v=0.3.0';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,calculateAge,mergeDirectories} from './model.js?v=0.3.0';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile} from './drive.js?v=0.3.0';
+import {validatePhoto} from './photos.js?v=0.4.0';
+import './windows.js?v=0.4.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote} from './model.js?v=0.4.0';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.4.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
-let data=emptyDirectory(),selected,storageFailed=false;
+let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget;
+const photoUrls=new Map();let photoGeneration=0;
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,6000);}
 try{const stored=localStorage.getItem(KEY);if(stored)data=validateDirectory(JSON.parse(stored));}catch{storageFailed=true;toast('Stored data could not be read. Existing storage has been preserved; reload after resolving the problem.');}
 function save(next){if(storageFailed){toast('Storage is unavailable. Existing data is protected.');return false;}try{localStorage.setItem(KEY,JSON.stringify(next));data=next;$('#storage-status').textContent='Saved on this device';return true;}catch{toast('Could not save: device storage is unavailable or full. Export your existing records.');return false;}}
@@ -10,37 +12,104 @@ function element(tag,text,cls){const e=document.createElement(tag);if(text!==und
 function render(){
   const query=$('#search').value.toLowerCase();const people=data.people.filter(p=>[personName(p),p.firstName,p.lastName,p.preferredName,p.name].filter(Boolean).join(' ').toLowerCase().includes(query)).sort((a,b)=>(a.lastName||personName(a)).localeCompare(b.lastName||personName(b)));
   $('#people').replaceChildren();
-  for(const p of people){const button=element('button',undefined,'person'+(selected===p.id?' selected':''));button.type='button';button.setAttribute('aria-pressed',String(selected===p.id));button.append(element('strong',personName(p)));const fullName=[p.firstName,p.lastName].filter(Boolean).join(' ');if(fullName && fullName!==personName(p))button.append(element('span',fullName));button.onclick=()=>{selected=p.id;render();};$('#people').append(button);}
+  for(const p of people){const button=element('button',undefined,'person'+(selected===p.id?' selected':''));button.type='button';button.setAttribute('aria-pressed',String(selected===p.id));button.append(element('strong',personName(p)));const fullName=[p.firstName,p.lastName].filter(Boolean).join(' ');if(fullName && fullName!==personName(p))button.append(element('span',fullName));button.onclick=()=>{selected=p.id;render();};const row=element('div',undefined,'person-row'),edit=element('button','✎','record-pencil');edit.type='button';edit.title='Edit record';edit.setAttribute('aria-label','Edit record for '+personName(p));edit.onclick=()=>openPerson(p.id);row.append(button,edit);$('#people').append(row);}
   if(!people.length)$('#people').append(element('p',query?'No matching people.':'Your directory is empty.','empty'));
   $('#people-count').textContent=`${data.people.length} ${data.people.length===1?'person':'people'} in directory`;
   const panel=$('#detail');panel.replaceChildren();const person=data.people.find(p=>p.id===selected);
   if(!person){const blank=element('div',undefined,'empty');blank.append(element('div','▤','empty-icon'),element('h2','A place for everyday care'),element('p','Add a person to begin, or connect Google Drive to pull an existing directory.'));panel.append(blank);return;}
-  const header=element('div',undefined,'person-header'),title=element('div');title.append(element('div','PERSON RECORD','eyebrow'),element('h2',personName(person)));header.append(element('div',personName(person).split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase(),'avatar'),title);panel.append(header);
+  const header=element('div',undefined,'person-header'),title=element('div'),avatar=makeAvatar(person);
+  title.append(element('div','PERSON RECORD','eyebrow'),element('h2',personName(person)));
+  const editRecord=element('button','✎','record-pencil');editRecord.type='button';editRecord.title='Edit record';editRecord.setAttribute('aria-label','Edit this record');editRecord.onclick=()=>openPerson(person.id);
+  header.append(avatar,title,editRecord);panel.append(header);
   const legalName=[person.firstName,person.lastName].filter(Boolean).join(' ');
   if(legalName && legalName!==personName(person))panel.append(element('p',legalName,'muted'));
   if(person.birthDate && Object.values(person.birthDate).some(Boolean)){const b=person.birthDate;panel.append(element('p',`Date of birth: ${b.month||'—'} / ${b.day||'—'} / ${b.year||'—'}`,'muted'));}
-  const age=calculateAge(person.birthDate);panel.append(element('p',`Age: ${age===null?'— (complete date of birth needed)':age+' years'}`,'muted age'));
+  const age=personAge(person);panel.append(element('p',`${person.deceased?'Age at death':'Age'}: ${age===null?'— (complete dates needed)':age+' years'}`,'muted age'));
+  if(person.deceased)panel.append(element('p',`Deceased · Date of death: ${person.deathDate||'Unknown'}`,'death-status'));
   const folderSection=element('section',undefined,'person-folders'),folderHeading=element('div',undefined,'notes-heading'),attach=element('button','Attach folder…');attach.type='button';attach.onclick=()=>openPersonFolder(person.id);const upload=element('button','Upload file…');upload.type='button';upload.onclick=()=>openUpload(person.id);folderHeading.append(element('h3','Drive folders'),attach,upload);folderSection.append(folderHeading);
   for(const folder of person.driveFolders||[]){const link=element('a',folder.name||'Drive folder','folder-link');link.href=`https://drive.google.com/drive/folders/${encodeURIComponent(folder.id)}`;link.target='_blank';link.rel='noopener noreferrer';folderSection.append(link);}
   if(!person.driveFolders?.length)folderSection.append(element('p','No folders attached.','muted'));panel.append(folderSection);
   if(person.info)panel.append(element('p',person.info,'info'));
   const heading=element('div',undefined,'notes-heading');heading.append(element('h3','Chronological notes'),element('span',`${person.notes.length} entries`,'muted'));panel.append(heading);
-  const form=element('form',undefined,'note-form'),input=element('input');input.required=true;input.maxLength=10000;input.placeholder='Type a note and press Enter…';input.setAttribute('aria-label','New note');input.autocomplete='off';const submit=element('button','Add');submit.type='submit';form.append(input,submit);panel.append(form,element('p','Each note is timestamped when added. Oldest entries appear first.','hint'));
-  const notes=element('ol',undefined,'notes');for(const note of [...person.notes].sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)||a.id.localeCompare(b.id))){const li=element('li',undefined,'note'),time=element('time',new Date(note.createdAt).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'}));time.dateTime=note.createdAt;li.append(time,element('p',note.text));notes.append(li);}if(!person.notes.length)notes.append(element('li','No notes yet. Add the first entry above.','empty'));panel.append(notes);
-  form.onsubmit=event=>{event.preventDefault();const text=input.value.trim();if(!text)return;const next=structuredClone(data),p=next.people.find(p=>p.id===selected),now=new Date().toISOString();p.notes.push({id:crypto.randomUUID(),text,createdAt:now});p.updatedAt=now;if(save(next)){render();$('.note-form input').focus();$('.notes').scrollTop=$('.notes').scrollHeight;}};
+  const form=element('form',undefined,'note-form'),input=element('input');input.required=true;input.maxLength=10000;input.placeholder='Type a note and press Enter…';input.setAttribute('aria-label','New note');input.autocomplete='off';const submit=element('button','Add');submit.type='submit';form.append(input,submit);panel.append(form,element('p',getCurrentUser()?'Each note records your Google account. Oldest entries appear first.':'Connect Google Drive to attribute notes to your account and enable author-only editing. Signed-out notes remain unattributed.','hint'));
+  const notes=element('ol',undefined,'notes');
+  for(const note of [...person.notes].sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)||a.id.localeCompare(b.id))){
+    const li=element('li',undefined,'note'),meta=element('div',undefined,'note-meta'),time=element('time',formatTime(note.createdAt));time.dateTime=note.createdAt;
+    meta.append(time,element('span','Entered by '+(note.authorName||'Unattributed (legacy or signed out)'),'note-author'));
+    if(canEditNote(note,getCurrentUser())){const edit=element('button','✎','note-pencil');edit.type='button';edit.setAttribute('aria-label','Edit your note from '+formatTime(note.createdAt));edit.onclick=()=>openNoteEditor(person.id,note.id);meta.append(edit);}
+    li.append(meta,element('p',currentNoteText(note)));
+    if(note.edits?.length){li.append(element('small','Edited '+formatTime(note.edits.at(-1).editedAt),'muted'));const history=element('details'),summary=element('summary','View edit history');history.append(summary,element('p','Original · '+note.text));for(const edit of note.edits)history.append(element('p',`${formatTime(edit.editedAt)} · ${edit.editorName}: ${edit.text}`));li.append(history);}
+    notes.append(li);
+  }
+  if(!person.notes.length)notes.append(element('li','No notes yet. Add the first entry above.','empty'));panel.append(notes);
+  form.onsubmit=event=>{event.preventDefault();const text=input.value.trim();if(!text)return;const next=structuredClone(data),p=next.people.find(p=>p.id===selected),now=new Date().toISOString(),user=getCurrentUser();p.notes.push({id:crypto.randomUUID(),text,createdAt:now,...(user?{authorId:user.id,authorName:user.name}:{})});p.updatedAt=now;if(save(next)){render();$('.note-form input').focus();$('.notes').scrollTop=$('.notes').scrollHeight;}};
+
 }
 selected=data.people[0]?.id;render();
 $('#search').oninput=render;
-$('#add-person').onclick=()=>{$('#person-dialog').showModal();$('#person-form input').focus();};
-$('#person-form').onsubmit=e=>{
-  e.preventDefault();const form=new FormData(e.target);
-  const firstName=form.get('firstName').trim(),lastName=form.get('lastName').trim(),preferredName=form.get('preferredName').trim();
-  const birthDate={month:form.get('birthMonth'),day:form.get('birthDay'),year:form.get('birthYear')};
-  const error=(!firstName&&!lastName&&!preferredName)?'Enter at least one name.':birthDateError(birthDate);
+$('#add-person').onclick=()=>openPerson();
+let recordBaseline;
+const recordFields=person=>JSON.stringify(Object.fromEntries(['firstName','lastName','preferredName','name','birthDate','info','deceased','deathDate','photo'].map(key=>[key,person[key]])));
+function openPerson(id=null){
+  if(personSaveBusy){if(!$('#person-dialog').open)$('#person-dialog').showModal();return;}
+  editPersonId=id;const person=data.people.find(p=>p.id===id),form=$('#person-form');form.reset();clearPhotoPreview();
+  recordBaseline=person?recordFields(person):null;
+  $('#person-dialog-title').textContent=person?'Edit record':'New person';$('#person-dialog .window-control').setAttribute('aria-label',person?'Minimize Edit record':'Minimize New person');$('#person-submit').textContent=person?'Save record':'Add person';$('#person-error').textContent='';
+  for(const key of ['firstName','lastName','preferredName','info','deathDate'])form.elements.namedItem(key).value=person?.[key]||'';
+  if(person&&!person.firstName&&!person.lastName&&!person.preferredName)form.elements.namedItem('preferredName').value=person.name;
+  for(const part of ['Month','Day','Year'])form.elements.namedItem('birth'+part).value=person?.birthDate?.[part.toLowerCase()]||'';
+  $('#person-deceased').checked=Boolean(person?.deceased);updateDeathFields();
+  const folders=new Map((person?.driveFolders||[]).map(folder=>[folder.id,folder.name]));
+  if(person?.photo)folders.set(person.photo.folderId,folders.get(person.photo.folderId)||'Current photo folder');
+  if(driveConfig.folder)folders.set(driveConfig.folder,folders.get(driveConfig.folder)||driveConfig.folderName||'Directory folder');
+  const select=$('#person-photo-folder');select.replaceChildren();
+  if(folders.size!==1){const placeholder=element('option',folders.size?'Choose photo folder…':'No Drive folder selected');placeholder.value='';select.append(placeholder);}
+  for(const [id,name] of folders){const option=element('option',name);option.value=id;select.append(option);}
+  $('#photo-storage-hint').textContent=folders.size?'Photos are stored in the selected Drive folder, never in directory JSON.':'Connect and select a directory folder, or save this person and attach a folder before adding a photo.';
+  showPhotoPreview(person);
+  if(!$('#person-dialog').open)$('#person-dialog').showModal();form.elements.namedItem('lastName').focus();
+}
+function updateDeathFields(){const enabled=$('#person-deceased').checked;$('#death-fields').disabled=!enabled;$('#death-fields').classList.toggle('enabled',enabled);}
+$('#person-deceased').onchange=updateDeathFields;
+function clearPhotoPreview(){if(photoPreviewUrl)URL.revokeObjectURL(photoPreviewUrl);photoPreviewUrl=undefined;delete $('#person-photo-preview').dataset.photoFile;$('#person-photo-preview').replaceChildren();}
+function showPhotoPreview(person){const preview=$('#person-photo-preview');preview.textContent=person?initials(person):'＋';if(person?.photo)displayPhoto(preview,person);}
+$('#person-photo').onchange=async()=>{const file=$('#person-photo').files[0];clearPhotoPreview();if(!file){showPhotoPreview(data.people.find(p=>p.id===editPersonId));return;}try{await validatePhoto(file);if($('#person-photo').files[0]!==file)return;photoPreviewUrl=URL.createObjectURL(file);const image=element('img');image.src=photoPreviewUrl;image.alt='Selected profile photo preview';$('#person-photo-preview').replaceChildren(image);$('#person-error').textContent='';}catch(error){if($('#person-photo').files[0]!==file)return;$('#person-error').textContent=error.message;$('#person-photo').value='';showPhotoPreview(data.people.find(p=>p.id===editPersonId));}};
+$('#person-dialog').addEventListener('close',()=>{if(!personSaveBusy)clearPhotoPreview();});
+$('#person-form').onsubmit=async event=>{
+  event.preventDefault();if(personSaveBusy)return;
+  const form=new FormData(event.target),firstName=form.get('firstName').trim(),lastName=form.get('lastName').trim(),preferredName=form.get('preferredName').trim();
+  const birthDate={month:form.get('birthMonth'),day:form.get('birthDay'),year:form.get('birthYear')},deceased=form.get('deceased')==='on',deathDate=deceased?form.get('deathDate'):'';
+  const fields={firstName,lastName,preferredName,birthDate,deceased,deathDate,info:form.get('info').trim()};
+  const error=(!firstName&&!lastName&&!preferredName)?'Enter at least one name.':birthDateError(birthDate)||deathDateError(fields);
   $('#person-error').textContent=error;if(error)return;
-  const id=crypto.randomUUID(),next=structuredClone(data),person={id,firstName,lastName,preferredName,birthDate,info:form.get('info').trim(),updatedAt:new Date().toISOString(),notes:[],driveFolders:[]};person.name=personName(person);next.people.push(person);
-  if(save(next)){selected=id;$('#search').value='';render();e.target.reset();$('#person-error').textContent='';$('#person-dialog').close();}
+  const id=editPersonId||crypto.randomUUID(),file=$('#person-photo').files[0],folder=$('#person-photo-folder').value;
+  personSaveBusy=true;for(const control of $('#person-form').elements)control.disabled=true;
+  try{
+    let person=data.people.find(p=>p.id===id);
+    if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed while you were editing. Reopen it to review the latest details.');
+    let photo=person?.photo;
+    if(file){if(!hasDriveAccess())throw new Error('Connect Google Drive before saving a photo. Your form has been kept.');if(!folder)throw new Error('Choose a Drive folder for the photo.');await validatePhoto(file);$('#person-error').textContent='Uploading photo directly to Drive…';const uploaded=await uploadPersonFile(folder,file);if(!uploaded.id)throw new Error('Google did not return a photo file ID.');photo={fileId:uploaded.id,folderId:folder};}
+    const next=structuredClone(data);person=next.people.find(p=>p.id===id);
+    if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed during photo upload. The photo is in Drive; reopen the record before saving details.');
+    const updated={...(person||{id,notes:[],driveFolders:[]}),...fields,updatedAt:new Date().toISOString(),...(photo?{photo}:{})};updated.name=personName({...updated,name:''});
+    if(person)next.people[next.people.findIndex(p=>p.id===id)]=updated;else next.people.push(updated);
+    if(save(next)){selected=id;$('#search').value='';render();$('#person-dialog').close();event.target.reset();clearPhotoPreview();$('#person-error').textContent='';}
+  }catch(error){$('#person-error').textContent=error.message;}
+  finally{personSaveBusy=false;for(const control of $('#person-form').elements)control.disabled=false;updateDeathFields();}
 };
+function formatTime(value){return new Date(value).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'});}
+function initials(person){return personName(person).split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();}
+function makeAvatar(person){const avatar=element('div',initials(person),'avatar');if(person.photo)displayPhoto(avatar,person);return avatar;}
+async function displayPhoto(avatar,person){
+  const fileId=person.photo.fileId,generation=photoGeneration;avatar.dataset.photoFile=fileId;if(!hasDriveAccess()){avatar.title='Connect Google Drive to view profile photo';return;}
+  try{let pending=photoUrls.get(fileId);if(!pending){pending=readPersonPhoto(fileId).then(blob=>URL.createObjectURL(blob));photoUrls.set(fileId,pending);}
+    const url=await pending;if(!avatar.isConnected||!hasDriveAccess()||generation!==photoGeneration||avatar.dataset.photoFile!==fileId)return;const img=element('img');img.alt='Profile photo of '+personName(person);img.src=url;img.onerror=()=>{avatar.textContent=initials(person);avatar.title='Photo unavailable';};avatar.replaceChildren(img);
+  }catch{photoUrls.delete(fileId);avatar.title='Photo unavailable; initials shown';}
+}
+function clearPhotos(){photoGeneration++;for(const pending of photoUrls.values())pending.then(url=>URL.revokeObjectURL(url)).catch(()=>{});photoUrls.clear();}
+function renderKeepingDraft(){const input=$('.note-form input'),draft=input?.value,focused=document.activeElement===input;render();if($('.note-form input')&&draft)$('.note-form input').value=draft;if(focused)$('.note-form input')?.focus();}
+function openNoteEditor(personId,noteId){const note=data.people.find(p=>p.id===personId)?.notes.find(n=>n.id===noteId);if(!note||!canEditNote(note,getCurrentUser())){toast('Connect the original author’s Google account to edit this note.');return;}noteEditTarget={personId,noteId,baseline:JSON.stringify(note)};$('#note-edit-text').value=currentNoteText(note);$('#note-edit-error').textContent='';$('#note-dialog').showModal();$('#note-edit-text').focus();}
+$('#note-edit-form').onsubmit=event=>{event.preventDefault();try{const {personId,noteId,baseline}=noteEditTarget,next=structuredClone(data),person=next.people.find(p=>p.id===personId),index=person.notes.findIndex(n=>n.id===noteId),note=person.notes[index];if(JSON.stringify(note)!==baseline)throw new Error('This note changed. Reopen it before editing.');person.notes[index]=editNote(note,getCurrentUser(),$('#note-edit-text').value);person.updatedAt=new Date().toISOString();if(save(next)){$('#note-dialog').close();renderKeepingDraft();}}catch(error){$('#note-edit-error').textContent=error.message;}};
 for(const button of document.querySelectorAll('[data-close]'))button.onclick=()=>document.getElementById(button.dataset.close).close();
 $('#export').onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=element('a');link.href=url;link.download='people_directory.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 let driveConfig={...window.INFIRMARY_CONFIG},googleReady=false,googleLoading=false,connecting=false,connected=false,pickerReady=false,folderTarget,syncing=false;
@@ -80,7 +149,7 @@ $('#google-connect').onclick=async()=>{
   // A ready SDK lets OAuth open directly from this click, avoiding popup blockers.
   if(!googleReady){await readyGoogle();return;}
   connecting=true;fillSettings();$('#drive-status').textContent='Complete sign-in in the Google window. Close it to cancel.';
-  try{await authorize(driveConfig.clientId);connected=true;$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Use My Drive (root), or configure Google folder browsing.';}
+  try{await authorize(driveConfig.clientId);connected=true;clearPhotos();try{const user=await loadCurrentUser();$('#current-user').textContent='Signed in as '+user.name;}catch(error){$('#current-user').textContent='Author identity unavailable; new notes will be unattributed.';}renderKeepingDraft();$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Use My Drive (root), or configure Google folder browsing.';}
   catch(error){connected=false;$('#drive-status').textContent=error.message;}
   finally{connecting=false;fillSettings();}
 };
@@ -90,13 +159,13 @@ async function chooseFolder(dialog){
 }
 $('#choose-sync-folder').onclick=async()=>{try{await authorize(driveConfig.clientId);const folder=await chooseFolder($('#drive-dialog'));if(folder){driveConfig.folder=folder.id;driveConfig.folderName=folder.name;rememberSettings();fillSettings();$('#drive-status').textContent='Directory folder selected. Choose Sync directory to merge your records.';}}catch(error){$('#drive-status').textContent=error.message;}};
 $('#use-drive-root').onclick=()=>{driveConfig.folder='root';driveConfig.folderName='My Drive (root)';rememberSettings();fillSettings();$('#drive-status').textContent='My Drive selected. Sync directory will save people_directory.json at the top level of My Drive.';};
-$('#disconnect').onclick=()=>{disconnect();connected=false;fillSettings();$('#connection').textContent='Local workspace';$('#drive-status').textContent='Disconnected. Local records and attached folder links are retained.';};
+$('#disconnect').onclick=()=>{disconnect();connected=false;clearPhotos();$('#current-user').textContent='';renderKeepingDraft();fillSettings();$('#connection').textContent='Local workspace';$('#drive-status').textContent='Disconnected. Local records and attached folder links are retained.';};
 async function runSync(automatic=false){
   if(syncing)return;
   if(storageFailed){if(!automatic)toast('Resolve local storage before syncing.');return;}
   if(!navigator.onLine){if(!automatic)toast('Offline. Notes will sync after your connection returns.');return;}
   if(!connected||!driveConfig.folder||!hasDriveAccess()){
-    if(connected&&!hasDriveAccess()){connected=false;fillSettings();$('#connection').textContent='Reconnect Google Drive to resume sync';}
+    if(connected&&!hasDriveAccess()){connected=false;clearPhotos();$('#current-user').textContent='';renderKeepingDraft();fillSettings();$('#connection').textContent='Reconnect Google Drive to resume sync';}
     if(!automatic){if(!$('#drive-dialog').open)$('#drive-dialog').showModal();readyGoogle();}
     return;
   }
@@ -115,7 +184,7 @@ $('#sync').onclick=()=>runSync();
 $('#manual-sync').onclick=()=>runSync();
 setInterval(()=>{if(!document.hidden)runSync(true);},10000);
 // Refresh derived ages after midnight without replacing an in-progress note.
-setInterval(()=>{const p=data.people.find(p=>p.id===selected),field=$('.age');if(field&&p){const age=calculateAge(p.birthDate);field.textContent=`Age: ${age===null?'— (complete date of birth needed)':age+' years'}`;}},60000);
+setInterval(()=>{const p=data.people.find(p=>p.id===selected),field=$('.age');if(field&&p){const age=personAge(p);field.textContent=`${p.deceased?'Age at death':'Age'}: ${age===null?'— (complete dates needed)':age+' years'}`;}},60000);
 function openPersonFolder(id){folderTarget=id;$('#folder-form').reset();$('#folder-error').textContent='';$('#folder-dialog').showModal();}
 function attachFolder(folder){
   const next=structuredClone(data),person=next.people.find(p=>p.id===folderTarget);if(!person)throw new Error('Select a person first.');

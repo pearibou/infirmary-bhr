@@ -1,5 +1,13 @@
 # Version history
 
+## 0.4.0
+
+- Added directory/header pencils and a shared New/Edit record form preserving notes and folders.
+- Added deceased status, illuminated date-of-death controls, date validation and age at death.
+- Added Drive-only profile photos with initials fallback and metadata-only directory references.
+- Added Google-account note attribution and author-only editing with append-only history and conflict-preserving sync. Legacy/signed-out notes remain unattributed and noneditable.
+- Added synthetic model/API/browser coverage. Ownership remains browser-enforced pending the planned authenticated backend.
+
 ## 0.3.0 — 2026-11-05
 
 - Added derived ages with birthday-aware calculation and partial-DOB handling.
