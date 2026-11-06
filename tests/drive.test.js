@@ -89,3 +89,10 @@ test('text publication failure is reported after a successful JSON history save'
  await assert.rejects(syncDirectory('folder',{version:1,people:[],eventLog:[createEvent({name:'Synthetic'},'test.change','person','p','Created')]}),/Directory saved, but Event Log/);
  assert.equal(saved.eventLog.length,1);disconnect();
 });
+
+test('disconnect aborts in-flight Drive requests and drops access',async()=>{
+ await signIn();let started;
+ const pending=new Promise(resolve=>started=resolve);
+ globalThis.fetch=async(url,options)=>new Promise((resolve,reject)=>{options.signal.addEventListener('abort',()=>reject(options.signal.reason));started();});
+ const request=readPersonPhoto('synthetic-photo');await pending;disconnect();await assert.rejects(request,/connection closed/);assert.equal(getCurrentUser(),null);
+});

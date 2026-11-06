@@ -1,12 +1,12 @@
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.1';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.1';
-import {makeTrashable,clearTrashSelection} from './trash.js?v=0.7.1';
-import {validatePhoto} from './photos.js?v=0.7.1';
-import './windows.js?v=0.7.1';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.1';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.1';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.2';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.2';
+import {makeTrashable,clearTrashSelection} from './trash.js?v=0.7.2';
+import {validatePhoto} from './photos.js?v=0.7.2';
+import './windows.js?v=0.7.2';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.2';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.2';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
-let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false;
+let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
 const photoUrls=new Map();let photoGeneration=0;
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,6000);}
@@ -141,6 +141,7 @@ function fillSettings(){
   $('#sync').disabled=!connected||!driveConfig.folder||syncing;
   $('#manual-sync').disabled=syncing||!workspaceReady;
   $('#export').disabled=!workspaceReady;
+  $('#logout-power').disabled=!workspaceReady;
   $('#manual-sync').setAttribute('aria-busy',String(syncing));
   $('#choose-sync-folder').disabled ||= syncing;
   $('#use-drive-root').disabled ||= syncing;
@@ -164,9 +165,9 @@ $('#google-connect').onclick=async()=>{
   if(googleLoading){$('#drive-status').textContent='Google sign-in is loading. Please try again in a moment.';return;}
   // A ready SDK lets OAuth open directly from this click, avoiding popup blockers.
   if(!googleReady){await readyGoogle();return;}
-  connecting=true;fillSettings();$('#drive-status').textContent='Complete sign-in in the Google window. Close it to cancel.';
-  try{await authorize(driveConfig.clientId);connected=true;clearPhotos();try{const user=await loadCurrentUser();$('#current-user').textContent='Signed in as '+user.name;}catch(error){$('#current-user').textContent='Author identity unavailable; new notes will be unattributed.';}appendActivity('drive.connected','directory',driveConfig.folder||'unselected','Google Drive connection established');renderKeepingDraft();$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Use My Drive (root), or configure Google folder browsing.';if(driveConfig.folder&&!workspaceReady)await runSync();}
-  catch(error){connected=false;$('#drive-status').textContent=error.message;}
+  const authEpoch=sessionEpoch;connecting=true;fillSettings();$('#drive-status').textContent='Complete sign-in in the Google window. Close it to cancel.';
+  try{await authorize(driveConfig.clientId);if(authEpoch!==sessionEpoch){disconnect();return;}connected=true;clearPhotos();try{const user=await loadCurrentUser();$('#current-user').textContent='Signed in as '+user.name;}catch(error){$('#current-user').textContent='Author identity unavailable; new notes will be unattributed.';}if(authEpoch!==sessionEpoch){$('#current-user').textContent='';return;}appendActivity('drive.connected','directory',driveConfig.folder||'unselected','Google Drive connection established');renderKeepingDraft();$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Use My Drive (root), or configure Google folder browsing.';if(driveConfig.folder&&!workspaceReady)await runSync();}
+  catch(error){if(authEpoch!==sessionEpoch)return;connected=false;$('#drive-status').textContent=error.message;}
   finally{connecting=false;fillSettings();}
 };
 async function chooseFolder(dialog){
@@ -175,7 +176,17 @@ async function chooseFolder(dialog){
 }
 $('#choose-sync-folder').onclick=async()=>{try{await authorize(driveConfig.clientId);const folder=await chooseFolder($('#drive-dialog'));if(folder){driveConfig.folder=folder.id;driveConfig.folderName=folder.name;rememberSettings();appendActivity('directory.selected','directory',folder.id,'Directory storage folder selected');fillSettings();$('#drive-status').textContent='Directory folder selected. Choose Sync directory to merge your records.';if(!workspaceReady)await runSync();}}catch(error){$('#drive-status').textContent=error.message;}};
 $('#use-drive-root').onclick=()=>{driveConfig.folder='root';driveConfig.folderName='My Drive (root)';rememberSettings();appendActivity('directory.selected','directory','root','My Drive root selected for directory storage');fillSettings();$('#drive-status').textContent='My Drive selected. Sync directory will save people_directory.json at the top level of My Drive.';if(!workspaceReady)runSync();};
-$('#disconnect').onclick=()=>{appendActivity('drive.disconnected','directory',driveConfig.folder||'unselected','Google Drive disconnected');disconnect();connected=false;clearPhotos();$('#current-user').textContent='';renderKeepingDraft();fillSettings();$('#connection').textContent='Local workspace';$('#drive-status').textContent='Disconnected. Connect Google Drive to reopen the workspace.';lockWorkspace();};
+function disconnectWorkspace(logout=false){
+  if(logout)appendActivity('session.logged_out','session','current','BHR session logged out');
+  appendActivity('drive.disconnected','directory',driveConfig.folder||'unselected','Google Drive disconnected');
+  sessionEpoch++;syncAgain=false;disconnect();connected=false;clearPhotos();clearPhotoPreview();
+  $('#person-form').reset();$('#upload-form').reset();$('#note-edit-text').value='';$('#sticky-text').value='';if($('.note-form input'))$('.note-form input').value='';
+  $('#current-user').textContent='';renderKeepingDraft();fillSettings();$('#connection').textContent='Local workspace';$('#drive-status').textContent=logout?'Logged out. Connect Google Drive to open BHR again.':'Disconnected. Connect Google Drive to reopen the workspace.';lockWorkspace();
+}
+$('#disconnect').onclick=()=>disconnectWorkspace();
+$('#logout-power').onclick=()=>{if(!workspaceReady)return;$('#logout-dialog').showModal();$('#logout-dialog [data-close]').focus();};
+$('#confirm-logout').onclick=()=>{disconnectWorkspace(true);};
+
 async function runSync(automatic=false){
   if(syncing){syncAgain=true;return;}
   if(storageFailed){if(!automatic)toast('Resolve local storage before syncing.');return;}
@@ -186,16 +197,17 @@ async function runSync(automatic=false){
     if(!automatic){if(!$('#drive-dialog').open)$('#drive-dialog').showModal();readyGoogle();}
     return;
   }
-  syncing=true;fillSettings();$('#drive-status').textContent='Syncing with Google Drive…';
+  const epoch=sessionEpoch;syncing=true;fillSettings();$('#drive-status').textContent='Syncing with Google Drive…';
   try{
     const snapshot=structuredClone(data),merged=await syncDirectory(driveConfig.folder,snapshot);
+    if(epoch!==sessionEpoch)return;
     // Preserve notes added during the request; the next cycle uploads them.
     const next=mergeDirectories(data,merged),changed=JSON.stringify(next)!==JSON.stringify(data);
     if(!save(next,true))throw new Error('Drive synced, but local storage failed. Export records before closing.');
     if(connected&&hasDriveAccess())unlockWorkspace();
     if(changed){const input=$('.note-form input'),draft=input?.value,focused=document.activeElement===input;selected=selected||data.people[0]?.id;render();if(draft&&$('.note-form input'))$('.note-form input').value=draft;if(focused)$('.note-form input')?.focus();}
     $('#connection').textContent='Last synced '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});$('#drive-status').textContent='Synced. Automatic sync checks every 10 seconds while connected.';
-  }catch(error){$('#drive-status').textContent=error.message;$('#connection').textContent='Sync failed · local notes retained';if(!automatic)toast(error.message);}
+  }catch(error){if(epoch!==sessionEpoch)return;$('#drive-status').textContent=error.message;$('#connection').textContent='Sync failed · local notes retained';if(!automatic)toast(error.message);}
   finally{syncing=false;fillSettings();const again=syncAgain;syncAgain=false;if(again&&workspaceReady&&hasDriveAccess())queueMicrotask(()=>runSync(true));}
 }
 $('#sync').onclick=()=>runSync();

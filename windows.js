@@ -43,6 +43,7 @@ maximize.onclick=()=>{
   maximize.setAttribute('aria-pressed',String(!isMaximized));maximize.setAttribute('aria-label',isMaximized?'Maximize window':'Restore window');maximize.title=isMaximized?'Maximize window':'Restore window';maximize.textContent=isMaximized?'□':'▣';
 };
 for(const dialog of document.querySelectorAll('dialog')){
+  if(dialog.dataset.simple==='true')continue;
   const title=dialog.querySelector('.dialog-title'),name=title.textContent,button=document.createElement('button');button.type='button';button.className='window-control';button.textContent='−';button.setAttribute('aria-label','Minimize '+name);button.onclick=()=>minimize(dialog,title.querySelector('#person-dialog-title')?.textContent||name);title.prepend(button);movable(dialog,title);
 }
 new ResizeObserver(layout).observe(menu);window.addEventListener('resize',layout);layout();
