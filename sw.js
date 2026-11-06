@@ -1,5 +1,5 @@
-const CACHE='infirmary-shell-v16';
-const ASSETS=['./','./index.html','./styles.css?v=0.6.1','./clock.js?v=0.6.1','./app.js?v=0.6.1','./windows.js?v=0.6.1','./trash.js?v=0.6.1','./sticky.js?v=0.6.1','./photos.js?v=0.6.1','./model.js?v=0.6.1','./drive.js?v=0.6.1','./config.js?v=0.6.1','./manifest.webmanifest','./icons/icon.svg','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE='infirmary-shell-v17';
+const ASSETS=['./','./index.html','./styles.css?v=0.6.2','./clock.js?v=0.6.2','./app.js?v=0.6.2','./windows.js?v=0.6.2','./trash.js?v=0.6.2','./sticky.js?v=0.6.2','./photos.js?v=0.6.2','./model.js?v=0.6.2','./drive.js?v=0.6.2','./config.js?v=0.6.2','./manifest.webmanifest','./icons/icon.svg','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('infirmary-shell-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(event.request.method!=='GET'||url.origin!==self.location.origin)return;
