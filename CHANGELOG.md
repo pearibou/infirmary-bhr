@@ -1,5 +1,17 @@
 # Version history
 
+## 0.6.3
+
+- Included middle name/initial in directory and record full-name subtitles, removing the separate middle-name detail label. Preferred display names are unchanged.
+
+## 0.6.2
+
+- Reduced the main window’s initial desktop size to roughly 60% of viewport width and 80% of available height, retaining responsive sizing and maximize/restore.
+
+## 0.6.1
+
+- Limited chronological-note trash dragging and deletion to the original connected author, with checks at confirmation and in the data operation. Shared desktop-note trash behavior is unchanged.
+
 ## 0.6.0
 
 - Added precision-preserving partial death dates and rejected isolated days.

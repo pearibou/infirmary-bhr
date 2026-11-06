@@ -3,12 +3,13 @@ const trash=document.querySelector('#desktop-trash');
 let selected,dragged;
 function select(target,node){selected=target;document.querySelectorAll('.trash-selected').forEach(el=>el.classList.remove('trash-selected'));node?.classList.add('trash-selected');}
 function request(target){if(target)document.dispatchEvent(new CustomEvent('trash-request',{detail:target}));}
-export function makeTrashable(node,target){
+export function makeTrashable(node,target,allowed=()=>true){
   node.draggable=true;node.title=(node.title?node.title+'. ':'')+'Drag to Trash or press Delete to remove';
   node.addEventListener('click',event=>{if(event.target.closest('button,a,input,textarea,summary')&&event.target.closest('button')!==node)return;select(target,node);});
   node.addEventListener('focus',()=>select(target,node));
-  node.addEventListener('keydown',event=>{if(event.target!==node)return;if(event.key==='Delete'){event.preventDefault();request(target);}});
+  node.addEventListener('keydown',event=>{if(event.target!==node)return;if(event.key==='Delete'){event.preventDefault();if(allowed())request(target);}});
   node.addEventListener('dragstart',event=>{
+    if(!allowed()){event.preventDefault();return;}
     if(event.target.closest('button,a')&&event.target.closest('button,a')!==node){event.preventDefault();return;}
     dragged=target;select(target,node);event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('application/x-infirmary-entry','entry');document.body.classList.add('dragging-entry');
   });

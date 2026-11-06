@@ -78,7 +78,7 @@ test('person deletion removes all record content and survives stale sync in eith
  for(const [a,b] of [[deleted,original],[original,deleted]]){const result=mergeDirectories(a,b);assert.equal(result.people.length,0);assert.deepEqual(result.deleted.people,['p1']);}
 });
 test('note deletion preserves person and other notes, including when stale edits conflict',()=>{
- const original={version:1,people:[person([authored(),note('keep')])]},deleted=deleteDirectoryEntry(original,{personId:'p1',noteId:'authored'});
+ const original={version:1,people:[person([authored(),note('keep')])]},deleted=deleteDirectoryEntry(original,{personId:'p1',noteId:'authored'},author);
  assert.equal(deleted.people[0].notes.length,1);assert.equal(deleted.people[0].notes[0].id,'keep');
  const stale={version:1,people:[person([{...authored(),text:'stale changed text'},note('keep')])]};
  for(const [a,b] of [[deleted,stale],[stale,deleted]]){const result=mergeDirectories(a,b);assert.equal(result.people[0].notes.length,1);assert.equal(result.people[0].notes[0].id,'keep');}
@@ -117,4 +117,11 @@ test('shared desktop notes merge, retain newest position and honor deletion mark
  const deleted=deleteDirectoryEntry(a,{desktopNoteId:'sticky1'});assert.equal(deleted.desktopNotes.length,0);
  assert.equal(mergeDirectories(deleted,b).desktopNotes,undefined);assert.equal(mergeDirectories(b,deleted).desktopNotes,undefined);
  assert.deepEqual(deleted.deleted.desktopNotes,['sticky1']);assert.throws(()=>validateDirectory({...a,desktopNotes:[{...note,x:NaN}]}),/desktop/);
+});
+
+test('chronological deletion requires the current original author, including after account changes',()=>{
+ const directory={version:1,people:[person([authored(),note('legacy')])]};
+ for(const user of [null,{id:'another-user',name:'Other'}])assert.throws(()=>deleteDirectoryEntry(directory,{personId:'p1',noteId:'authored'},user),/Only/);
+ assert.throws(()=>deleteDirectoryEntry(directory,{personId:'p1',noteId:'legacy'},author),/Only/);
+ const deleted=deleteDirectoryEntry(directory,{personId:'p1',noteId:'authored'},author);assert.equal(deleted.people[0].notes.length,1);assert.equal(directory.people[0].notes.length,2);
 });

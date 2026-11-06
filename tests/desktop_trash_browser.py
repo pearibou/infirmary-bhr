@@ -6,7 +6,7 @@ with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
     context=b.new_context(viewport={'width':1280,'height':900},service_workers='block')
     page=context.new_page();errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
-    person=lambda id,name:{'id':id,'name':name,'info':'Synthetic record','updatedAt':'2026-01-01T00:00:00Z','notes':[{'id':'note-'+id,'text':'Synthetic note for '+name,'createdAt':'2026-01-01T00:00:00Z'}]}
+    person=lambda id,name:{'id':id,'name':name,'info':'Synthetic record','updatedAt':'2026-01-01T00:00:00Z','notes':[{'id':'note-'+id,'text':'Synthetic note for '+name,'authorId':'synthetic-staff','authorName':'Synthetic Staff','createdAt':'2026-01-01T00:00:00Z'}]}
     data={'version':1,'people':[person('a','Alpha Test'),person('b','Beta Test')]}
     page.add_init_script("if(!localStorage.getItem('infirmary.directory.v1'))localStorage.setItem('infirmary.directory.v1',"+json.dumps(json.dumps(data))+");window.google={accounts:{oauth2:{initTokenClient:opts=>({requestAccessToken:()=>opts.callback({access_token:'test',expires_in:3600})})}}};")
     page.route('**/config.js*',lambda route:route.fulfill(content_type='application/javascript',body="window.INFIRMARY_CONFIG={clientId:'test.apps.googleusercontent.com'}"))
