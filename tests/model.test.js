@@ -70,3 +70,21 @@ test('photo references validate without storing image data',()=>{
  const directory=entry=>({version:1,people:[entry]});validateDirectory(directory({...person(),photo:{fileId:'private-photo',folderId:'person-folder'}}));
  assert.throws(()=>validateDirectory(directory({...person(),photo:{fileId:'data:image/png;base64,xyz',folderId:'folder'}})),/photo/);
 });
+
+import {deleteDirectoryEntry} from '../model.js';
+test('person deletion removes all record content and survives stale sync in either direction',()=>{
+ const original={version:1,people:[person([authored()])]},deleted=deleteDirectoryEntry(original,{personId:'p1'});
+ assert.equal(deleted.people.length,0);assert.deepEqual(deleted.deleted,{people:['p1'],notes:[]});assert.equal(original.people.length,1);
+ for(const [a,b] of [[deleted,original],[original,deleted]]){const result=mergeDirectories(a,b);assert.equal(result.people.length,0);assert.deepEqual(result.deleted.people,['p1']);}
+});
+test('note deletion preserves person and other notes, including when stale edits conflict',()=>{
+ const original={version:1,people:[person([authored(),note('keep')])]},deleted=deleteDirectoryEntry(original,{personId:'p1',noteId:'authored'});
+ assert.equal(deleted.people[0].notes.length,1);assert.equal(deleted.people[0].notes[0].id,'keep');
+ const stale={version:1,people:[person([{...authored(),text:'stale changed text'},note('keep')])]};
+ for(const [a,b] of [[deleted,stale],[stale,deleted]]){const result=mergeDirectories(a,b);assert.equal(result.people[0].notes.length,1);assert.equal(result.people[0].notes[0].id,'keep');}
+ assert.throws(()=>deleteDirectoryEntry(deleted,{personId:'p1',noteId:'authored'}),/already/);
+});
+test('deletion marker validation rejects invalid metadata',()=>{
+ assert.throws(()=>validateDirectory({version:1,people:[],deleted:{people:['same','same'],notes:[]}}),/deleted/);
+ assert.throws(()=>validateDirectory({version:1,people:[],deleted:{people:[],notes:[{personId:'p',noteId:''}]}}),/deleted/);
+});

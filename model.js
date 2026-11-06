@@ -1,6 +1,12 @@
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
+  if(data.deleted!==undefined){
+    if(!data.deleted||!Array.isArray(data.deleted.people)||!Array.isArray(data.deleted.notes))throw new Error('Invalid deletion markers.');
+    const people=new Set(),notes=new Set();
+    for(const id of data.deleted.people){if(typeof id!=='string'||!id||people.has(id))throw new Error('Invalid deleted person ID.');people.add(id);}
+    for(const entry of data.deleted.notes){const key=JSON.stringify([entry?.personId,entry?.noteId]);if(!entry||typeof entry.personId!=='string'||!entry.personId||typeof entry.noteId!=='string'||!entry.noteId||notes.has(key))throw new Error('Invalid deleted note ID.');notes.add(key);}
+  }
   const ids=new Set();
   for(const p of data.people){
     if(!p || typeof p.id!=='string' || !p.id || ids.has(p.id) || typeof p.name!=='string' || !p.name.trim() || (p.room!==undefined && typeof p.room!=='string') || typeof p.info!=='string' || !Array.isArray(p.notes) || !validDate(p.updatedAt)) throw new Error('Invalid person in directory.');
@@ -28,8 +34,14 @@ export function validateDirectory(data) {
 function validDate(value){return typeof value==='string' && Number.isFinite(Date.parse(value));}
 export function mergeDirectories(local,remote){
   validateDirectory(local);validateDirectory(remote);
-  const people=new Map(local.people.map(p=>[p.id,structuredClone(p)]));
-  for(const incoming of remote.people){
+  const removedPeople=new Set([...(local.deleted?.people||[]),...(remote.deleted?.people||[])]);
+  const removedNotes=new Map([...(local.deleted?.notes||[]),...(remote.deleted?.notes||[])].map(entry=>[JSON.stringify([entry.personId,entry.noteId]),{personId:entry.personId,noteId:entry.noteId}]));
+  const keepNote=(personId,noteId)=>!removedNotes.has(JSON.stringify([personId,noteId]));
+  const clean=person=>({...structuredClone(person),notes:person.notes.filter(note=>keepNote(person.id,note.id)).map(note=>structuredClone(note))});
+  const people=new Map(local.people.filter(p=>!removedPeople.has(p.id)).map(p=>[p.id,clean(p)]));
+  for(const raw of remote.people){
+    if(removedPeople.has(raw.id))continue;
+    const incoming=clean(raw);
     const old=people.get(incoming.id);
     if(!old){people.set(incoming.id,structuredClone(incoming));continue;}
     const notes=new Map(old.notes.map(n=>[n.id,n]));
@@ -38,7 +50,7 @@ export function mergeDirectories(local,remote){
     const folders=new Map([...(old.driveFolders||[]),...(incoming.driveFolders||[])].map(folder=>[folder.id,folder]));
     people.set(old.id,{...latest,...(folders.size?{driveFolders:[...folders.values()]}:{}),notes:[...notes.values()].sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)||a.id.localeCompare(b.id))});
   }
-  return {version:1,people:[...people.values()]};
+  return {version:1,people:[...people.values()],...((removedPeople.size||removedNotes.size)?{deleted:{people:[...removedPeople].sort(),notes:[...removedNotes.values()].sort((a,b)=>JSON.stringify([a.personId,a.noteId]).localeCompare(JSON.stringify([b.personId,b.noteId])))}}:{})};
 }
 
 export function personName(person){
@@ -104,4 +116,17 @@ export function personAge(person,today=new Date()){
   if(!person.deceased)return calculateAge(person.birthDate,today);
   if(!person.deathDate)return null;
   const [y,m,d]=person.deathDate.split('-').map(Number);const date=new Date(0);date.setFullYear(y,m-1,d);date.setHours(0,0,0,0);return calculateAge(person.birthDate,date);
+}
+
+export function deleteDirectoryEntry(directory,target){
+  validateDirectory(directory);
+  const next=structuredClone(directory),person=next.people.find(p=>p.id===target.personId);
+  if(!person)throw new Error('This person has already been deleted.');
+  next.deleted??={people:[],notes:[]};
+  if(target.noteId){
+    if(!person.notes.some(note=>note.id===target.noteId))throw new Error('This note has already been deleted.');
+    person.notes=person.notes.filter(note=>note.id!==target.noteId);person.updatedAt=new Date().toISOString();
+    next.deleted.notes.push({personId:person.id,noteId:target.noteId});
+  }else{next.people=next.people.filter(p=>p.id!==person.id);next.deleted.people.push(person.id);}
+  return next;
 }
