@@ -110,6 +110,7 @@ JSON format: `{ "version": 1, "people": [...] }`. Each person contains `id`, a c
 ## Validate
 
 - `python tests/logout_browser.py` checks confirmation/cancel, sync failure/retry, pending sync, and cleanup across tabs/reload.
+- `python tests/documents_browser.py` checks rich formatting, Drive-root persistence, folder nesting/dragging, author-only changes, chart links, sanitization and trash.
 - `python tests/logout_cleanup_browser.py` checks storage cleanup failure/retry, photo URL/draft/sticky removal and recovery from Drive.
 - `python tests/event_log_browser.py` verifies icon/window behavior, JSON/text history recovery, event coverage and cross-user sticky deletion using a synthetic backend.
 - `python tests/startup_sticky_browser.py` verifies connection hard stops, partial dates, collapse preferences and two-user sticky-note sync/deletion with a synthetic Drive backend.
@@ -143,3 +144,18 @@ The top-bar power button confirms logout, waits for any active sync, then perfor
 
 
 Person records optionally include **Allergies:** or **No known allergies** below age. The checkbox disables/dims the text field; saving it checked stores the no-known-allergies state and clears previously entered allergy text. Leaving both blank hides the line. These clinical fields follow existing protected directory storage, Drive sync and logout cleanup; the Event Log records field names only.
+
+
+## Drive desktop notes and folders
+
+Right-click empty desktop space for **New Blank Note** or **New Folder** (alongside New Sticky Note). Clinical notes support bold, italic, underline, bulleted and numbered lists. New notes receive a suggested timestamped name and current local date/time, both editable. Save writes immediately to My Drive root, or the current folder when created inside an open BHR folder. There is no offline document editing: failed writes keep the draft in memory, and closing/minimizing an editor retains that draft until it is saved, explicitly discarded, disconnected or logged out. Keep the page open while an unsaved draft exists.
+
+Saved notes use a versioned `bhr-rich-note` JSON format containing sanitized formatting, note date, immutable creation time and Google author identity. They are not executable HTML files and are opened/formatted within BHR. Native Drive folders and note files are marked with private application metadata; unrelated files in My Drive are neither listed nor changed. File names, folder names, note bodies and chart links are fetched directly from Google with no-store requests and are not saved in the browser directory, service-worker cache or repository. Metadata-only activity events remain in the protected Event Log.
+
+Desktop icons fill the existing grid from the top right. Double-click a note to open it, or a folder to browse it; Enter also opens. New Folder starts with an active selected **New Folder** name: type a name and press Enter or click away, or Escape to retain the default. Drag notes/folders onto a folder to move them. Create nested folders from the folder toolbar/context menu. **Up** navigates outward; dragging an item from a folder onto empty desktop space returns it to My Drive root. A folder cannot move into itself or a descendant.
+
+Right-click a note for Open, Rename note, Attach note to patient's chart, or Send to Trash (delete). Attachment links one person to the original Drive note; it does not move or duplicate the document. Attached notes appear under **Clinical documents** on that person's page. Reattaching selects a different chart. Read-only viewers can open chart links. Clinical notes' text, dates, names, location and chart attachment can be changed, and notes deleted, only by the Google identity that created them. Checks apply in the UI and immediately before Drive writes. Other creators' notes are read-only and cannot be dragged. Shared folders may be renamed/moved; only empty folders can be trashed, preventing indirect deletion of someone else's notes. Deletion requires confirmation and sends files to recoverable Google Drive Trash, not immediate permanent destruction.
+
+Writes check the current Drive modification time and send If-Match when an ETag is available; conflicting edits require reopening rather than silently overwriting. These browser-side checks are not a substitute for server-enforced authorization. Anyone signing into the same central Google account has the same author identity, and direct Drive access remains outside BHR restrictions. The future individual-staff-login backend must enforce these rules independently. Logout clears document/editor/list state across open BHR tabs; live files remain in Drive.
+
+The agreed medication spreadsheet design is in [docs/medication-list-design.md](docs/medication-list-design.md). This release documents that plan; it does not implement medications.
