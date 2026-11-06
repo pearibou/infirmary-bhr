@@ -1,3 +1,4 @@
+from browser_helpers import prepare_test_page,unlock_test_drive,open_drive,fill_death_date
 """Only synthetic records and generated image bytes; no real health information."""
 from playwright.sync_api import sync_playwright
 import json, struct, zlib
@@ -26,18 +27,20 @@ with sync_playwright() as p:
         else:route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
     page.route('https://www.googleapis.com/**',drive)
     page.add_init_script("localStorage.setItem('infirmary.drive',JSON.stringify({folder:'directory-only',folderName:'Backend directory folder'}))")
+    prepare_test_page(page)
     page.goto('http://127.0.0.1:8000')
+    unlock_test_drive(page,profile=False)
     assert page.locator('.person-header .avatar').inner_text()=='LT'
     page.get_by_role('button',name='Edit record for Legacy Test',exact=True).click()
     dialog=page.locator('#person-dialog')
     assert dialog.get_by_label('Preferred name',exact=True).input_value()=='Legacy Test'
-    assert dialog.get_by_label('Date of death',exact=True).is_disabled()
+    assert dialog.get_by_label('Death month',exact=True).is_disabled()
     dialog.get_by_label('This person is deceased').check()
-    assert dialog.get_by_label('Date of death',exact=True).is_enabled()
-    dialog.get_by_label('Date of death',exact=True).fill('1930-01-01')
+    assert dialog.get_by_label('Death month',exact=True).is_enabled()
+    fill_death_date(dialog,'1930-01-01')
     page.locator('#person-submit').click()
     assert 'precede' in page.locator('#person-error').inner_text()
-    dialog.get_by_label('Date of death',exact=True).fill('2020-01-01')
+    fill_death_date(dialog,'2020-01-01')
     dialog.get_by_label('Preferred name',exact=True).fill('Brother Alpha')
     page.locator('#person-submit').click()
     assert page.locator('.age').inner_text()=='Age at death: 80 years'
@@ -45,7 +48,7 @@ with sync_playwright() as p:
     assert page.locator('.note').count()==1
     assert page.get_by_role('link',name='Person documents').is_visible()
     assert page.locator('.note-pencil').count()==0
-    page.locator('#drive-open').click();page.locator('#google-connect').click()
+    open_drive(page);page.locator('#google-connect').click()
     page.wait_for_function("document.querySelector('#current-user').textContent.includes('Staff Alpha')")
     page.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()
     page.get_by_label('New note',exact=True).fill('Author observation');page.get_by_label('New note',exact=True).press('Enter')
@@ -60,7 +63,7 @@ with sync_playwright() as p:
     assert page.locator('.note-pencil').count()==1
     page.locator('.note-pencil').click()
     page.locator('#note-dialog').get_by_role('button',name='Cancel',exact=True).click()
-    page.locator('#drive-open').click();page.locator('#disconnect').click()
+    open_drive(page);page.locator('#disconnect').click()
     account.update(sub='staff-b',name='Staff Beta')
     page.locator('#google-connect').click()
     page.wait_for_function("document.querySelector('#current-user').textContent.includes('Staff Beta')")
@@ -104,9 +107,10 @@ with sync_playwright() as p:
     assert replaced['photo']=={'fileId':'photo-file-2','folderId':'person-folder-one'} and len(uploads)==2
     assert photo_parents==[['root'],['person-folder-one']]
     page.reload()
+    unlock_test_drive(page,profile=False)
     assert page.locator('.note-pencil').count()==0
     page.locator('.person').filter(has_text='Photo Test').click()
-    assert page.locator('.person-header .avatar').inner_text()=='PT'
+    page.locator('.person-header .avatar img').wait_for(state='visible')
     page.set_viewport_size({'width':390,'height':844})
     page.get_by_role('button',name='Edit this record',exact=True).click()
     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')

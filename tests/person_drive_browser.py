@@ -1,3 +1,4 @@
+from browser_helpers import prepare_test_page,unlock_test_drive,open_drive,fill_death_date
 """Person forms, folder persistence, and mocked native Google OAuth/Picker flow."""
 from playwright.sync_api import sync_playwright
 with sync_playwright() as p:
@@ -14,7 +15,9 @@ with sync_playwright() as p:
     window.google={accounts:{oauth2:{initTokenClient:opts=>({requestAccessToken:()=>{window.oauthCalls++;opts.callback({access_token:'test',expires_in:3600})}})}},picker:{DocsView:View,ViewId:{FOLDERS:'folders'},PickerBuilder:Builder,Action:{PICKED:'picked',CANCEL:'cancel'}}};
     ''')
     page.route('https://www.googleapis.com/oauth2/v3/userinfo',lambda route:route.fulfill(json={'sub':'synthetic-staff','name':'Synthetic Staff'}))
+    prepare_test_page(page)
     page.goto('http://127.0.0.1:8000')
+    unlock_test_drive(page,profile=True)
     page.locator('#add-person').click()
     dialog=page.locator('#person-dialog')
     assert dialog.get_by_label('Location',exact=False).count()==0
@@ -39,9 +42,10 @@ with sync_playwright() as p:
     page.locator('#folder-dialog').get_by_role('button',name='Attach folder',exact=True).click()
     assert page.get_by_role('link',name='Care documents').get_attribute('href').endswith('/care-folder')
     page.reload()
+    unlock_test_drive(page,profile=True)
     page.get_by_role('button',name='Brother Joseph',exact=True).click()
     assert page.get_by_role('link',name='Care documents').is_visible()
-    page.locator('#drive-open').click()
+    open_drive(page)
     page.get_by_role('button',name='Continue with Google').click()
     assert page.evaluate('window.oauthCalls')==1
     page.get_by_role('button',name='Use My Drive (root)').click()

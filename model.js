@@ -7,6 +7,11 @@ export function validateDirectory(data) {
     for(const id of data.deleted.people){if(typeof id!=='string'||!id||people.has(id))throw new Error('Invalid deleted person ID.');people.add(id);}
     for(const entry of data.deleted.notes){const key=JSON.stringify([entry?.personId,entry?.noteId]);if(!entry||typeof entry.personId!=='string'||!entry.personId||typeof entry.noteId!=='string'||!entry.noteId||notes.has(key))throw new Error('Invalid deleted note ID.');notes.add(key);}
   }
+  if(data.desktopNotes!==undefined){
+    if(!Array.isArray(data.desktopNotes))throw new Error('Invalid desktop notes.');
+    const ids=new Set();for(const note of data.desktopNotes){if(!note||typeof note.id!=='string'||!note.id||ids.has(note.id)||typeof note.text!=='string'||!note.text.trim()||!validDate(note.createdAt)||!validDate(note.updatedAt)||typeof note.authorName!=='string'||!Number.isFinite(note.x)||!Number.isFinite(note.y)||note.x<0||note.y<0)throw new Error('Invalid desktop note.');ids.add(note.id);}
+  }
+  if(data.deleted?.desktopNotes!==undefined&&(!Array.isArray(data.deleted.desktopNotes)||data.deleted.desktopNotes.some(id=>typeof id!=='string'||!id)||new Set(data.deleted.desktopNotes).size!==data.deleted.desktopNotes.length))throw new Error('Invalid deleted desktop notes.');
   const ids=new Set();
   for(const p of data.people){
     if(!p || typeof p.id!=='string' || !p.id || ids.has(p.id) || typeof p.name!=='string' || !p.name.trim() || (p.room!==undefined && typeof p.room!=='string') || typeof p.info!=='string' || !Array.isArray(p.notes) || !validDate(p.updatedAt)) throw new Error('Invalid person in directory.');
@@ -50,7 +55,13 @@ export function mergeDirectories(local,remote){
     const folders=new Map([...(old.driveFolders||[]),...(incoming.driveFolders||[])].map(folder=>[folder.id,folder]));
     people.set(old.id,{...latest,...(folders.size?{driveFolders:[...folders.values()]}:{}),notes:[...notes.values()].sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)||a.id.localeCompare(b.id))});
   }
-  return {version:1,people:[...people.values()],...((removedPeople.size||removedNotes.size)?{deleted:{people:[...removedPeople].sort(),notes:[...removedNotes.values()].sort((a,b)=>JSON.stringify([a.personId,a.noteId]).localeCompare(JSON.stringify([b.personId,b.noteId])))}}:{})};
+  const removedDesktop=new Set([...(local.deleted?.desktopNotes||[]),...(remote.deleted?.desktopNotes||[])]),desktop=new Map();
+  for(const note of [...(local.desktopNotes||[]),...(remote.desktopNotes||[])]){
+    if(removedDesktop.has(note.id))continue;const old=desktop.get(note.id);
+    if(old&&['text','createdAt','authorName','authorId'].some(key=>old[key]!==note[key]))throw new Error('Conflicting desktop note. Sync stopped to protect both copies.');
+    if(!old||Date.parse(note.updatedAt)>Date.parse(old.updatedAt)||note.updatedAt===old.updatedAt&&JSON.stringify([note.x,note.y])>JSON.stringify([old.x,old.y]))desktop.set(note.id,structuredClone(note));
+  }
+  return {version:1,people:[...people.values()],...(desktop.size?{desktopNotes:[...desktop.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))}:{}),...((removedPeople.size||removedNotes.size||removedDesktop.size)?{deleted:{people:[...removedPeople].sort(),notes:[...removedNotes.values()].sort((a,b)=>JSON.stringify([a.personId,a.noteId]).localeCompare(JSON.stringify([b.personId,b.noteId]))),...(removedDesktop.size?{desktopNotes:[...removedDesktop].sort()}:{})}}:{})};
 }
 
 export function personName(person){
@@ -101,26 +112,48 @@ function mergeNote(a,b){
   while(revisions.size){const children=[...revisions.values()].filter(edit=>edit.parentId===parent);if(children.length!==1)throw new Error('Concurrent note edits conflict. Both copies are retained; resolve before syncing.');const edit=children[0];edits.push(edit);revisions.delete(edit.id);parent=edit.id;}
   return {...a,...(edits.length?{edits}:{})};
 }
+export function deathDateParts(value){
+  if(typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)){const [year,month,day]=value.split('-');return {month,day,year};}
+  return value&&typeof value==='object'?{month:value.month??'',day:value.day??'',year:value.year??''}:{month:'',day:'',year:''};
+}
 export function deathDateError(person,today=new Date()){
   if(person.deceased!==undefined&&typeof person.deceased!=='boolean')return 'Invalid deceased status.';
   if(!person.deathDate)return '';
-  if(!person.deceased||typeof person.deathDate!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(person.deathDate))return 'Enter a valid date of death.';
-  const [year,month,day]=person.deathDate.split('-').map(Number);
-  if(birthDateError({year:String(year),month:String(month),day:String(day)}))return 'Enter a valid date of death.';
-  const local=new Date(0);local.setFullYear(year,month-1,day);local.setHours(0,0,0,0);
-  if(local>today)return 'Date of death cannot be in the future.';
-  const birth=person.birthDate;if(birth?.year&&birth.month&&birth.day&&calculateAge(birth,local)===null)return 'Date of death cannot precede date of birth.';
+  const value=person.deathDate;
+  if(!person.deceased||typeof value==='string'&&!/^\d{4}-\d{2}-\d{2}$/.test(value)||typeof value!=='string'&&(!value||typeof value!=='object'||Array.isArray(value)))return 'Enter a valid date of death.';
+  const parts=deathDateParts(value),{year,month,day}=parts;
+  if(birthDateError(parts))return 'Enter a valid date of death.';
+  if(day!==''&&month==='')return 'A day needs a month. Enter a month, year, or month/year if the exact date is unknown.';
+  if(year!==''){
+    const earliest=new Date(0);earliest.setFullYear(Number(year),month===''?0:Number(month)-1,day===''?1:Number(day));earliest.setHours(0,0,0,0);
+    if(earliest>today)return 'Date of death cannot be in the future.';
+    const latest=new Date(0);latest.setFullYear(Number(year),month===''?12:Number(month),0);latest.setHours(23,59,59,999);if(day!=='')latest.setDate(Number(day));
+    const birth=person.birthDate;
+    if(birth?.year&&birth.month&&birth.day&&calculateAge(birth,latest)===null)return 'Date of death cannot precede date of birth.';
+  }
   return '';
+}
+export function formatDeathDate(value){
+  const {year,month,day}=deathDateParts(value);
+  if(!year&&!month&&!day)return 'Unknown';
+  if(year&&month&&day)return `${String(year).padStart(4,'0')}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  const name=month?new Date(2000,Number(month)-1,1).toLocaleString('en-US',{month:'long'}):'';
+  return [name,day?String(day):'',year?String(year):''].filter(Boolean).join(' ');
 }
 export function personAge(person,today=new Date()){
   if(!person.deceased)return calculateAge(person.birthDate,today);
-  if(!person.deathDate)return null;
-  const [y,m,d]=person.deathDate.split('-').map(Number);const date=new Date(0);date.setFullYear(y,m-1,d);date.setHours(0,0,0,0);return calculateAge(person.birthDate,date);
+  const {year,month,day}=deathDateParts(person.deathDate);if(!year||!month||!day)return null;
+  const date=new Date(0);date.setFullYear(Number(year),Number(month)-1,Number(day));date.setHours(0,0,0,0);return calculateAge(person.birthDate,date);
 }
 
 export function deleteDirectoryEntry(directory,target){
   validateDirectory(directory);
-  const next=structuredClone(directory),person=next.people.find(p=>p.id===target.personId);
+  const next=structuredClone(directory);
+  if(target.desktopNoteId){
+    if(!next.desktopNotes?.some(note=>note.id===target.desktopNoteId))throw new Error('This desktop note has already been deleted.');
+    next.desktopNotes=next.desktopNotes.filter(note=>note.id!==target.desktopNoteId);next.deleted??={people:[],notes:[]};next.deleted.desktopNotes??=[];next.deleted.desktopNotes.push(target.desktopNoteId);return next;
+  }
+  const person=next.people.find(p=>p.id===target.personId);
   if(!person)throw new Error('This person has already been deleted.');
   next.deleted??={people:[],notes:[]};
   if(target.noteId){
