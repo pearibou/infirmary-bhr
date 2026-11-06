@@ -1,5 +1,9 @@
 # Version history
 
+## 0.7.8
+
+- Enlarge the sync arrow and rotate it clockwise throughout sync without changing top-bar height; add a subtle rounded border around Connected Users.
+
 ## 0.7.7
 
 - After final sync, logout clears protected browser storage, records, drafts, photo URLs and other open BHR tabs; failed sync/cleanup retains data for retry.

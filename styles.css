@@ -86,3 +86,13 @@
  .menubar #logout-power{grid-row:3}
  #connected-users-pane{right:0}
 }
+
+/* Fixed-size controls keep the menu bar's existing desktop/mobile heights. */
+.menubar #manual-sync{display:flex;align-items:center;justify-content:center;width:28px;min-width:28px;flex-shrink:0;color:#111}
+#manual-sync .sync-arrow{display:block;width:24px;height:24px;transform-origin:center}
+.menubar #manual-sync[aria-busy="true"]{opacity:1}
+#manual-sync[aria-busy="true"] .sync-arrow{animation:drive-sync-clockwise 1s linear infinite}
+@keyframes drive-sync-clockwise{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.menubar #connected-users{border:1px solid #aaa;border-radius:5px;min-height:24px;height:24px;padding:0 5px}
+@media(prefers-reduced-motion:reduce){#manual-sync[aria-busy="true"] .sync-arrow{animation-duration:3s}}
+.menubar .presence-menu{align-self:stretch;display:flex;align-items:center}

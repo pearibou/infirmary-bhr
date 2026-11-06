@@ -1,5 +1,5 @@
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.7.7';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.7.7';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.7.8';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.7.8';
 let token,expires=0,loading,authorizedClient,currentUser;
 const activeRequests=new Set();
 export function disconnect(){for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}

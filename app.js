@@ -1,12 +1,12 @@
-import {updateSessionPresence} from './presence.js?v=0.7.7';
-import {closeAppMenu} from './app-menu.js?v=0.7.7';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.7';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.7';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.7.7';
-import {validatePhoto} from './photos.js?v=0.7.7';
-import './windows.js?v=0.7.7';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.7';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.7';
+import {updateSessionPresence} from './presence.js?v=0.7.8';
+import {closeAppMenu} from './app-menu.js?v=0.7.8';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.8';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.8';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.7.8';
+import {validatePhoto} from './photos.js?v=0.7.8';
+import './windows.js?v=0.7.8';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.8';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.8';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
