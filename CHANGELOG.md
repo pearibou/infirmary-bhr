@@ -1,5 +1,9 @@
 # Version history
 
+## 0.6.3
+
+- Included middle name/initial in directory and record full-name subtitles, removing the separate middle-name detail label. Preferred display names are unchanged.
+
 ## 0.6.2
 
 - Reduced the main window’s initial desktop size to roughly 60% of viewport width and 80% of available height, retaining responsive sizing and maximize/restore.

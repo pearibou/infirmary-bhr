@@ -32,7 +32,9 @@ with sync_playwright() as p:
     assert names()==['Brother Zulu','Brother Delta','Brother Cedar','Brother Alpha']
     assert page.locator('.person-header h2').inner_text()=='Brother Alpha'
     assert page.get_by_role('img',name='Deceased — crucifix',exact=True).is_visible()
-    assert page.get_by_text('Middle name / initial: J.',exact=True).is_visible()
+    assert page.locator('.legal-name').inner_text()=='Zed J. Zulu'
+    assert page.locator('.person').filter(has_text='Brother Alpha').locator('span').inner_text()=='Zed J. Zulu'
+    assert page.get_by_text('Middle name / initial: J.',exact=True).count()==0
     page.get_by_role('button',name='Edit this record',exact=True).click()
     assert dialog.get_by_label('Middle name / initial',exact=True).input_value()=='J.'
     dialog.get_by_label('This person is deceased',exact=True).uncheck()
@@ -49,11 +51,15 @@ with sync_playwright() as p:
     assert names()==['Brother Zulu','Brother Alpha','Brother Delta','Brother Cedar']
     page.locator('#add-person').click()
     dialog.get_by_label('Preferred name',exact=True).fill('Brother New')
-    dialog.get_by_label('Middle name / initial',exact=True).fill('James')
+    dialog.get_by_label('Middle name / initial',exact=True).fill('Genoa')
+    dialog.get_by_label('First name',exact=True).fill('John')
+    dialog.get_by_label('Last name',exact=True).fill('Smith')
     dialog.get_by_role('button',name='Add person',exact=True).click()
     assert page.locator('.person-header h2').inner_text()=='Brother New'
+    assert page.locator('.legal-name').inner_text()=='John Genoa Smith'
+    assert page.locator('.person').filter(has_text='Brother New').locator('span').inner_text()=='John Genoa Smith'
     page.get_by_role('button',name='Edit this record',exact=True).click()
-    assert dialog.get_by_label('Middle name / initial',exact=True).input_value()=='James'
+    assert dialog.get_by_label('Middle name / initial',exact=True).input_value()=='Genoa'
     page.set_viewport_size({'width':390,'height':844})
     assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     b.close()
