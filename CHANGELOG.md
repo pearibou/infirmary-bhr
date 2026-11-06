@@ -1,5 +1,9 @@
 # Version history
 
+## 0.4.1
+
+- Removed profile-photo folder selection. New/replacement photos automatically upload to the person’s first attached Drive folder, falling back to My Drive root.
+
 ## 0.4.0
 
 - Added directory/header pencils and a shared New/Edit record form preserving notes and folders.
