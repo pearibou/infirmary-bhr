@@ -35,7 +35,7 @@ function minimize(win,title){
   restore.onclick=()=>{if(win instanceof HTMLDialogElement)win.showModal();else win.hidden=false;restore.remove();constrain(win);win.querySelector('.titlebar,.dialog-title')?.focus();};dock.append(restore);restore.focus();
 }
 main.id='records-window';movable(main,main.querySelector('.titlebar'));
-document.querySelector('#minimize-main').onclick=()=>minimize(main,'Brother Health Records');
+document.querySelector('#minimize-main').onclick=()=>minimize(main,'Brother Health Records - Main');
 maximize.onclick=()=>{
   const isMaximized=main.classList.contains('maximized');
   if(isMaximized){main.classList.remove('maximized');main.style.cssText=beforeMaximize||'';constrain(main);}
