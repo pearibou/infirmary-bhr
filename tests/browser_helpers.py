@@ -20,7 +20,9 @@ def prepare_test_page(page):
     page.add_init_script(SDK)
     page.route('https://accounts.google.com/gsi/client',lambda route:route.fulfill(content_type='application/javascript',body=SDK))
 def open_drive(page):
-    if not page.locator('#drive-dialog').is_visible():page.locator('#drive-open').click()
+    if not page.locator('#drive-dialog').is_visible():
+        if not page.locator('#app-menu').is_visible():page.locator('#app-menu-toggle').click()
+        page.locator('#drive-open').click()
 def unlock_test_drive(page,profile=True):
     if not page.locator('body').evaluate("el=>el.classList.contains('drive-locked')"):return
     snapshot=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')||'{\"version\":1,\"people\":[]}')")

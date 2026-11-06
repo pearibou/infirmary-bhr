@@ -45,3 +45,24 @@
  .menubar .menu-clock{grid-row:3;grid-column:1 / -1;width:calc(100% - 44px);justify-self:start}
  .menubar #logout-power{grid-row:3;grid-column:4}
 }
+
+/* System 7 application menu. */
+.menubar{display:flex;gap:18px;height:38px;min-height:38px}
+.application-menu{position:relative;flex-shrink:0;align-self:stretch}
+.menubar #app-menu-toggle{height:100%;padding:0 8px;white-space:nowrap}
+.menubar #app-menu-toggle[aria-expanded="true"]{background:#111;color:#fff}
+#app-menu{position:absolute;top:100%;left:0;width:208px;padding:3px 0;background:#fff;border:1px solid #111;box-shadow:2px 2px 0 #111;z-index:10}
+#app-menu[hidden]{display:none}
+.menubar #app-menu button{display:block;width:100%;min-height:32px;padding:5px 18px;text-align:left;font-size:14px;background:transparent;color:#111;border:0;box-shadow:none;border-radius:0}
+.menubar #app-menu button:not(:disabled):is(:hover,:focus){background:#111;color:#fff;outline:none}
+.menubar #app-menu button:disabled{color:#888;cursor:default}
+@media(max-width:700px){
+ .menubar{display:grid;grid-template-columns:28px minmax(0,1fr) 32px;grid-template-rows:36px 32px;height:auto;min-height:68px;gap:0 8px}
+ .menubar .abbey-mark{grid-row:1;grid-column:1}
+ .menubar .application-menu{grid-row:1;grid-column:2;min-width:0;justify-self:start}
+ .menubar #app-menu-toggle{padding:0 2px;font-size:12px}
+ .menubar #manual-sync{grid-row:1;grid-column:3}
+ .menubar .menu-clock{grid-row:2;grid-column:1 / -1;width:calc(100% - 44px);justify-self:start}
+ .menubar #logout-power{grid-row:2;grid-column:3}
+ .menubar #app-menu button{min-height:36px}
+}

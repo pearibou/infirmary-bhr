@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" shape-rendering="crispEdges">
+  <title>Mepkin Abbey emblem</title>
+  <!-- Purpose-drawn logical pixels: roof, pillars, branch, and water. -->
+  <g fill="#111">
+    <path d="M12 1h4v2h-4zM10 3h3v1h-3zM8 4h3v1H8zM6 5h3v1H6zM4 6h3v1H4zM2 7h3v1H2zM15 3h3v1h-3zM17 4h3v1h-3zM19 5h3v1h-3zM21 6h3v1h-3zM23 7h3v1h-3z"/>
+    <path d="M13 3h2v5h-2zM0 8h28v2H0zM3 10h2v12H3zM23 10h2v12h-2z"/>
+    <path d="M5 11h10v1H5zM14 12h4v1h-4zM17 13h4v1h-4zM20 14h3v1h-3zM8 12h3v1H8zM7 13h2v2H7zM6 15h1v2H6zM11 13h1v4h-1zM15 14h2v1h-2zM17 15h2v1h-2zM19 16h2v1h-2zM21 17h2v1h-2zM18 14h1v3h-1zM22 18h1v2h-1z"/>
+    <path d="M2 21h10v2H2zM16 21h10v2H16zM2 24h8v2H2zM10 23h2v2h-2zM16 23h2v2h-2zM18 24h8v2h-8zM2 27h10v1H2zM16 27h10v1H16zM13 22h2v6h-2z"/>
+  </g>
+</svg>

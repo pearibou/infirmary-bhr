@@ -6,7 +6,7 @@ A dependency-free, single-page PWA with a System 7 Macintosh interface. Director
 
 From this repository, run `npm start` (Node/npm and Python 3 required), then open port 8000 locally. Alternatively serve this directory using any static HTTP server. No install or build step is required. Deploy these files to an HTTPS static host for home-screen installation and offline support. Do not open `index.html` as a file URL.
 
-Use **+ New** to create a person, select them in the directory, and enter notes with Enter or Add. Notes appear oldest first, with timestamps displayed in the device's timezone. **Export JSON** downloads a backup. No sample health records are included.
+Use **+ New** to create a person, select them in the directory, and enter notes with Enter or Add. Notes appear oldest first, with timestamps displayed in the device's timezone. **Mepkin Abbey Infirmary → Export JSON** downloads a backup. No sample health records are included.
 
 ## Required connection and desktop handoff notes
 
@@ -78,7 +78,7 @@ Until the client ID is configured in `config.js`, actual Google sign-in cannot r
 
 To store `people_directory.json` at the top level of your own Drive, sign in, click **Use My Drive (root)**, then **Sync directory**. This choice is remembered and does not require opening the folder picker. It refers to My Drive, not a shared-drive root.
 
-The normal connection flow is **Google Drive… → Continue with Google → Choose directory folder… → Sync directory**. Account selection and consent use Google's actual OAuth popup; folder selection uses Google's actual Picker. Both need one-time application registration by the site administrator. The connection screen does not expose technical configuration fields. A static site cannot supply its own valid Google client identity automatically.
+The normal connection flow is **Mepkin Abbey Infirmary → Google Drive… → Continue with Google → Choose directory folder… → Sync directory**. Account selection and consent use Google's actual OAuth popup; folder selection uses Google's actual Picker. Both need one-time application registration by the site administrator. The connection screen does not expose technical configuration fields. A static site cannot supply its own valid Google client identity automatically.
 
 1. Create a Google Cloud project; enable **Google Drive API** and **Google Picker API**.
 2. Configure the OAuth consent screen and add test users while the app is in testing. Create an **OAuth 2.0 Web application** client.

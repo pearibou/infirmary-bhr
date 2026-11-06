@@ -1,10 +1,11 @@
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.3';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.3';
-import {makeTrashable,clearTrashSelection} from './trash.js?v=0.7.3';
-import {validatePhoto} from './photos.js?v=0.7.3';
-import './windows.js?v=0.7.3';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.3';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.3';
+import {closeAppMenu} from './app-menu.js?v=0.7.5';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.5';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.5';
+import {makeTrashable,clearTrashSelection} from './trash.js?v=0.7.5';
+import {validatePhoto} from './photos.js?v=0.7.5';
+import './windows.js?v=0.7.5';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.5';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.5';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
@@ -275,7 +276,7 @@ $('#trash-dialog').addEventListener('close',()=>{trashTarget=undefined;$('#trash
 
 function lockWorkspace(){
   if(!hasDriveAccess()){connected=false;clearPhotos();$('#current-user').textContent='';}
-  workspaceReady=false;document.body.classList.add('drive-locked');$('.desktop').inert=true;closeDesktopMenu();
+  workspaceReady=false;document.body.classList.add('drive-locked');$('.desktop').inert=true;closeDesktopMenu();closeAppMenu();
   for(const dialog of document.querySelectorAll('dialog'))if(dialog.id!=='drive-dialog'&&dialog.open)dialog.close();
   $('#connection-required').hidden=false;$('#drive-dialog [data-close]').disabled=true;fillSettings();
   if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();
