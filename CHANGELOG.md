@@ -1,5 +1,9 @@
 # Version history
 
+## 0.6.1
+
+- Limited chronological-note trash dragging and deletion to the original connected author, with checks at confirmation and in the data operation. Shared desktop-note trash behavior is unchanged.
+
 ## 0.6.0
 
 - Added precision-preserving partial death dates and rejected isolated days.

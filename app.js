@@ -1,9 +1,9 @@
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.6.0';
-import {makeTrashable,clearTrashSelection} from './trash.js?v=0.6.0';
-import {validatePhoto} from './photos.js?v=0.6.0';
-import './windows.js?v=0.6.0';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.6.0';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.6.0';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.6.1';
+import {makeTrashable,clearTrashSelection} from './trash.js?v=0.6.1';
+import {validatePhoto} from './photos.js?v=0.6.1';
+import './windows.js?v=0.6.1';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.6.1';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.6.1';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
@@ -48,7 +48,7 @@ function render(){
   const form=element('form',undefined,'note-form'),input=element('input');input.required=true;input.maxLength=10000;input.placeholder='Type a note and press Enter…';input.setAttribute('aria-label','New note');input.autocomplete='off';const submit=element('button','Add');submit.type='submit';form.append(input,submit);panel.append(form,element('p',getCurrentUser()?'Each note records your Google account. Oldest entries appear first.':'Connect Google Drive to attribute notes to your account and enable author-only editing. Signed-out notes remain unattributed.','hint'));
   const notes=element('ol',undefined,'notes');
   for(const note of [...person.notes].sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)||a.id.localeCompare(b.id))){
-    const li=element('li',undefined,'note');li.tabIndex=0;makeTrashable(li,{personId:person.id,noteId:note.id});const meta=element('div',undefined,'note-meta'),time=element('time',formatTime(note.createdAt));time.dateTime=note.createdAt;
+    const li=element('li',undefined,'note');li.tabIndex=0;if(canEditNote(note,getCurrentUser()))makeTrashable(li,{personId:person.id,noteId:note.id},()=>canEditNote(note,getCurrentUser()));else{li.draggable=false;li.title='Only the original author can delete this note';li.addEventListener('dragstart',event=>event.preventDefault());}const meta=element('div',undefined,'note-meta'),time=element('time',formatTime(note.createdAt));time.dateTime=note.createdAt;
     meta.append(time,element('span','Entered by '+(note.authorName||'Unattributed (legacy or signed out)'),'note-author'));
     if(canEditNote(note,getCurrentUser())){const edit=element('button','✎','note-pencil');edit.type='button';edit.setAttribute('aria-label','Edit your note from '+formatTime(note.createdAt));edit.onclick=()=>openNoteEditor(person.id,note.id);meta.append(edit);}
     li.append(meta,element('p',currentNoteText(note)));
@@ -245,12 +245,13 @@ let trashTarget;
 document.addEventListener('trash-request',event=>{
   const target=event.detail,sticky=target.desktopNoteId?data.desktopNotes?.find(note=>note.id===target.desktopNoteId):null,person=data.people.find(p=>p.id===target.personId),note=target.noteId?person?.notes.find(n=>n.id===target.noteId):null;
   if(target.desktopNoteId?!sticky:!person||(target.noteId&&!note)){toast('This entry is no longer in the directory.');return;}
+  if(note&&!canEditNote(note,getCurrentUser())){toast('Only the Google account that entered this note can delete it.');return;}
   trashTarget={...target};$('#trash-error').textContent='';$('#trash-entry-label').textContent=sticky?'Shared desktop note · '+new Date(sticky.createdAt).toLocaleString():note?`Note for ${personName(person)} · ${formatTime(note.createdAt)}`:`Person: ${personName(person)} (including ${person.notes.length} notes)`;
   $('#trash-dialog').showModal();$('#trash-dialog [data-close]').focus();
 });
 $('#trash-form').onsubmit=event=>{
   event.preventDefault();try{
-    const next=deleteDirectoryEntry(data,trashTarget);
+    const next=deleteDirectoryEntry(data,trashTarget,getCurrentUser());
     if(save(next)){
       if(!trashTarget.noteId&&editPersonId===trashTarget.personId){$('#person-form').reset();clearPhotoPreview();$('#person-dialog').close();document.querySelector('#window-dock [data-window="person-dialog"]')?.remove();}
       if(noteEditTarget?.personId===trashTarget.personId&&(!trashTarget.noteId||noteEditTarget.noteId===trashTarget.noteId)){$('#note-edit-text').value='';$('#note-dialog').close();noteEditTarget=undefined;document.querySelector('#window-dock [data-window="note-dialog"]')?.remove();}

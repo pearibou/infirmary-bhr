@@ -61,6 +61,7 @@ with sync_playwright() as p:
     assert entry['text']=='Author observation' and entry['edits'][0]['text']=='Corrected observation'
     assert entry['authorId']=='staff-a'
     assert page.locator('.note-pencil').count()==1
+    assert page.locator('.note').filter(has_text='Corrected observation').get_attribute('draggable')=='true'
     page.locator('.note-pencil').click()
     page.locator('#note-dialog').get_by_role('button',name='Cancel',exact=True).click()
     open_drive(page);page.locator('#disconnect').click()
@@ -69,6 +70,10 @@ with sync_playwright() as p:
     page.wait_for_function("document.querySelector('#current-user').textContent.includes('Staff Beta')")
     page.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()
     assert page.locator('.note-pencil').count()==0
+    assert page.locator('.note').filter(has_text='Corrected observation').get_attribute('draggable')=='false'
+    page.evaluate("document.dispatchEvent(new CustomEvent('trash-request',{detail:{personId:'legacy',noteId:JSON.parse(localStorage.getItem('infirmary.directory.v1')).people[0].notes[1].id}}))")
+    assert not page.locator('#trash-dialog').is_visible()
+    assert 'Only the Google account' in page.locator('#toast').inner_text()
     # Even a stale editor submitted after an account switch must reject editing.
     page.locator('#note-dialog').evaluate('(el)=>el.showModal()')
     page.locator('#note-edit-text').fill('Attempt by another account')

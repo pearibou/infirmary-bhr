@@ -146,7 +146,7 @@ export function personAge(person,today=new Date()){
   const date=new Date(0);date.setFullYear(Number(year),Number(month)-1,Number(day));date.setHours(0,0,0,0);return calculateAge(person.birthDate,date);
 }
 
-export function deleteDirectoryEntry(directory,target){
+export function deleteDirectoryEntry(directory,target,user=null){
   validateDirectory(directory);
   const next=structuredClone(directory);
   if(target.desktopNoteId){
@@ -157,7 +157,9 @@ export function deleteDirectoryEntry(directory,target){
   if(!person)throw new Error('This person has already been deleted.');
   next.deleted??={people:[],notes:[]};
   if(target.noteId){
-    if(!person.notes.some(note=>note.id===target.noteId))throw new Error('This note has already been deleted.');
+    const note=person.notes.find(note=>note.id===target.noteId);
+    if(!note)throw new Error('This note has already been deleted.');
+    if(!canEditNote(note,user))throw new Error('Only the Google account that entered this note can delete it.');
     person.notes=person.notes.filter(note=>note.id!==target.noteId);person.updatedAt=new Date().toISOString();
     next.deleted.notes.push({personId:person.id,noteId:target.noteId});
   }else{next.people=next.people.filter(p=>p.id!==person.id);next.deleted.people.push(person.id);}
