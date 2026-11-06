@@ -10,7 +10,7 @@ export function validateDirectory(data) {
   const ids=new Set();
   for(const p of data.people){
     if(!p || typeof p.id!=='string' || !p.id || ids.has(p.id) || typeof p.name!=='string' || !p.name.trim() || (p.room!==undefined && typeof p.room!=='string') || typeof p.info!=='string' || !Array.isArray(p.notes) || !validDate(p.updatedAt)) throw new Error('Invalid person in directory.');
-    for(const field of ['firstName','lastName','preferredName'])if(p[field]!==undefined && typeof p[field]!=='string')throw new Error('Invalid name field.');
+    for(const field of ['firstName','middleName','lastName','preferredName'])if(p[field]!==undefined && typeof p[field]!=='string')throw new Error('Invalid name field.');
     if(p.birthDate!==undefined && (!p.birthDate || typeof p.birthDate!=='object' || birthDateError(p.birthDate)))throw new Error('Invalid birth date.');
     if(p.driveFolders!==undefined){
       if(!Array.isArray(p.driveFolders))throw new Error('Invalid Drive folders.');
@@ -129,4 +129,12 @@ export function deleteDirectoryEntry(directory,target){
     next.deleted.notes.push({personId:person.id,noteId:target.noteId});
   }else{next.people=next.people.filter(p=>p.id!==person.id);next.deleted.people.push(person.id);}
   return next;
+}
+
+const directoryCollator=new Intl.Collator(undefined,{sensitivity:'base'});
+export function compareDirectoryPeople(a,b){
+  return Number(Boolean(a.deceased))-Number(Boolean(b.deceased))
+    ||directoryCollator.compare(a.lastName?.trim()||personName(a),b.lastName?.trim()||personName(b))
+    ||directoryCollator.compare(a.firstName?.trim()||personName(a),b.firstName?.trim()||personName(b))
+    ||a.id.localeCompare(b.id);
 }

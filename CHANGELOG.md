@@ -1,5 +1,11 @@
 # Version history
 
+## 0.5.1
+
+- Grouped living/deceased directory entries, each sorted by surname, with a heavy divider and muted plum deceased styling.
+- Added optional middle name/initial in New/Edit/search without changing display names.
+- Simplified death-date labels and added a crucifix beside deceased persons’ avatars.
+
 ## 0.5.0
 
 - Added true maximize/restore with previous geometry and a status bar pinned to the window frame.

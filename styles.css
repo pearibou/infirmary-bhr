@@ -22,3 +22,4 @@
 @media(max-width:700px){.desktop{padding:112px 10px 24px}.workspace{display:block}.directory{max-height:280px}.people{max-height:170px}.detail{overflow:visible}.window{height:calc(100dvh - var(--desktop-top,64px) - 140px);min-height:180px}.window.maximized{height:calc(100dvh - var(--desktop-top,64px))}}
 
 .window:not(.maximized){max-height:min(calc(100dvh - var(--desktop-top,38px) - 8px),var(--window-room-height,100dvh));max-width:min(calc(100vw - 20px),var(--window-room-width,100vw))}
+.directory-divider{border-top:5px solid #493848;border-bottom:1px solid #fff;margin:7px 0}.deceased-row{background:#e7dce6;border-bottom-color:#c8b6c6}.deceased-row .person{color:#60475e}.deceased-row .person.selected{background:#6b4e69;color:#fff}.deceased-row .record-pencil{color:#60475e;background:#e7dce6;border-color:#8d7489}.avatar-group{display:flex;align-items:center;gap:8px;flex-shrink:0}.deceased-crucifix{width:20px;height:34px;color:#6b4e69;flex-shrink:0}

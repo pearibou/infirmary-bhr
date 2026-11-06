@@ -88,3 +88,16 @@ test('deletion marker validation rejects invalid metadata',()=>{
  assert.throws(()=>validateDirectory({version:1,people:[],deleted:{people:['same','same'],notes:[]}}),/deleted/);
  assert.throws(()=>validateDirectory({version:1,people:[],deleted:{people:[],notes:[{personId:'p',noteId:''}]}}),/deleted/);
 });
+
+import {compareDirectoryPeople} from '../model.js';
+test('directory groups living before deceased and sorts each by surname, ignoring display name',()=>{
+ const entries=[{id:'1',firstName:'A',lastName:'Zulu',preferredName:'Brother Alpha'}, {id:'2',firstName:'Z',lastName:'Adams',preferredName:'Brother Zulu'}, {id:'3',firstName:'A',lastName:'Adams',deceased:true}, {id:'4',firstName:'B',lastName:'zulu',deceased:true}];
+ assert.deepEqual(entries.toSorted(compareDirectoryPeople).map(p=>p.id),['2','1','3','4']);
+ assert.equal(personName({...entries[0],middleName:'James'}),'Brother Alpha');
+ assert.equal(personName({firstName:'John',middleName:'J.',lastName:'Smith'}),'John Smith');
+});
+test('middle name is optional text and survives directory merge',()=>{
+ const entry={...person(),middleName:'J.'};validateDirectory({version:1,people:[entry]});
+ assert.equal(mergeDirectories(emptyDirectory(),{version:1,people:[entry]}).people[0].middleName,'J.');
+ assert.throws(()=>validateDirectory({version:1,people:[{...entry,middleName:123}]}),/name/);
+});
