@@ -26,12 +26,48 @@ with sync_playwright() as p:
     assert not page.locator('body').evaluate("el=>el.classList.contains('drive-locked')")
     assert page.get_by_label('New note',exact=True).input_value()=='Synthetic unsent draft'
     power.click();page.keyboard.press('Escape');assert not dialog.is_visible()
-    # Keep an actual sync pending when confirming logout. It must not reopen the workspace.
-    pending=[]
+    # Failed final sync retains the authenticated session and permits retry.
+    assert page.locator('#connected-users').inner_text()=='Connected Users: 1'
+    page.locator('#connected-users').click()
+    assert page.locator('#connected-users-list').inner_text()=='Synthetic Staff'
+    power.click()
+    page.route('https://www.googleapis.com/drive/v3/files/root?*',lambda route:route.fulfill(status=503,json={'error':{'message':'Synthetic outage'}}))
+    dialog.get_by_role('button',name='Log out',exact=True).click()
+    page.wait_for_function("document.querySelector('#logout-status').textContent.includes('still signed in')")
+    assert not page.locator('body').evaluate("el=>el.classList.contains('drive-locked')")
+    assert page.get_by_label('New note',exact=True).input_value()=='Synthetic unsent draft'
+    page.unroute('https://www.googleapis.com/drive/v3/files/root?*')
+    dialog.get_by_role('button',name='Cancel',exact=True).click()
+    # Hold an older sync; logout must wait for it and then upload a fresh snapshot.
+    pending=[];writes=[]
     page.route('https://www.googleapis.com/drive/v3/files/root?*',lambda route:pending.append(route))
-    page.locator('#manual-sync').click();page.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='true'")
+    page.route('https://www.googleapis.com/drive/v3/files?*',lambda route:route.fulfill(json={'files':[] if 'BHR_event_log.txt' in route.request.url else [{'id':'logout-test'}]}))
+    page.route('https://www.googleapis.com/drive/v3/files/logout-test?*',lambda route:route.fulfill(json=seed))
+    def write(route):
+        writes.append(route.request.post_data_json)
+        route.fulfill(json={'id':'logout-test'})
+    page.route('https://www.googleapis.com/upload/drive/v3/files/logout-test?*',write)
+    page.locator('#manual-sync').click()
+    page.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='true'")
+    page.get_by_label('New note',exact=True).fill('Synthetic latest saved note')
+    page.get_by_label('New note',exact=True).press('Enter')
     power.click();dialog.get_by_role('button',name='Log out',exact=True).click()
+    assert dialog.get_by_role('button',name='Cancel',exact=True).is_disabled()
+    assert not page.locator('body').evaluate("el=>el.classList.contains('drive-locked')")
+    page.keyboard.press('Escape');assert dialog.is_visible()
+    page.wait_for_timeout(100)
+    assert len(pending)==1
+    pending[0].fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
+    for _ in range(100):
+        page.wait_for_timeout(50)
+        if len(pending)>1:break
+    assert len(pending)==2
+    assert not page.locator('body').evaluate("el=>el.classList.contains('drive-locked')")
+    pending[1].fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
     page.wait_for_function("document.body.classList.contains('drive-locked')")
+    assert len(writes)==2
+    assert any(note['text']=='Synthetic latest saved note' for note in writes[-1]['people'][0]['notes'])
+    assert page.locator('#connected-users').inner_text()=='Connected Users: 0'
     assert page.locator('#drive-dialog').is_visible()
     assert page.locator('#drive-dialog [data-close]').is_disabled()
     assert page.locator('.desktop').evaluate('el=>el.inert')
@@ -39,9 +75,6 @@ with sync_playwright() as p:
     assert page.get_by_label('New note',exact=True).input_value()==''
     events=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')).eventLog")
     assert any(event['action']=='session.logged_out' and event['actorId']=='synthetic-staff' for event in events)
-    for route in pending:route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
-    page.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'")
-    assert 'Logged out.' in page.locator('#drive-status').inner_text()
     # A delayed OAuth result after disconnect must also be discarded.
     page.evaluate("google.accounts.oauth2.initTokenClient=opts=>({requestAccessToken:()=>window.pendingAuth=opts.callback})")
     page.locator('#google-connect').click()
@@ -52,4 +85,4 @@ with sync_playwright() as p:
     assert power.is_disabled()
     assert not errors,errors
     browser.close()
-    print('PASS: power right of clock at desktop/tablet/mobile widths; dimmed two-choice dialog; Cancel/Escape preserve session; logout clears draft, records actor and locks workspace; pending sync cannot unlock it')
+    print('PASS: power right of clock at desktop/tablet/mobile widths; dimmed two-choice dialog; Cancel/Escape preserve session; logout clears draft, records actor and locks workspace; failed sync retains session; pending sync is awaited before fresh final sync')

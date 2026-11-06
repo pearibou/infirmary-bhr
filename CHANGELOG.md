@@ -1,5 +1,10 @@
 # Version history
 
+## 0.7.6
+
+- Wait for a fresh, successful final Drive sync before logout; keep the session open with retry on failure.
+- Add compact Connected Users dropdown showing the current browser session, with a replaceable subscription provider for future shared presence.
+
 ## 0.7.5
 - Move Google Drive and Export JSON into a keyboard-accessible System 7 application menu under Mepkin Abbey Infirmary.
 

@@ -1,11 +1,12 @@
-import {closeAppMenu} from './app-menu.js?v=0.7.5';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.5';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.5';
-import {makeTrashable,clearTrashSelection} from './trash.js?v=0.7.5';
-import {validatePhoto} from './photos.js?v=0.7.5';
-import './windows.js?v=0.7.5';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.5';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.5';
+import {updateSessionPresence} from './presence.js?v=0.7.6';
+import {closeAppMenu} from './app-menu.js?v=0.7.6';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.6';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.6';
+import {makeTrashable,clearTrashSelection} from './trash.js?v=0.7.6';
+import {validatePhoto} from './photos.js?v=0.7.6';
+import './windows.js?v=0.7.6';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.6';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.6';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
@@ -128,7 +129,7 @@ function openNoteEditor(personId,noteId){const note=data.people.find(p=>p.id===p
 $('#note-edit-form').onsubmit=event=>{event.preventDefault();try{const {personId,noteId,baseline}=noteEditTarget,next=structuredClone(data),person=next.people.find(p=>p.id===personId),index=person.notes.findIndex(n=>n.id===noteId),note=person.notes[index];if(JSON.stringify(note)!==baseline)throw new Error('This note changed. Reopen it before editing.');person.notes[index]=editNote(note,getCurrentUser(),$('#note-edit-text').value);person.updatedAt=new Date().toISOString();if(save(next)){$('#note-dialog').close();renderKeepingDraft();}}catch(error){$('#note-edit-error').textContent=error.message;}};
 for(const button of document.querySelectorAll('[data-close]'))button.onclick=()=>document.getElementById(button.dataset.close).close();
 $('#export').onclick=()=>{if(!workspaceReady||!hasDriveAccess()){lockWorkspace();return;}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=element('a');link.href=url;link.download='people_directory.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-let driveConfig={...window.INFIRMARY_CONFIG},googleReady=false,googleLoading=false,connecting=false,connected=false,pickerReady=false,folderTarget,syncing=false,syncAgain=false;
+let driveConfig={...window.INFIRMARY_CONFIG},googleReady=false,googleLoading=false,connecting=false,connected=false,pickerReady=false,folderTarget,syncing=false,syncAgain=false,loggingOut=false,syncPromise=null;
 try{
   const remembered=JSON.parse(localStorage.getItem('infirmary.drive')||'{}');
   driveConfig={...remembered,...Object.fromEntries(Object.entries(driveConfig).filter(([,value])=>value))};
@@ -142,7 +143,8 @@ function fillSettings(){
   $('#sync').disabled=!connected||!driveConfig.folder||syncing;
   $('#manual-sync').disabled=syncing||!workspaceReady;
   $('#export').disabled=!workspaceReady;
-  $('#logout-power').disabled=!workspaceReady;
+  $('#logout-power').disabled=!workspaceReady||loggingOut;
+  updateSessionPresence(workspaceReady&&hasDriveAccess()?(getCurrentUser()||{id:'current-session',name:'Connected Google account'}):null);
   $('#manual-sync').setAttribute('aria-busy',String(syncing));
   $('#choose-sync-folder').disabled ||= syncing;
   $('#use-drive-root').disabled ||= syncing;
@@ -186,9 +188,33 @@ function disconnectWorkspace(logout=false){
 }
 $('#disconnect').onclick=()=>disconnectWorkspace();
 $('#logout-power').onclick=()=>{if(!workspaceReady)return;$('#logout-dialog').showModal();$('#logout-dialog [data-close]').focus();};
-$('#confirm-logout').onclick=()=>{disconnectWorkspace(true);};
+$('#confirm-logout').onclick=async()=>{
+  if(loggingOut)return;
+  loggingOut=true;fillSettings();
+  const dialog=$('#logout-dialog'),status=$('#logout-status');
+  dialog.querySelectorAll('button').forEach(button=>button.disabled=true);
+  status.textContent='Syncing with Google Drive before logging out…';
+  try{
+    // An existing request used an older snapshot; wait, then send a fresh one.
+    if(syncPromise)await syncPromise;
+    if(!await runSync(false,true))throw new Error('Final sync did not complete.');
+    disconnectWorkspace(true);
+  }catch(error){status.textContent='Could not finish syncing. You are still signed in. Check your connection and try Log out again. '+error.message;}
+  finally{loggingOut=false;dialog.querySelectorAll('button').forEach(button=>button.disabled=false);fillSettings();}
+};
+$('#logout-dialog').addEventListener('cancel',event=>{if(loggingOut)event.preventDefault();});
+$('#logout-dialog').addEventListener('close',()=>{$('#logout-status').textContent='';});
 
-async function runSync(automatic=false){
+function runSync(automatic=false,finalLogout=false){
+  if(loggingOut&&!finalLogout)return Promise.resolve(false);
+  if(syncPromise){syncAgain=true;return syncPromise;}
+  syncPromise=performSync(automatic).finally(()=>{
+    syncPromise=null;const again=syncAgain;syncAgain=false;
+    if(again&&!loggingOut&&workspaceReady&&hasDriveAccess())queueMicrotask(()=>runSync(true));
+  });
+  return syncPromise;
+}
+async function performSync(automatic=false){
   if(syncing){syncAgain=true;return;}
   if(storageFailed){if(!automatic)toast('Resolve local storage before syncing.');return;}
   if(!navigator.onLine){if(!automatic)toast('Offline. Notes will sync after your connection returns.');return;}
@@ -205,11 +231,13 @@ async function runSync(automatic=false){
     // Preserve notes added during the request; the next cycle uploads them.
     const next=mergeDirectories(data,merged),changed=JSON.stringify(next)!==JSON.stringify(data);
     if(!save(next,true))throw new Error('Drive synced, but local storage failed. Export records before closing.');
+    if(loggingOut&&JSON.stringify(next)!==JSON.stringify(merged))throw new Error('Records changed during final sync. Retry logout to send the latest changes.');
     if(connected&&hasDriveAccess())unlockWorkspace();
     if(changed){const input=$('.note-form input'),draft=input?.value,focused=document.activeElement===input;selected=selected||data.people[0]?.id;render();if(draft&&$('.note-form input'))$('.note-form input').value=draft;if(focused)$('.note-form input')?.focus();}
     $('#connection').textContent='Last synced '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});$('#drive-status').textContent='Synced. Automatic sync checks every 10 seconds while connected.';
+    return true;
   }catch(error){if(epoch!==sessionEpoch)return;$('#drive-status').textContent=error.message;$('#connection').textContent='Sync failed · local notes retained';if(!automatic)toast(error.message);}
-  finally{syncing=false;fillSettings();const again=syncAgain;syncAgain=false;if(again&&workspaceReady&&hasDriveAccess())queueMicrotask(()=>runSync(true));}
+  finally{syncing=false;fillSettings();}
 }
 $('#sync').onclick=()=>runSync();
 $('#manual-sync').onclick=()=>runSync();
