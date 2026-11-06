@@ -36,7 +36,7 @@ with sync_playwright() as p:
         page.locator('#manual-sync').click();page.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'")
     c,a=setup('Synthetic Staff A');connect(a)
     icon=a.locator('#event-log-icon');trash=a.locator('#desktop-trash')
-    assert icon.bounding_box()['y']>trash.bounding_box()['y'] and abs(icon.bounding_box()['x']-trash.bounding_box()['x'])<1
+    assert icon.bounding_box()['y']<trash.bounding_box()['y'] and abs(icon.bounding_box()['x']-trash.bounding_box()['x'])<1
     icon.dblclick();assert a.locator('#event-log-dialog').is_visible();assert a.locator('#event-log-text').get_attribute('contenteditable') is None
     assert a.locator('#event-log-dialog textarea').count()==0
     a.locator('#event-log-dialog').get_by_role('button',name='Close',exact=True).click()
@@ -74,4 +74,4 @@ with sync_playwright() as p:
     assert d.evaluate('document.documentElement.scrollWidth<=innerWidth')
     assert not errors,errors
     browser.close()
-    print('PASS: New Sticky Note label; clipboard below Trash; read-only Event Log window; record/note/folder/upload/delete logging; metadata-only text; immutable cross-user merge; anyone can delete shared stickies; newest-first chronology; recovery from text copy')
+    print('PASS: New Sticky Note label; clipboard at top right; Trash bottom right; read-only Event Log window; record/note/folder/upload/delete logging; metadata-only text; immutable cross-user merge; anyone can delete shared stickies; newest-first chronology; recovery from text copy')

@@ -1,5 +1,11 @@
 # Version history
 
+## 0.7.3
+
+- Moved Event Log to the top-right desktop grid and pinned Trash to the bottom right.
+- Replaced the diamond with a monochrome pixel-style recreation of the supplied abbey emblem.
+- Updated branding to Mepkin Abbey Infirmary and adjusted responsive header spacing.
+
 ## 0.7.2
 
 - Added a right-aligned power button and dimmed Log out/Cancel confirmation.

@@ -13,7 +13,7 @@ function constrain(win){
 function layout(){
   const top=menu.getBoundingClientRect().bottom;
   document.documentElement.style.setProperty('--desktop-top',`${top}px`);
-  document.documentElement.style.setProperty('--desktop-rows',Math.max(1,Math.floor((innerHeight-top-80)/96)));
+  document.documentElement.style.setProperty('--desktop-rows',Math.max(1,Math.floor((innerHeight-top-128)/96)));
   constrain(main);for(const dialog of document.querySelectorAll('dialog'))constrain(dialog);
 }
 function movable(win,bar){
