@@ -1,19 +1,19 @@
-import {updateSessionPresence} from './presence.js?v=0.7.6';
-import {closeAppMenu} from './app-menu.js?v=0.7.6';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.6';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.6';
-import {makeTrashable,clearTrashSelection} from './trash.js?v=0.7.6';
-import {validatePhoto} from './photos.js?v=0.7.6';
-import './windows.js?v=0.7.6';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.6';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.6';
-const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
-let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0;
+import {updateSessionPresence} from './presence.js?v=0.7.8';
+import {closeAppMenu} from './app-menu.js?v=0.7.8';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.8';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.8';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.7.8';
+import {validatePhoto} from './photos.js?v=0.7.8';
+import './windows.js?v=0.7.8';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.8';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.8';
+const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
+let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
 const photoUrls=new Map();let photoGeneration=0;
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,6000);}
 try{const stored=localStorage.getItem(KEY);if(stored)data=validateDirectory(JSON.parse(stored));}catch{storageFailed=true;toast('Stored data could not be read. Existing storage has been preserved; reload after resolving the problem.');}
-function save(next,fromSync=false){if(!fromSync&&(!workspaceReady||!hasDriveAccess())){if(workspaceReady)lockWorkspace();toast('Connect Google Drive and sync the directory first.');return false;}if(storageFailed){toast('Storage is unavailable. Existing data is protected.');return false;}try{if(!fromSync)next=recordChanges(data,next,getCurrentUser());localStorage.setItem(KEY,JSON.stringify(next));data=next;refreshEventLog();$('#storage-status').textContent='Saved on this device';return true;}catch{toast('Could not save: device storage is unavailable or full. Export your existing records.');return false;}}
+function save(next,fromSync=false){if(sessionCleared)return false;if(!fromSync&&(!workspaceReady||!hasDriveAccess())){if(workspaceReady)lockWorkspace();toast('Connect Google Drive and sync the directory first.');return false;}if(storageFailed){toast('Storage is unavailable. Existing data is protected.');return false;}try{if(!fromSync)next=recordChanges(data,next,getCurrentUser());localStorage.setItem(KEY,JSON.stringify(next));data=next;refreshEventLog();$('#storage-status').textContent='Saved on this device';return true;}catch{toast('Could not save: device storage is unavailable or full. Export your existing records.');return false;}}
 function element(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 function render(){
   refreshEventLog();clearTrashSelection();renderDesktopNotes(data.desktopNotes||[]);
@@ -93,21 +93,21 @@ $('#person-form').onsubmit=async event=>{
   const error=(!firstName&&!lastName&&!preferredName)?'Enter at least one name.':birthDateError(birthDate)||deathDateError(fields);
   $('#person-error').textContent=error;if(error)return;
   const id=editPersonId||crypto.randomUUID(),file=$('#person-photo').files[0];
-  personSaveBusy=true;for(const control of $('#person-form').elements)control.disabled=true;
+  const saveEpoch=sessionEpoch;personSaveBusy=true;fillSettings();for(const control of $('#person-form').elements)control.disabled=true;
   try{
     let person=data.people.find(p=>p.id===id);
     if(editPersonId&&!person)throw new Error('This record was deleted while you were editing.');
     if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed while you were editing. Reopen it to review the latest details.');
     let photo=person?.photo;const folder=person?.driveFolders?.[0]?.id||'root';
-    if(file){if(!hasDriveAccess())throw new Error('Connect Google Drive before saving a photo. Your form has been kept.');await validatePhoto(file);$('#person-error').textContent='Uploading photo directly to Drive…';const photoActor=getCurrentUser(),uploaded=await uploadPersonFile(folder,file);if(uploaded.id)appendActivity('photo.uploaded','file',uploaded.id,'Profile photo uploaded to Drive folder '+folder,id,photoActor);if(!uploaded.id)throw new Error('Google did not return a photo file ID.');photo={fileId:uploaded.id,folderId:folder};}
+    if(file){if(!hasDriveAccess())throw new Error('Connect Google Drive before saving a photo. Your form has been kept.');await validatePhoto(file);$('#person-error').textContent='Uploading photo directly to Drive…';const photoActor=getCurrentUser(),uploaded=await uploadPersonFile(folder,file);if(saveEpoch!==sessionEpoch)return;if(uploaded.id)appendActivity('photo.uploaded','file',uploaded.id,'Profile photo uploaded to Drive folder '+folder,id,photoActor);if(!uploaded.id)throw new Error('Google did not return a photo file ID.');photo={fileId:uploaded.id,folderId:folder};}
     const next=structuredClone(data);person=next.people.find(p=>p.id===id);
     if(editPersonId&&!person)throw new Error('This record was deleted during the upload. The photo remains in Drive.');
     if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed during photo upload. The photo is in Drive; reopen the record before saving details.');
     const updated={...(person||{id,notes:[],driveFolders:[]}),...fields,updatedAt:new Date().toISOString(),...(photo?{photo}:{})};updated.name=personName({...updated,name:''});
     if(person)next.people[next.people.findIndex(p=>p.id===id)]=updated;else next.people.push(updated);
     if(save(next)){selected=id;$('#search').value='';render();$('#person-dialog').close();event.target.reset();clearPhotoPreview();$('#person-error').textContent='';}
-  }catch(error){$('#person-error').textContent=error.message;}
-  finally{personSaveBusy=false;for(const control of $('#person-form').elements)control.disabled=false;updateDeathFields();}
+  }catch(error){if(saveEpoch===sessionEpoch)$('#person-error').textContent=error.message;}
+  finally{personSaveBusy=false;fillSettings();for(const control of $('#person-form').elements)control.disabled=false;updateDeathFields();}
 };
 function formatTime(value){return new Date(value).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'});}
 function initials(person){return personName(person).split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();}
@@ -129,7 +129,7 @@ function openNoteEditor(personId,noteId){const note=data.people.find(p=>p.id===p
 $('#note-edit-form').onsubmit=event=>{event.preventDefault();try{const {personId,noteId,baseline}=noteEditTarget,next=structuredClone(data),person=next.people.find(p=>p.id===personId),index=person.notes.findIndex(n=>n.id===noteId),note=person.notes[index];if(JSON.stringify(note)!==baseline)throw new Error('This note changed. Reopen it before editing.');person.notes[index]=editNote(note,getCurrentUser(),$('#note-edit-text').value);person.updatedAt=new Date().toISOString();if(save(next)){$('#note-dialog').close();renderKeepingDraft();}}catch(error){$('#note-edit-error').textContent=error.message;}};
 for(const button of document.querySelectorAll('[data-close]'))button.onclick=()=>document.getElementById(button.dataset.close).close();
 $('#export').onclick=()=>{if(!workspaceReady||!hasDriveAccess()){lockWorkspace();return;}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=element('a');link.href=url;link.download='people_directory.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-let driveConfig={...window.INFIRMARY_CONFIG},googleReady=false,googleLoading=false,connecting=false,connected=false,pickerReady=false,folderTarget,syncing=false,syncAgain=false,loggingOut=false,syncPromise=null;
+let driveConfig={...window.INFIRMARY_CONFIG},googleReady=false,googleLoading=false,connecting=false,connected=false,pickerReady=false,folderTarget,syncing=false,syncAgain=false,loggingOut=false,syncPromise=null,uploading=false,uploadPersonId;
 try{
   const remembered=JSON.parse(localStorage.getItem('infirmary.drive')||'{}');
   driveConfig={...remembered,...Object.fromEntries(Object.entries(driveConfig).filter(([,value])=>value))};
@@ -143,7 +143,7 @@ function fillSettings(){
   $('#sync').disabled=!connected||!driveConfig.folder||syncing;
   $('#manual-sync').disabled=syncing||!workspaceReady;
   $('#export').disabled=!workspaceReady;
-  $('#logout-power').disabled=!workspaceReady||loggingOut;
+  $('#logout-power').disabled=!workspaceReady||loggingOut||personSaveBusy||uploading;
   updateSessionPresence(workspaceReady&&hasDriveAccess()?(getCurrentUser()||{id:'current-session',name:'Connected Google account'}):null);
   $('#manual-sync').setAttribute('aria-busy',String(syncing));
   $('#choose-sync-folder').disabled ||= syncing;
@@ -169,19 +169,42 @@ $('#google-connect').onclick=async()=>{
   // A ready SDK lets OAuth open directly from this click, avoiding popup blockers.
   if(!googleReady){await readyGoogle();return;}
   const authEpoch=sessionEpoch;connecting=true;fillSettings();$('#drive-status').textContent='Complete sign-in in the Google window. Close it to cancel.';
-  try{await authorize(driveConfig.clientId);if(authEpoch!==sessionEpoch){disconnect();return;}connected=true;clearPhotos();try{const user=await loadCurrentUser();$('#current-user').textContent='Signed in as '+user.name;}catch(error){$('#current-user').textContent='Author identity unavailable; new notes will be unattributed.';}if(authEpoch!==sessionEpoch){$('#current-user').textContent='';return;}appendActivity('drive.connected','directory',driveConfig.folder||'unselected','Google Drive connection established');renderKeepingDraft();$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Use My Drive (root), or configure Google folder browsing.';if(driveConfig.folder&&!workspaceReady)await runSync();}
+  try{await authorize(driveConfig.clientId);if(authEpoch!==sessionEpoch){disconnect();return;}connected=true;sessionCleared=false;clearPhotos();try{const user=await loadCurrentUser();$('#current-user').textContent='Signed in as '+user.name;}catch(error){$('#current-user').textContent='Author identity unavailable; new notes will be unattributed.';}if(authEpoch!==sessionEpoch){$('#current-user').textContent='';return;}appendActivity('drive.connected','directory',driveConfig.folder||'unselected','Google Drive connection established');renderKeepingDraft();$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Use My Drive (root), or configure Google folder browsing.';if(driveConfig.folder&&!workspaceReady)await runSync();}
   catch(error){if(authEpoch!==sessionEpoch)return;connected=false;$('#drive-status').textContent=error.message;}
   finally{connecting=false;fillSettings();}
 };
 async function chooseFolder(dialog){
   // Native Google Picker must appear above the app, outside a modal's top layer.
-  choosingFolder=true;dialog.close();try{return await pickFolder(driveConfig);}finally{choosingFolder=false;if(!dialog.open)dialog.showModal();}
+  const pickerEpoch=sessionEpoch;choosingFolder=true;dialog.close();try{const folder=await pickFolder(driveConfig);return pickerEpoch===sessionEpoch?folder:null;}finally{choosingFolder=false;if(pickerEpoch===sessionEpoch&&!dialog.open)dialog.showModal();}
 }
 $('#choose-sync-folder').onclick=async()=>{try{await authorize(driveConfig.clientId);const folder=await chooseFolder($('#drive-dialog'));if(folder){driveConfig.folder=folder.id;driveConfig.folderName=folder.name;rememberSettings();appendActivity('directory.selected','directory',folder.id,'Directory storage folder selected');fillSettings();$('#drive-status').textContent='Directory folder selected. Choose Sync directory to merge your records.';if(!workspaceReady)await runSync();}}catch(error){$('#drive-status').textContent=error.message;}};
 $('#use-drive-root').onclick=()=>{driveConfig.folder='root';driveConfig.folderName='My Drive (root)';rememberSettings();appendActivity('directory.selected','directory','root','My Drive root selected for directory storage');fillSettings();$('#drive-status').textContent='My Drive selected. Sync directory will save people_directory.json at the top level of My Drive.';if(!workspaceReady)runSync();};
+function clearProtectedWorkspace(removeStorage=true){
+  if(removeStorage){
+    // Remove only BHR data, preserving unrelated origin storage/preferences.
+    // Do this before ending the session so a storage failure is retryable.
+    localStorage.removeItem('infirmary.drive');
+    localStorage.removeItem(KEY);
+    if(localStorage.getItem(KEY)!==null)throw new Error('Browser records could not be cleared.');
+    try{localStorage.setItem(LOGOUT_KEY,crypto.randomUUID());}catch{} // Removal itself also notifies other tabs.
+  }
+  sessionEpoch++;sessionCleared=true;syncAgain=false;choosingFolder=false;disconnect();connected=false;
+  clearPhotos();clearPhotoPreview();clearTrashSelection();finishEntryDrag();
+  data=emptyDirectory();selected=undefined;editPersonId=null;recordBaseline=undefined;noteEditTarget=undefined;folderTarget=undefined;uploadPersonId=undefined;trashTarget=undefined;
+  for(const form of document.querySelectorAll('form'))form.reset();
+  for(const input of document.querySelectorAll('input:not([type="checkbox"]),textarea'))input.value='';
+  $('#upload-folder').replaceChildren();$('#person-deceased').checked=false;updateDeathFields();
+  for(const id of ['person-error','folder-error','upload-person-name','upload-status','note-edit-error','trash-entry-label','trash-error','sticky-error','current-user'])$('#'+id).textContent='';
+  clearTimeout(toast.timer);$('#toast').textContent='';$('#toast').hidden=true;
+  driveConfig={...window.INFIRMARY_CONFIG};
+  document.querySelectorAll('#window-dock [data-window$="-dialog"]').forEach(button=>button.remove());
+  storageFailed=false;$('.workspace').inert=false;render();lockWorkspace();
+  $('#storage-status').textContent='No records stored on this device';$('#connection').textContent='Logged out';
+  $('#drive-status').textContent='Logged out. Protected browser data cleared. Connect Google Drive to open BHR again.';
+}
 function disconnectWorkspace(logout=false){
-  if(logout)appendActivity('session.logged_out','session','current','BHR session logged out');
-  appendActivity('drive.disconnected','directory',driveConfig.folder||'unselected','Google Drive disconnected');
+  if(logout){clearProtectedWorkspace();return;}
+  if(!sessionCleared&&connected)appendActivity('drive.disconnected','directory',driveConfig.folder||'unselected','Google Drive disconnected');
   sessionEpoch++;syncAgain=false;disconnect();connected=false;clearPhotos();clearPhotoPreview();
   $('#person-form').reset();$('#upload-form').reset();$('#note-edit-text').value='';$('#sticky-text').value='';if($('.note-form input'))$('.note-form input').value='';
   $('#current-user').textContent='';renderKeepingDraft();fillSettings();$('#connection').textContent='Local workspace';$('#drive-status').textContent=logout?'Logged out. Connect Google Drive to open BHR again.':'Disconnected. Connect Google Drive to reopen the workspace.';lockWorkspace();
@@ -190,6 +213,7 @@ $('#disconnect').onclick=()=>disconnectWorkspace();
 $('#logout-power').onclick=()=>{if(!workspaceReady)return;$('#logout-dialog').showModal();$('#logout-dialog [data-close]').focus();};
 $('#confirm-logout').onclick=async()=>{
   if(loggingOut)return;
+  if(personSaveBusy||uploading){toast('Wait for the current upload or record save to finish before logging out.');return;}
   loggingOut=true;fillSettings();
   const dialog=$('#logout-dialog'),status=$('#logout-status');
   dialog.querySelectorAll('button').forEach(button=>button.disabled=true);
@@ -197,9 +221,13 @@ $('#confirm-logout').onclick=async()=>{
   try{
     // An existing request used an older snapshot; wait, then send a fresh one.
     if(syncPromise)await syncPromise;
+    // Log the request before the final upload; do not create unsynced events
+    // after it, since successful logout now removes this browser's copy.
+    appendActivity('session.logout_requested','session','current','User confirmed logout; final sync requested');
     if(!await runSync(false,true))throw new Error('Final sync did not complete.');
+    status.textContent='Sync complete. Clearing this browser’s protected data…';
     disconnectWorkspace(true);
-  }catch(error){status.textContent='Could not finish syncing. You are still signed in. Check your connection and try Log out again. '+error.message;}
+  }catch(error){status.textContent='Logout did not finish. You are still signed in; local records are retained. Check your connection or browser storage and try Log out again. '+error.message;}
   finally{loggingOut=false;dialog.querySelectorAll('button').forEach(button=>button.disabled=false);fillSettings();}
 };
 $('#logout-dialog').addEventListener('cancel',event=>{if(loggingOut)event.preventDefault();});
@@ -256,11 +284,14 @@ $('#pick-person-folder').onclick=async()=>{
   if(!connected||!pickerReady){$('#folder-error').textContent='Connect Google Drive and configure its folder picker first, or paste a folder link below.';return;}
   try{await authorize(driveConfig.clientId);const folder=await chooseFolder($('#folder-dialog'));if(folder)attachFolder(folder);}catch(error){$('#folder-error').textContent=error.message;}
 };
-window.addEventListener('storage',event=>{if(event.key===KEY){toast('Records changed in another tab. Reload this tab before editing.');storageFailed=true;$('.workspace').inert=true;}});
+window.addEventListener('storage',event=>{
+  if((event.key===KEY&&event.newValue===null)||event.key===LOGOUT_KEY||event.key===null){clearProtectedWorkspace(false);return;}
+  if(event.key===KEY){toast('Records changed in another tab. Reload this tab before editing.');storageFailed=true;$('.workspace').inert=true;}
+});
 function connection(){if(!navigator.onLine)$('#connection').textContent='Offline · local notes available';else if($('#connection').textContent.startsWith('Offline'))$('#connection').textContent='Local workspace';}window.addEventListener('online',connection);window.addEventListener('offline',connection);connection();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>toast('Offline caching unavailable. Use HTTPS or localhost.'));
 
-let uploading=false,uploadPersonId;
+
 function openUpload(id){
   if(uploading){$('#upload-dialog').showModal();return;}
   const person=data.people.find(p=>p.id===id);
@@ -275,11 +306,11 @@ function openUpload(id){
 $('#upload-form').onsubmit=async event=>{
   event.preventDefault();if(uploading)return;
   const file=$('#upload-file').files[0],folder=$('#upload-folder').value;if(!file||!folder)return;
-  uploading=true;$('#upload-submit').disabled=true;$('#upload-file').disabled=true;$('#upload-folder').disabled=true;$('#upload-status').textContent='Uploading directly to Google Drive… Keep this page open.';
+  const uploadEpoch=sessionEpoch;uploading=true;fillSettings();$('#upload-submit').disabled=true;$('#upload-file').disabled=true;$('#upload-folder').disabled=true;$('#upload-status').textContent='Uploading directly to Google Drive… Keep this page open.';
   const actor=getCurrentUser();
-  try{const uploaded=await uploadPersonFile(folder,file);appendActivity('file.uploaded','file',uploaded.id||'unknown-file','File uploaded to Drive folder '+folder,uploadPersonId,actor);runSync();$('#upload-status').textContent='Uploaded to Google Drive: '+file.name;$('#upload-file').value='';toast('File uploaded to Google Drive.');}
-  catch(error){$('#upload-status').textContent=error.message;}
-  finally{uploading=false;$('#upload-submit').disabled=false;$('#upload-file').disabled=false;$('#upload-folder').disabled=false;}
+  try{const uploaded=await uploadPersonFile(folder,file);if(uploadEpoch!==sessionEpoch)return;appendActivity('file.uploaded','file',uploaded.id||'unknown-file','File uploaded to Drive folder '+folder,uploadPersonId,actor);runSync();$('#upload-status').textContent='Uploaded to Google Drive: '+file.name;$('#upload-file').value='';toast('File uploaded to Google Drive.');}
+  catch(error){if(uploadEpoch===sessionEpoch)$('#upload-status').textContent=error.message;}
+  finally{uploading=false;fillSettings();$('#upload-submit').disabled=false;$('#upload-file').disabled=false;$('#upload-folder').disabled=false;}
 };
 window.addEventListener('beforeunload',event=>{if(uploading){event.preventDefault();event.returnValue='';}});
 
@@ -326,6 +357,7 @@ $('#sticky-form').onsubmit=event=>{
 lockWorkspace();readyGoogle();
 
 function appendActivity(action,type,id,summary,personId,user=getCurrentUser()){
+  if(sessionCleared)return;
   const next={...data,eventLog:mergeEventLogs(data.eventLog,[createEvent(user,action,type,id,summary,personId)])};
   if(!save(next,true))toast('The action completed, but its event log could not be saved. Keep this page open and resolve storage.');
 }

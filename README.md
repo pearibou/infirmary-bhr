@@ -16,11 +16,13 @@ Right-click an empty desktop area to open its context menu, then choose **New St
 
 ## Log out
 
-The power symbol at the far right of the top bar opens a small dimmed-screen confirmation: **Do you want to log out?** **Cancel** or Escape keeps the session and draft; **Log out** clears the in-memory Google connection, aborts pending Drive requests, clears unsent editor/file drafts and photo previews, and returns to the mandatory connection window. A completed old sync cannot unlock the logged-out workspace. Saved records remain intact in local storage/Drive. Logout activity is recorded locally and may remain pending until the next connection. This logs out of the BHR connection, not every Google website or the browser's Google account; future backend staff sessions will be separate from the central Drive connection.
+The power symbol at the far right of the top bar opens **Do you want to log out?** Cancel or Escape keeps the session and draft. Log out waits for any current sync, records the logout request, then completes a fresh Drive sync before clearing protected browser data. If sync or storage cleanup fails, the session and records remain available for retry. Finish active uploads/record saves before logging out.
+
+Successful logout removes directory JSON (including notes, sticky notes, photos' Drive references and event history) and remembered Drive folder settings from localStorage. It clears rendered records, editor drafts, file selections, photo blob URLs and in-memory account/record state, and locks/clears other open BHR tabs on the same browser origin. The next connection pulls records from Drive. Public frontend assets remain cached; non-sensitive display preferences are retained. Drive requests use `cache: no-store`; the service worker caches only explicitly listed frontend assets. Downloaded exports, screenshots, browser/OS backups and another device's sessions are outside this cleanup. Closing a tab/browser or using Disconnect is not this explicit logout-and-clear flow. This ends the BHR connection, not the browser's Google account; future backend staff sessions will be separate from the central Drive connection.
 
 ## Event Log
 
-Double-click the clipboard icon at the top right of the desktop (or focus it and press Enter) to open the read-only Event Log window. Events appear newest first and record actor, UTC creation time, action, affected entry ID, and changed field names. Record creation/updates/deletion, clinical note entry/edits/deletion, folder attachment changes, profile-photo and other uploads, sticky creation/movement/deletion, Drive connections/disconnections and directory-location selections are recorded. Read-only viewing, mouse movements, window geometry and unchanged periodic syncs do not add noise. Logging begins with this version; past activity cannot be reconstructed retroactively.
+Double-click the clipboard icon at the top right of the desktop (or focus it and press Enter) to open the read-only Event Log window. Events appear newest first and record actor, UTC creation time, action, affected entry ID, and changed field names. Record creation/updates/deletion, clinical note entry/edits/deletion, folder attachment changes, profile-photo and other uploads, sticky creation/movement/deletion, Drive connections/disconnections and directory-location selections are recorded. Read-only viewing, mouse movements, window geometry and unchanged periodic syncs do not add noise. Logout requests are recorded before the final sync; a request is not proof that sync and cleanup succeeded. Logging begins with this version; past activity cannot be reconstructed retroactively.
 
 Data mutations and their event metadata are saved together in browser directory JSON. Existing event IDs cannot be edited or removed through normal application actions, including deleting a person or note. Cross-user sync unions entries and rejects changes under an existing event ID. Clinical note text, record field values, attachment bytes and credentials are not copied into the log. File IDs, person IDs and staff identities remain protected information. Only synthetic test metadata belongs in source.
 
@@ -107,7 +109,8 @@ JSON format: `{ "version": 1, "people": [...] }`. Each person contains `id`, a c
 
 ## Validate
 
-- `python tests/logout_browser.py` checks power-button placement, confirmation/cancel and logout during pending sync.
+- `python tests/logout_browser.py` checks confirmation/cancel, sync failure/retry, pending sync, and cleanup across tabs/reload.
+- `python tests/logout_cleanup_browser.py` checks storage cleanup failure/retry, photo URL/draft/sticky removal and recovery from Drive.
 - `python tests/event_log_browser.py` verifies icon/window behavior, JSON/text history recovery, event coverage and cross-user sticky deletion using a synthetic backend.
 - `python tests/startup_sticky_browser.py` verifies connection hard stops, partial dates, collapse preferences and two-user sticky-note sync/deletion with a synthetic Drive backend.
 - `python tests/directory_browser.py` checks group/surname sorting, plum entries, crucifix, middle-name editing and unchanged display names.
@@ -134,6 +137,6 @@ With login, the local/offline cache also needs an explicit policy: avoid unencry
 
 ### Logout and presence
 
-The top-bar power button confirms logout, waits for any active sync, then performs a fresh final sync before disconnecting. A failed final sync keeps the session open for retry; Cancel becomes available again. Unsaved input drafts are not posted automatically. Closing a tab or browser does not run this logout flow.
+The top-bar power button confirms logout, waits for any active sync, then performs a fresh final sync before disconnecting. A failed final sync keeps the session open for retry; Cancel becomes available again. After successful sync, logout removes protected local records and remembered folder settings, clears UI/memory and other open tabs, then requires a new connection. Unsaved input drafts are discarded rather than posted automatically. Closing a tab or browser does not run this logout flow.
 
 **Connected Users: N** opens a compact list. Currently it reports only the authenticated session in this browser, not all people using the shared Drive account. `presence.js` exports `setPresenceProvider(provider)` for future shared presence: `provider.subscribe(onUsers)` emits arrays of `{id, name}` and returns an unsubscribe function. The provider starts only during an unlocked session and stops at logout; stale callbacks are ignored. Supply this from a future authenticated backend with session expiry/heartbeats and authorization, without writing presence to the clinical directory or GitHub.
