@@ -1,4 +1,4 @@
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.7.8';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.7.9';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
@@ -18,6 +18,8 @@ export function validateDirectory(data) {
   for(const p of data.people){
     if(!p || typeof p.id!=='string' || !p.id || ids.has(p.id) || typeof p.name!=='string' || !p.name.trim() || (p.room!==undefined && typeof p.room!=='string') || typeof p.info!=='string' || !Array.isArray(p.notes) || !validDate(p.updatedAt)) throw new Error('Invalid person in directory.');
     for(const field of ['firstName','middleName','lastName','preferredName'])if(p[field]!==undefined && typeof p[field]!=='string')throw new Error('Invalid name field.');
+    if(p.allergies!==undefined&&(typeof p.allergies!=='string'||p.allergies.length>2000))throw new Error('Invalid allergies field.');
+    if(p.noKnownAllergies!==undefined&&typeof p.noKnownAllergies!=='boolean')throw new Error('Invalid no-known-allergies field.');
     if(p.birthDate!==undefined && (!p.birthDate || typeof p.birthDate!=='object' || birthDateError(p.birthDate)))throw new Error('Invalid birth date.');
     if(p.driveFolders!==undefined){
       if(!Array.isArray(p.driveFolders))throw new Error('Invalid Drive folders.');

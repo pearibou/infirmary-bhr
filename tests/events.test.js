@@ -25,3 +25,11 @@ test('every connected user can trash a shared sticky while preserving its event 
  const other={id:'staff-b',name:'Staff B'},deleted=recordChanges(data,deleteDirectoryEntry(data,{desktopNoteId:'s'},other),other);
  assert.equal(deleted.desktopNotes.length,0);assert.ok(deleted.eventLog.some(e=>e.action==='sticky.deleted'&&e.actorId==='staff-b'));assert.equal(deleted.eventLog.length,2);
 });
+
+test('allergy updates log field names without clinical values',()=>{
+ const before={version:1,people:[person()]},after=structuredClone(before);
+ after.people[0].allergies='SYNTHETIC ALLERGY DETAIL';after.people[0].noKnownAllergies=false;
+ const result=recordChanges(before,after,user),text=eventLogText(result.eventLog);
+ assert.ok(text.includes('allergies'));assert.ok(text.includes('noKnownAllergies'));
+ assert.ok(!text.includes('SYNTHETIC ALLERGY DETAIL'));
+});

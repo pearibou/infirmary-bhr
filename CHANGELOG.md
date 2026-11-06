@@ -1,5 +1,9 @@
 # Version history
 
+## 0.7.9
+
+- Add optional allergies text and No known allergies checkbox to person records; show the selected state below age, sync fields and log changes without clinical values.
+
 ## 0.7.8
 
 - Enlarge the sync arrow and rotate it clockwise throughout sync without changing top-bar height; add a subtle rounded border around Connected Users.

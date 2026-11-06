@@ -96,3 +96,10 @@
 .menubar #connected-users{border:1px solid #aaa;border-radius:5px;min-height:24px;height:24px;padding:0 5px}
 @media(prefers-reduced-motion:reduce){#manual-sync[aria-busy="true"] .sync-arrow{animation-duration:3s}}
 .menubar .presence-menu{align-self:stretch;display:flex;align-items:center}
+
+.allergy-fields{border:0;padding:0;margin:16px 0 0;min-width:0}
+.allergy-fields label{margin:0}
+.allergy-fields:disabled{opacity:.45}
+.allergy-fields:disabled textarea{background:#ddd;cursor:default}
+#person-dialog .allergy-check{margin-top:8px}
+.detail .allergies{font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}

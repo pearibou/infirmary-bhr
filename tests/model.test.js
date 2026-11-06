@@ -125,3 +125,14 @@ test('chronological deletion requires the current original author, including aft
  assert.throws(()=>deleteDirectoryEntry(directory,{personId:'p1',noteId:'legacy'},author),/Only/);
  const deleted=deleteDirectoryEntry(directory,{personId:'p1',noteId:'authored'},author);assert.equal(deleted.people[0].notes.length,1);assert.equal(directory.people[0].notes.length,2);
 });
+
+test('optional allergies and no-known-allergies state validate and survive newer-record sync',()=>{
+ const legacy={version:1,people:[person()]};validateDirectory(legacy);
+ const known={...person(),allergies:'Synthetic substance',noKnownAllergies:false,updatedAt:'2026-11-06T12:00:00Z'};
+ const next=mergeDirectories(legacy,{version:1,people:[known]});
+ assert.equal(next.people[0].allergies,'Synthetic substance');
+ const none={...known,allergies:'',noKnownAllergies:true,updatedAt:'2026-11-07T12:00:00Z'};
+ assert.equal(mergeDirectories(next,{version:1,people:[none]}).people[0].noKnownAllergies,true);
+ assert.throws(()=>validateDirectory({version:1,people:[{...known,allergies:123}]}),/allergies/);
+ assert.throws(()=>validateDirectory({version:1,people:[{...known,noKnownAllergies:'yes'}]}),/allergies/);
+});
