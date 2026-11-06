@@ -1,7 +1,7 @@
-import {validatePhoto} from './photos.js?v=0.4.0';
-import './windows.js?v=0.4.0';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote} from './model.js?v=0.4.0';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.4.0';
+import {validatePhoto} from './photos.js?v=0.4.1';
+import './windows.js?v=0.4.1';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote} from './model.js?v=0.4.1';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.4.1';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget;
 const photoUrls=new Map();let photoGeneration=0;
@@ -59,13 +59,6 @@ function openPerson(id=null){
   if(person&&!person.firstName&&!person.lastName&&!person.preferredName)form.elements.namedItem('preferredName').value=person.name;
   for(const part of ['Month','Day','Year'])form.elements.namedItem('birth'+part).value=person?.birthDate?.[part.toLowerCase()]||'';
   $('#person-deceased').checked=Boolean(person?.deceased);updateDeathFields();
-  const folders=new Map((person?.driveFolders||[]).map(folder=>[folder.id,folder.name]));
-  if(person?.photo)folders.set(person.photo.folderId,folders.get(person.photo.folderId)||'Current photo folder');
-  if(driveConfig.folder)folders.set(driveConfig.folder,folders.get(driveConfig.folder)||driveConfig.folderName||'Directory folder');
-  const select=$('#person-photo-folder');select.replaceChildren();
-  if(folders.size!==1){const placeholder=element('option',folders.size?'Choose photo folder…':'No Drive folder selected');placeholder.value='';select.append(placeholder);}
-  for(const [id,name] of folders){const option=element('option',name);option.value=id;select.append(option);}
-  $('#photo-storage-hint').textContent=folders.size?'Photos are stored in the selected Drive folder, never in directory JSON.':'Connect and select a directory folder, or save this person and attach a folder before adding a photo.';
   showPhotoPreview(person);
   if(!$('#person-dialog').open)$('#person-dialog').showModal();form.elements.namedItem('lastName').focus();
 }
@@ -82,13 +75,13 @@ $('#person-form').onsubmit=async event=>{
   const fields={firstName,lastName,preferredName,birthDate,deceased,deathDate,info:form.get('info').trim()};
   const error=(!firstName&&!lastName&&!preferredName)?'Enter at least one name.':birthDateError(birthDate)||deathDateError(fields);
   $('#person-error').textContent=error;if(error)return;
-  const id=editPersonId||crypto.randomUUID(),file=$('#person-photo').files[0],folder=$('#person-photo-folder').value;
+  const id=editPersonId||crypto.randomUUID(),file=$('#person-photo').files[0];
   personSaveBusy=true;for(const control of $('#person-form').elements)control.disabled=true;
   try{
     let person=data.people.find(p=>p.id===id);
     if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed while you were editing. Reopen it to review the latest details.');
-    let photo=person?.photo;
-    if(file){if(!hasDriveAccess())throw new Error('Connect Google Drive before saving a photo. Your form has been kept.');if(!folder)throw new Error('Choose a Drive folder for the photo.');await validatePhoto(file);$('#person-error').textContent='Uploading photo directly to Drive…';const uploaded=await uploadPersonFile(folder,file);if(!uploaded.id)throw new Error('Google did not return a photo file ID.');photo={fileId:uploaded.id,folderId:folder};}
+    let photo=person?.photo;const folder=person?.driveFolders?.[0]?.id||'root';
+    if(file){if(!hasDriveAccess())throw new Error('Connect Google Drive before saving a photo. Your form has been kept.');await validatePhoto(file);$('#person-error').textContent='Uploading photo directly to Drive…';const uploaded=await uploadPersonFile(folder,file);if(!uploaded.id)throw new Error('Google did not return a photo file ID.');photo={fileId:uploaded.id,folderId:folder};}
     const next=structuredClone(data);person=next.people.find(p=>p.id===id);
     if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed during photo upload. The photo is in Drive; reopen the record before saving details.');
     const updated={...(person||{id,notes:[],driveFolders:[]}),...fields,updatedAt:new Date().toISOString(),...(photo?{photo}:{})};updated.name=personName({...updated,name:''});
