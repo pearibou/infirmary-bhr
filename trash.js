@@ -17,6 +17,10 @@ export function makeTrashable(node,target){
 function endDrag(){dragged=undefined;trash.classList.remove('drop-ready');document.body.classList.remove('dragging-entry');}
 trash.addEventListener('dragover',event=>{if(!dragged)return;event.preventDefault();event.dataTransfer.dropEffect='move';trash.classList.add('drop-ready');});
 trash.addEventListener('dragleave',()=>trash.classList.remove('drop-ready'));
-trash.addEventListener('drop',event=>{if(!dragged)return;event.preventDefault();const target=dragged;endDrag();request(target);});
+trash.addEventListener('drop',event=>{if(!dragged)return;event.preventDefault();event.stopPropagation();const target=dragged;endDrag();request(target);});
 trash.onclick=()=>request(selected);
 export function clearTrashSelection(){selected=undefined;document.querySelectorAll('.trash-selected').forEach(el=>el.classList.remove('trash-selected'));}
+
+export function draggedEntry(){return dragged;}
+
+export function finishEntryDrag(){endDrag();}

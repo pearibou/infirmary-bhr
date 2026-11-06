@@ -1,21 +1,30 @@
-import {makeTrashable,clearTrashSelection} from './trash.js?v=0.5.1';
-import {validatePhoto} from './photos.js?v=0.5.1';
-import './windows.js?v=0.5.1';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople} from './model.js?v=0.5.1';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.5.1';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.6.0';
+import {makeTrashable,clearTrashSelection} from './trash.js?v=0.6.0';
+import {validatePhoto} from './photos.js?v=0.6.0';
+import './windows.js?v=0.6.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.6.0';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.6.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
-let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget;
+let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false;
+try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
 const photoUrls=new Map();let photoGeneration=0;
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,6000);}
 try{const stored=localStorage.getItem(KEY);if(stored)data=validateDirectory(JSON.parse(stored));}catch{storageFailed=true;toast('Stored data could not be read. Existing storage has been preserved; reload after resolving the problem.');}
-function save(next){if(storageFailed){toast('Storage is unavailable. Existing data is protected.');return false;}try{localStorage.setItem(KEY,JSON.stringify(next));data=next;$('#storage-status').textContent='Saved on this device';return true;}catch{toast('Could not save: device storage is unavailable or full. Export your existing records.');return false;}}
+function save(next,fromSync=false){if(!fromSync&&(!workspaceReady||!hasDriveAccess())){if(workspaceReady)lockWorkspace();toast('Connect Google Drive and sync the directory first.');return false;}if(storageFailed){toast('Storage is unavailable. Existing data is protected.');return false;}try{localStorage.setItem(KEY,JSON.stringify(next));data=next;$('#storage-status').textContent='Saved on this device';return true;}catch{toast('Could not save: device storage is unavailable or full. Export your existing records.');return false;}}
 function element(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 function render(){
-  clearTrashSelection();
+  clearTrashSelection();renderDesktopNotes(data.desktopNotes||[]);
   const query=$('#search').value.toLowerCase();const people=data.people.filter(p=>[personName(p),p.firstName,p.middleName,p.lastName,p.preferredName,p.name].filter(Boolean).join(' ').toLowerCase().includes(query)).sort(compareDirectoryPeople);
   $('#people').replaceChildren();
-  let deceasedSection=false;const hasLiving=people.some(person=>!person.deceased);
-  for(const p of people){if(p.deceased&&!deceasedSection){deceasedSection=true;if(hasLiving){const divider=element('div',undefined,'directory-divider');divider.setAttribute('role','separator');divider.setAttribute('aria-label','Deceased persons');$('#people').append(divider);}}const button=element('button',undefined,'person'+(selected===p.id?' selected':''));button.type='button';button.setAttribute('aria-pressed',String(selected===p.id));button.append(element('strong',personName(p)));const fullName=[p.firstName,p.lastName].filter(Boolean).join(' ');if(fullName && fullName!==personName(p))button.append(element('span',fullName));button.onclick=()=>{selected=p.id;render();};makeTrashable(button,{personId:p.id});const row=element('div',undefined,'person-row'+(p.deceased?' deceased-row':'')),edit=element('button','✎','record-pencil');edit.type='button';edit.title='Edit record';edit.setAttribute('aria-label','Edit record for '+personName(p));edit.onclick=()=>openPerson(p.id);row.append(button,edit);$('#people').append(row);}
+  let deceasedSection=false;const deceasedCount=people.filter(person=>person.deceased).length;
+  for(const p of people){
+    if(p.deceased&&!deceasedSection){
+      deceasedSection=true;const divider=element('button',`${deceasedCollapsed?'▸':'▾'} Deceased (${deceasedCount})`,'directory-divider');divider.type='button';divider.setAttribute('aria-expanded',String(!deceasedCollapsed));divider.setAttribute('aria-label',deceasedCollapsed?'Show deceased people':'Hide deceased people');
+      divider.onclick=()=>{deceasedCollapsed=!deceasedCollapsed;try{localStorage.setItem('infirmary.deceasedCollapsed',String(deceasedCollapsed));}catch{}renderKeepingDraft();$('#people .directory-divider')?.focus();};$('#people').append(divider);
+    }
+    if(p.deceased&&deceasedCollapsed)continue;
+    const button=element('button',undefined,'person'+(selected===p.id?' selected':''));button.type='button';button.setAttribute('aria-pressed',String(selected===p.id));button.append(element('strong',personName(p)));const fullName=[p.firstName,p.lastName].filter(Boolean).join(' ');if(fullName && fullName!==personName(p))button.append(element('span',fullName));button.onclick=()=>{selected=p.id;render();};makeTrashable(button,{personId:p.id});const row=element('div',undefined,'person-row'+(p.deceased?' deceased-row':'')),edit=element('button','✎','record-pencil');edit.type='button';edit.title='Edit record';edit.setAttribute('aria-label','Edit record for '+personName(p));edit.onclick=()=>openPerson(p.id);row.append(button,edit);$('#people').append(row);
+  }
   if(!people.length)$('#people').append(element('p',query?'No matching people.':'Your directory is empty.','empty'));
   $('#people-count').textContent=`${data.people.length} ${data.people.length===1?'person':'people'} in directory`;
   const panel=$('#detail');panel.replaceChildren();const person=data.people.find(p=>p.id===selected);
@@ -30,7 +39,7 @@ function render(){
   if(person.middleName)panel.append(element('p','Middle name / initial: '+person.middleName,'muted'));
   if(person.birthDate && Object.values(person.birthDate).some(Boolean)){const b=person.birthDate;panel.append(element('p',`Date of birth: ${b.month||'—'} / ${b.day||'—'} / ${b.year||'—'}`,'muted'));}
   const age=personAge(person);panel.append(element('p',`${person.deceased?'Age at death':'Age'}: ${age===null?'— (complete dates needed)':age+' years'}`,'muted age'));
-  if(person.deceased)panel.append(element('p',`Date of death: ${person.deathDate||'Unknown'}`,'death-status'));
+  if(person.deceased)panel.append(element('p',`Date of death: ${formatDeathDate(person.deathDate)}`,'death-status'));
   const folderSection=element('section',undefined,'person-folders'),folderHeading=element('div',undefined,'notes-heading'),attach=element('button','Attach folder…');attach.type='button';attach.onclick=()=>openPersonFolder(person.id);const upload=element('button','Upload file…');upload.type='button';upload.onclick=()=>openUpload(person.id);folderHeading.append(element('h3','Drive folders'),attach,upload);folderSection.append(folderHeading);
   for(const folder of person.driveFolders||[]){const link=element('a',folder.name||'Drive folder','folder-link');link.href=`https://drive.google.com/drive/folders/${encodeURIComponent(folder.id)}`;link.target='_blank';link.rel='noopener noreferrer';folderSection.append(link);}
   if(!person.driveFolders?.length)folderSection.append(element('p','No folders attached.','muted'));panel.append(folderSection);
@@ -60,9 +69,10 @@ function openPerson(id=null){
   editPersonId=id;const person=data.people.find(p=>p.id===id),form=$('#person-form');form.reset();clearPhotoPreview();
   recordBaseline=person?recordFields(person):null;
   $('#person-dialog-title').textContent=person?'Edit record':'New person';$('#person-dialog .window-control').setAttribute('aria-label',person?'Minimize Edit record':'Minimize New person');$('#person-submit').textContent=person?'Save record':'Add person';$('#person-error').textContent='';
-  for(const key of ['firstName','middleName','lastName','preferredName','info','deathDate'])form.elements.namedItem(key).value=person?.[key]||'';
+  for(const key of ['firstName','middleName','lastName','preferredName','info'])form.elements.namedItem(key).value=person?.[key]||'';
   if(person&&!person.firstName&&!person.lastName&&!person.preferredName)form.elements.namedItem('preferredName').value=person.name;
   for(const part of ['Month','Day','Year'])form.elements.namedItem('birth'+part).value=person?.birthDate?.[part.toLowerCase()]||'';
+  const death=deathDateParts(person?.deathDate);for(const part of ['Month','Day','Year'])form.elements.namedItem('death'+part).value=death[part.toLowerCase()];
   $('#person-deceased').checked=Boolean(person?.deceased);updateDeathFields();
   showPhotoPreview(person);
   if(!$('#person-dialog').open)$('#person-dialog').showModal();form.elements.namedItem('lastName').focus();
@@ -76,7 +86,7 @@ $('#person-dialog').addEventListener('close',()=>{if(!personSaveBusy)clearPhotoP
 $('#person-form').onsubmit=async event=>{
   event.preventDefault();if(personSaveBusy)return;
   const form=new FormData(event.target),firstName=form.get('firstName').trim(),middleName=form.get('middleName').trim(),lastName=form.get('lastName').trim(),preferredName=form.get('preferredName').trim();
-  const birthDate={month:form.get('birthMonth'),day:form.get('birthDay'),year:form.get('birthYear')},deceased=form.get('deceased')==='on',deathDate=deceased?form.get('deathDate'):'';
+  const birthDate={month:form.get('birthMonth'),day:form.get('birthDay'),year:form.get('birthYear')},deceased=form.get('deceased')==='on',deathDate=deceased?{month:form.get('deathMonth'),day:form.get('deathDay'),year:form.get('deathYear')}:'';
   const fields={firstName,middleName,lastName,preferredName,birthDate,deceased,deathDate,info:form.get('info').trim()};
   const error=(!firstName&&!lastName&&!preferredName)?'Enter at least one name.':birthDateError(birthDate)||deathDateError(fields);
   $('#person-error').textContent=error;if(error)return;
@@ -116,8 +126,8 @@ function renderKeepingDraft(){const input=$('.note-form input'),draft=input?.val
 function openNoteEditor(personId,noteId){const note=data.people.find(p=>p.id===personId)?.notes.find(n=>n.id===noteId);if(!note||!canEditNote(note,getCurrentUser())){toast('Connect the original author’s Google account to edit this note.');return;}noteEditTarget={personId,noteId,baseline:JSON.stringify(note)};$('#note-edit-text').value=currentNoteText(note);$('#note-edit-error').textContent='';$('#note-dialog').showModal();$('#note-edit-text').focus();}
 $('#note-edit-form').onsubmit=event=>{event.preventDefault();try{const {personId,noteId,baseline}=noteEditTarget,next=structuredClone(data),person=next.people.find(p=>p.id===personId),index=person.notes.findIndex(n=>n.id===noteId),note=person.notes[index];if(JSON.stringify(note)!==baseline)throw new Error('This note changed. Reopen it before editing.');person.notes[index]=editNote(note,getCurrentUser(),$('#note-edit-text').value);person.updatedAt=new Date().toISOString();if(save(next)){$('#note-dialog').close();renderKeepingDraft();}}catch(error){$('#note-edit-error').textContent=error.message;}};
 for(const button of document.querySelectorAll('[data-close]'))button.onclick=()=>document.getElementById(button.dataset.close).close();
-$('#export').onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=element('a');link.href=url;link.download='people_directory.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-let driveConfig={...window.INFIRMARY_CONFIG},googleReady=false,googleLoading=false,connecting=false,connected=false,pickerReady=false,folderTarget,syncing=false;
+$('#export').onclick=()=>{if(!workspaceReady||!hasDriveAccess()){lockWorkspace();return;}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=element('a');link.href=url;link.download='people_directory.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+let driveConfig={...window.INFIRMARY_CONFIG},googleReady=false,googleLoading=false,connecting=false,connected=false,pickerReady=false,folderTarget,syncing=false,syncAgain=false;
 try{
   const remembered=JSON.parse(localStorage.getItem('infirmary.drive')||'{}');
   driveConfig={...remembered,...Object.fromEntries(Object.entries(driveConfig).filter(([,value])=>value))};
@@ -129,7 +139,8 @@ function fillSettings(){
   $('#choose-sync-folder').disabled=!connected||!pickerReady;
   $('#use-drive-root').disabled=!connected;
   $('#sync').disabled=!connected||!driveConfig.folder||syncing;
-  $('#manual-sync').disabled=syncing;
+  $('#manual-sync').disabled=syncing||!workspaceReady;
+  $('#export').disabled=!workspaceReady;
   $('#manual-sync').setAttribute('aria-busy',String(syncing));
   $('#choose-sync-folder').disabled ||= syncing;
   $('#use-drive-root').disabled ||= syncing;
@@ -137,7 +148,7 @@ function fillSettings(){
 }
 fillSettings();
 function rememberSettings(){try{localStorage.setItem('infirmary.drive',JSON.stringify(driveConfig));}catch{toast('Connection settings could not be remembered on this device.');}}
-const missingGoogleSetup='Google Drive is not connected yet. The site administrator needs to finish Google sign-in setup. Your local records are still available.';
+const missingGoogleSetup='Google Drive is not connected yet. The site administrator needs to finish Google sign-in setup. Connect to open the workspace.';
 async function readyGoogle(){
   if(googleLoading)return;
   if(!driveConfig.clientId){$('#drive-status').textContent=missingGoogleSetup;return;}
@@ -147,29 +158,30 @@ async function readyGoogle(){
   finally{googleLoading=false;fillSettings();}
   if(googleReady&&driveConfig.pickerApiKey&&driveConfig.projectNumber){try{await preparePicker();pickerReady=true;}catch(error){$('#drive-status').textContent=error.message;}fillSettings();}
 }
-$('#drive-open').onclick=()=>{$('#drive-dialog').showModal();fillSettings();readyGoogle();};
+$('#drive-open').onclick=()=>{if(!$('#drive-dialog').open)$('#drive-dialog').showModal();fillSettings();readyGoogle();};
 $('#google-connect').onclick=async()=>{
   if(!driveConfig.clientId){$('#drive-status').textContent=missingGoogleSetup;return;}
   if(googleLoading){$('#drive-status').textContent='Google sign-in is loading. Please try again in a moment.';return;}
   // A ready SDK lets OAuth open directly from this click, avoiding popup blockers.
   if(!googleReady){await readyGoogle();return;}
   connecting=true;fillSettings();$('#drive-status').textContent='Complete sign-in in the Google window. Close it to cancel.';
-  try{await authorize(driveConfig.clientId);connected=true;clearPhotos();try{const user=await loadCurrentUser();$('#current-user').textContent='Signed in as '+user.name;}catch(error){$('#current-user').textContent='Author identity unavailable; new notes will be unattributed.';}renderKeepingDraft();$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Use My Drive (root), or configure Google folder browsing.';}
+  try{await authorize(driveConfig.clientId);connected=true;clearPhotos();try{const user=await loadCurrentUser();$('#current-user').textContent='Signed in as '+user.name;}catch(error){$('#current-user').textContent='Author identity unavailable; new notes will be unattributed.';}renderKeepingDraft();$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Use My Drive (root), or configure Google folder browsing.';if(driveConfig.folder&&!workspaceReady)await runSync();}
   catch(error){connected=false;$('#drive-status').textContent=error.message;}
   finally{connecting=false;fillSettings();}
 };
 async function chooseFolder(dialog){
   // Native Google Picker must appear above the app, outside a modal's top layer.
-  dialog.close();try{return await pickFolder(driveConfig);}finally{dialog.showModal();}
+  choosingFolder=true;dialog.close();try{return await pickFolder(driveConfig);}finally{choosingFolder=false;if(!dialog.open)dialog.showModal();}
 }
-$('#choose-sync-folder').onclick=async()=>{try{await authorize(driveConfig.clientId);const folder=await chooseFolder($('#drive-dialog'));if(folder){driveConfig.folder=folder.id;driveConfig.folderName=folder.name;rememberSettings();fillSettings();$('#drive-status').textContent='Directory folder selected. Choose Sync directory to merge your records.';}}catch(error){$('#drive-status').textContent=error.message;}};
-$('#use-drive-root').onclick=()=>{driveConfig.folder='root';driveConfig.folderName='My Drive (root)';rememberSettings();fillSettings();$('#drive-status').textContent='My Drive selected. Sync directory will save people_directory.json at the top level of My Drive.';};
-$('#disconnect').onclick=()=>{disconnect();connected=false;clearPhotos();$('#current-user').textContent='';renderKeepingDraft();fillSettings();$('#connection').textContent='Local workspace';$('#drive-status').textContent='Disconnected. Local records and attached folder links are retained.';};
+$('#choose-sync-folder').onclick=async()=>{try{await authorize(driveConfig.clientId);const folder=await chooseFolder($('#drive-dialog'));if(folder){driveConfig.folder=folder.id;driveConfig.folderName=folder.name;rememberSettings();fillSettings();$('#drive-status').textContent='Directory folder selected. Choose Sync directory to merge your records.';if(!workspaceReady)await runSync();}}catch(error){$('#drive-status').textContent=error.message;}};
+$('#use-drive-root').onclick=()=>{driveConfig.folder='root';driveConfig.folderName='My Drive (root)';rememberSettings();fillSettings();$('#drive-status').textContent='My Drive selected. Sync directory will save people_directory.json at the top level of My Drive.';if(!workspaceReady)runSync();};
+$('#disconnect').onclick=()=>{disconnect();connected=false;clearPhotos();$('#current-user').textContent='';renderKeepingDraft();fillSettings();$('#connection').textContent='Local workspace';$('#drive-status').textContent='Disconnected. Connect Google Drive to reopen the workspace.';lockWorkspace();};
 async function runSync(automatic=false){
-  if(syncing)return;
+  if(syncing){syncAgain=true;return;}
   if(storageFailed){if(!automatic)toast('Resolve local storage before syncing.');return;}
   if(!navigator.onLine){if(!automatic)toast('Offline. Notes will sync after your connection returns.');return;}
   if(!connected||!driveConfig.folder||!hasDriveAccess()){
+    if(workspaceReady)lockWorkspace();
     if(connected&&!hasDriveAccess()){connected=false;clearPhotos();$('#current-user').textContent='';renderKeepingDraft();fillSettings();$('#connection').textContent='Reconnect Google Drive to resume sync';}
     if(!automatic){if(!$('#drive-dialog').open)$('#drive-dialog').showModal();readyGoogle();}
     return;
@@ -179,15 +191,16 @@ async function runSync(automatic=false){
     const snapshot=structuredClone(data),merged=await syncDirectory(driveConfig.folder,snapshot);
     // Preserve notes added during the request; the next cycle uploads them.
     const next=mergeDirectories(data,merged),changed=JSON.stringify(next)!==JSON.stringify(data);
-    if(!save(next))throw new Error('Drive synced, but local storage failed. Export records before closing.');
+    if(!save(next,true))throw new Error('Drive synced, but local storage failed. Export records before closing.');
+    if(connected&&hasDriveAccess())unlockWorkspace();
     if(changed){const input=$('.note-form input'),draft=input?.value,focused=document.activeElement===input;selected=selected||data.people[0]?.id;render();if(draft&&$('.note-form input'))$('.note-form input').value=draft;if(focused)$('.note-form input')?.focus();}
     $('#connection').textContent='Last synced '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});$('#drive-status').textContent='Synced. Automatic sync checks every 10 seconds while connected.';
   }catch(error){$('#drive-status').textContent=error.message;$('#connection').textContent='Sync failed · local notes retained';if(!automatic)toast(error.message);}
-  finally{syncing=false;fillSettings();}
+  finally{syncing=false;fillSettings();const again=syncAgain;syncAgain=false;if(again&&workspaceReady&&hasDriveAccess())queueMicrotask(()=>runSync(true));}
 }
 $('#sync').onclick=()=>runSync();
 $('#manual-sync').onclick=()=>runSync();
-setInterval(()=>{if(!document.hidden)runSync(true);},10000);
+setInterval(()=>{if(workspaceReady&&!hasDriveAccess())lockWorkspace();if(!document.hidden)runSync(true);},10000);
 // Refresh derived ages after midnight without replacing an in-progress note.
 setInterval(()=>{const p=data.people.find(p=>p.id===selected),field=$('.age');if(field&&p){const age=personAge(p);field.textContent=`${p.deceased?'Age at death':'Age'}: ${age===null?'— (complete dates needed)':age+' years'}`;}},60000);
 function openPersonFolder(id){folderTarget=id;$('#folder-form').reset();$('#folder-error').textContent='';$('#folder-dialog').showModal();}
@@ -230,9 +243,9 @@ window.addEventListener('beforeunload',event=>{if(uploading){event.preventDefaul
 
 let trashTarget;
 document.addEventListener('trash-request',event=>{
-  const target=event.detail,person=data.people.find(p=>p.id===target.personId),note=target.noteId?person?.notes.find(n=>n.id===target.noteId):null;
-  if(!person||(target.noteId&&!note)){toast('This entry is no longer in the directory.');return;}
-  trashTarget={...target};$('#trash-error').textContent='';$('#trash-entry-label').textContent=note?`Note for ${personName(person)} · ${formatTime(note.createdAt)}`:`Person: ${personName(person)} (including ${person.notes.length} notes)`;
+  const target=event.detail,sticky=target.desktopNoteId?data.desktopNotes?.find(note=>note.id===target.desktopNoteId):null,person=data.people.find(p=>p.id===target.personId),note=target.noteId?person?.notes.find(n=>n.id===target.noteId):null;
+  if(target.desktopNoteId?!sticky:!person||(target.noteId&&!note)){toast('This entry is no longer in the directory.');return;}
+  trashTarget={...target};$('#trash-error').textContent='';$('#trash-entry-label').textContent=sticky?'Shared desktop note · '+new Date(sticky.createdAt).toLocaleString():note?`Note for ${personName(person)} · ${formatTime(note.createdAt)}`:`Person: ${personName(person)} (including ${person.notes.length} notes)`;
   $('#trash-dialog').showModal();$('#trash-dialog [data-close]').focus();
 });
 $('#trash-form').onsubmit=event=>{
@@ -245,3 +258,26 @@ $('#trash-form').onsubmit=event=>{
   }catch(error){$('#trash-error').textContent=error.message;}
 };
 $('#trash-dialog').addEventListener('close',()=>{trashTarget=undefined;$('#trash-entry-label').textContent='';});
+
+function lockWorkspace(){
+  if(!hasDriveAccess()){connected=false;clearPhotos();$('#current-user').textContent='';}
+  workspaceReady=false;document.body.classList.add('drive-locked');$('.desktop').inert=true;closeDesktopMenu();
+  for(const dialog of document.querySelectorAll('dialog'))if(dialog.id!=='drive-dialog'&&dialog.open)dialog.close();
+  $('#connection-required').hidden=false;$('#drive-dialog [data-close]').disabled=true;fillSettings();
+  if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();
+}
+function unlockWorkspace(){workspaceReady=true;document.body.classList.remove('drive-locked');$('.desktop').inert=storageFailed;$('#connection-required').hidden=true;$('#drive-dialog [data-close]').disabled=false;fillSettings();}
+$('#drive-dialog').addEventListener('cancel',event=>{if(!workspaceReady)event.preventDefault();});
+$('#drive-dialog').addEventListener('close',()=>{if(!workspaceReady&&!choosingFolder)queueMicrotask(()=>{if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();});});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&workspaceReady&&!hasDriveAccess()){lockWorkspace();readyGoogle();}});
+let stickyOrigin={x:24,y:24};
+initDesktopNotes(origin=>{if(!workspaceReady)return;stickyOrigin=origin;$('#sticky-form').reset();$('#sticky-error').textContent='';$('#sticky-dialog').showModal();$('#sticky-text').focus();},(id,position)=>{
+  if(!workspaceReady)return;const next=structuredClone(data),note=next.desktopNotes?.find(note=>note.id===id);if(!note)return;
+  note.x=Math.min(position.x,Math.max(0,innerWidth-260));note.y=Math.min(position.y,Math.max(0,innerHeight-$('.menubar').getBoundingClientRect().bottom-120));note.updatedAt=new Date(Math.max(Date.now(),Date.parse(note.updatedAt)+1)).toISOString();if(save(next))renderDesktopNotes(data.desktopNotes);
+});
+$('#sticky-form').onsubmit=event=>{
+  event.preventDefault();const text=$('#sticky-text').value.trim();if(!text)return;const user=getCurrentUser(),now=new Date().toISOString(),next=structuredClone(data);next.desktopNotes??=[];
+  next.desktopNotes.push({id:crypto.randomUUID(),text,createdAt:now,updatedAt:now,authorName:user?.name||'Connected staff',...(user?{authorId:user.id}:{}),x:stickyOrigin.x,y:stickyOrigin.y});
+  if(save(next)){$('#sticky-dialog').close();renderDesktopNotes(data.desktopNotes);runSync();}
+};
+lockWorkspace();readyGoogle();

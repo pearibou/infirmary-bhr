@@ -1,3 +1,4 @@
+from browser_helpers import prepare_test_page,unlock_test_drive,open_drive,fill_death_date
 """Synthetic desktop geometry, drag-to-trash confirmation and stale-copy sync tests."""
 from playwright.sync_api import sync_playwright
 import json
@@ -18,7 +19,9 @@ with sync_playwright() as p:
         elif 'files?q=' in url:route.fulfill(json={'files':[{'id':'directory'}]})
         else:route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
     page.route('https://www.googleapis.com/**',drive)
+    prepare_test_page(page)
     page.goto('http://127.0.0.1:8000')
+    unlock_test_drive(page,profile=True)
     window=page.locator('.window');footer=page.locator('.statusbar');bar=page.locator('.titlebar');trash=page.locator('#desktop-trash')
     def drag_to_trash(source):
         source.scroll_into_view_if_needed();rect=source.bounding_box()
@@ -73,12 +76,13 @@ with sync_playwright() as p:
     drag_to_trash(page.locator('.person').filter(has_text='Beta Test'))
     confirm.get_by_role('button',name='Permanently delete',exact=True).click()
     assert page.locator('.person').count()==1
-    page.locator('#drive-open').click();page.locator('#google-connect').click();page.locator('#use-drive-root').click();page.locator('#sync').click()
+    open_drive(page);page.locator('#google-connect').click();page.locator('#use-drive-root').click();page.locator('#sync').click()
     page.wait_for_function("document.querySelector('#drive-status').textContent.startsWith('Synced.')")
     assert uploads and len(uploads[-1]['people'])==1 and uploads[-1]['people'][0]['notes']==[]
     assert uploads[-1]['deleted']['people']==['b']
     page.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()
     page.reload()
+    unlock_test_drive(page,profile=True)
     assert page.locator('.person').count()==1 and page.locator('.note').count()==0
     # Keyboard/tap alternative selects an entry then uses the same confirmation.
     page.locator('.person').first.focus();page.locator('.person').first.press('Delete')

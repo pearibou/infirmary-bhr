@@ -1,5 +1,12 @@
 # Version history
 
+## 0.6.0
+
+- Added precision-preserving partial death dates and rejected isolated days.
+- Made the deceased divider collapsible with a device-local preference.
+- Added desktop context menu and shared pastel-yellow handoff notes, movable and trashable with synced deletion markers.
+- Required Google connection and successful initial directory sync before workspace access; disconnect/expired sessions lock it again.
+
 ## 0.5.1
 
 - Grouped living/deceased directory entries, each sorted by surname, with a heavy divider and muted plum deceased styling.

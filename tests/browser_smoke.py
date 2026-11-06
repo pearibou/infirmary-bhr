@@ -1,3 +1,4 @@
+from browser_helpers import prepare_test_page,unlock_test_drive,open_drive,fill_death_date
 """Run against npm start. Requires Python Playwright and Chromium."""
 from playwright.sync_api import sync_playwright
 import json
@@ -7,7 +8,9 @@ with sync_playwright() as p:
     page=context.new_page()
     errors=[]
     page.on('pageerror',lambda error:errors.append(str(error)))
+    prepare_test_page(page)
     page.goto('http://127.0.0.1:8000')
+    unlock_test_drive(page,profile=True)
     page.locator('#add-person').click()
     page.get_by_label('Preferred name').fill('Brother Test')
     page.get_by_label('Additional information').fill('Test entry only')
@@ -19,6 +22,7 @@ with sync_playwright() as p:
     assert page.locator('.note').count()==2
     assert '<script>' in page.locator('.note').first.inner_text()
     page.reload()
+    unlock_test_drive(page)
     assert page.locator('.note').count()==2
     page.locator('#search').fill('missing')
     assert page.get_by_text('No matching people.').is_visible()
@@ -27,11 +31,12 @@ with sync_playwright() as p:
     page.evaluate('navigator.serviceWorker.ready')
     page.wait_for_function('navigator.serviceWorker.controller !== null')
     context.set_offline(True)
-    page.reload()
-    assert page.locator('.note').count()==2
     page.get_by_label('New note').fill('Offline observation')
     page.get_by_label('New note').press('Enter')
     assert page.locator('.note').count()==3
+    page.reload()
+    assert page.locator('body').evaluate("el=>el.classList.contains('drive-locked')")
+    assert page.locator('#drive-dialog').is_visible()
     page.set_viewport_size({'width':390,'height':844})
     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
     page.screenshot(path='artifacts/mobile.png',full_page=True)

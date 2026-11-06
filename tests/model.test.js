@@ -101,3 +101,20 @@ test('middle name is optional text and survives directory merge',()=>{
  assert.equal(mergeDirectories(emptyDirectory(),{version:1,people:[entry]}).people[0].middleName,'J.');
  assert.throws(()=>validateDirectory({version:1,people:[{...entry,middleName:123}]}),/name/);
 });
+
+import {deathDateParts,formatDeathDate} from '../model.js';
+test('partial death dates retain precision and reject isolated days',()=>{
+ const p={...person(),deceased:true};
+ for(const deathDate of [{month:'5',day:'',year:''},{month:'',day:'',year:'2020'},{month:'5',day:'',year:'2020'},{month:'5',day:'3',year:''}]){assert.equal(deathDateError({...p,deathDate}),'');assert.equal(personAge({...p,deathDate}),null);}
+ assert.ok(deathDateError({...p,deathDate:{day:'3'}}));assert.ok(deathDateError({...p,deathDate:{day:'3',year:'2020'}}));
+ assert.ok(deathDateError({...p,deathDate:{month:'2',day:'30',year:'2020'}}));assert.ok(deathDateError({...p,deathDate:{year:'2999'}}));
+ assert.equal(formatDeathDate({month:'5'}),'May');assert.equal(formatDeathDate({year:'2020'}),'2020');assert.equal(formatDeathDate({month:'5',year:'2020'}),'May 2020');assert.deepEqual(deathDateParts('2020-05-03'),{year:'2020',month:'05',day:'03'});
+});
+test('shared desktop notes merge, retain newest position and honor deletion markers',()=>{
+ const note={id:'sticky1',text:'Synthetic handoff',authorName:'Synthetic Staff',createdAt:date,updatedAt:date,x:10,y:20};
+ const a={...emptyDirectory(),desktopNotes:[note]},b={...emptyDirectory(),desktopNotes:[{...note,x:80,updatedAt:'2026-11-06T12:00:00Z'}]};
+ assert.equal(mergeDirectories(a,b).desktopNotes[0].x,80);assert.equal(mergeDirectories(b,a).desktopNotes[0].x,80);
+ const deleted=deleteDirectoryEntry(a,{desktopNoteId:'sticky1'});assert.equal(deleted.desktopNotes.length,0);
+ assert.equal(mergeDirectories(deleted,b).desktopNotes,undefined);assert.equal(mergeDirectories(b,deleted).desktopNotes,undefined);
+ assert.deepEqual(deleted.deleted.desktopNotes,['sticky1']);assert.throws(()=>validateDirectory({...a,desktopNotes:[{...note,x:NaN}]}),/desktop/);
+});

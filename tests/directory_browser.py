@@ -1,3 +1,4 @@
+from browser_helpers import prepare_test_page,unlock_test_drive,open_drive,fill_death_date
 """Synthetic directory grouping, plum deceased entries, middle-name persistence and avatar icon."""
 from playwright.sync_api import sync_playwright
 import json
@@ -8,7 +9,9 @@ with sync_playwright() as p:
         return {'id':id,'name':preferred,'firstName':first,'lastName':last,'preferredName':preferred,'deceased':deceased,'info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]}
     data={'version':1,'people':[record('a','Zed','Zulu','Brother Alpha'),record('b','Amy','Adams','Brother Zulu'),record('c','Caleb','Zulu','Brother Cedar',True),record('d','David','Adams','Brother Delta',True)]}
     page.add_init_script("if(!localStorage.getItem('infirmary.directory.v1'))localStorage.setItem('infirmary.directory.v1',"+json.dumps(json.dumps(data))+");")
+    prepare_test_page(page)
     page.goto('http://127.0.0.1:8000')
+    unlock_test_drive(page,profile=True)
     names=lambda:page.locator('.person strong').all_text_contents()
     assert names()==['Brother Zulu','Brother Alpha','Brother Delta','Brother Cedar']
     assert page.locator('.directory-divider').count()==1
@@ -37,11 +40,12 @@ with sync_playwright() as p:
     assert names()==['Brother Zulu','Brother Alpha','Brother Delta','Brother Cedar']
     assert page.locator('.deceased-crucifix').count()==0
     page.locator('#search').fill('Caleb')
-    assert names()==['Brother Cedar'] and page.locator('.directory-divider').count()==0
+    assert names()==['Brother Cedar'] and page.locator('.directory-divider').count()==1
     page.locator('#search').fill('J.')
     assert names()==['Brother Alpha']
     page.locator('#search').fill('')
     page.reload()
+    unlock_test_drive(page,profile=True)
     assert names()==['Brother Zulu','Brother Alpha','Brother Delta','Brother Cedar']
     page.locator('#add-person').click()
     dialog.get_by_label('Preferred name',exact=True).fill('Brother New')

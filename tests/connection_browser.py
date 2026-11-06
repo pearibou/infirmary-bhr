@@ -1,3 +1,4 @@
+from browser_helpers import open_drive
 """Connection states should never imply loading when setup is absent."""
 from playwright.sync_api import sync_playwright
 with sync_playwright() as p:
@@ -11,7 +12,7 @@ with sync_playwright() as p:
         else:
             page.route('**/config.js*',lambda route:route.fulfill(content_type='application/javascript',body='window.INFIRMARY_CONFIG={}'))
         page.goto('http://127.0.0.1:8000')
-        page.locator('#drive-open').click()
+        open_drive(page)
         connect=page.locator('#google-connect')
         assert connect.is_enabled()
         assert page.locator('#drive-settings').count()==0

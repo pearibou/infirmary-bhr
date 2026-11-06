@@ -1,3 +1,4 @@
+from browser_helpers import prepare_test_page,unlock_test_drive,open_drive,fill_death_date
 """Age, window controls and timed sync with a mocked Google backend."""
 from playwright.sync_api import sync_playwright
 import json
@@ -30,7 +31,9 @@ with sync_playwright() as p:
     page.route('https://www.googleapis.com/**',drive)
     page.route('**/config.js*',lambda route:route.fulfill(content_type='application/javascript',body="window.INFIRMARY_CONFIG={clientId:'test.apps.googleusercontent.com'}"))
     page.route('https://www.googleapis.com/oauth2/v3/userinfo',lambda route:route.fulfill(json={'sub':'synthetic-staff','name':'Synthetic Staff'}))
+    prepare_test_page(page)
     page.goto('http://127.0.0.1:8000')
+    unlock_test_drive(page,profile=True)
     assert 'years' in page.locator('.age').inner_text()
     window=page.locator('.window')
     original=window.bounding_box()
@@ -60,11 +63,6 @@ with sync_playwright() as p:
     page.locator('#window-dock button').click()
     assert page.locator('#person-dialog').is_visible()
     page.locator('#person-dialog').get_by_role('button',name='Cancel').click()
-    page.locator('#drive-open').click()
-    page.wait_for_function("document.querySelector('#drive-status').textContent.includes('Ready.')")
-    page.locator('#google-connect').click()
-    page.locator('#use-drive-root').click()
-    page.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()
     with page.expect_request(lambda request:'alt=media' in request.url):
         page.locator('#manual-sync').click()
     page.get_by_label('New note').fill('Note added during sync')
@@ -72,14 +70,14 @@ with sync_playwright() as p:
     page.get_by_label('New note').fill('Keep this unsent draft')
     assert pending
     pending[0].fulfill(json=data)
-    page.wait_for_function("document.querySelector('#connection').textContent.startsWith('Last synced')")
+    page.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'")
     assert len(uploads)==1
     assert page.get_by_label('New note').input_value()=='Keep this unsent draft'
     page.clock.fast_forward(10000)
     page.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'")
     assert len(uploads)==2
     assert uploads[1]['people'][0]['notes'][0]['text']=='Note added during sync'
-    page.locator('#drive-open').click()
+    open_drive(page)
     page.locator('#disconnect').click()
     page.clock.fast_forward(10000)
     assert len(uploads)==2

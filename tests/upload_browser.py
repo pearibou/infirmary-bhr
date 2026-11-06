@@ -1,3 +1,4 @@
+from browser_helpers import prepare_test_page,unlock_test_drive,open_drive,fill_death_date
 """Only synthetic bytes: verify direct Drive upload and no record persistence of file contents."""
 from playwright.sync_api import sync_playwright
 import json
@@ -20,8 +21,10 @@ with sync_playwright() as p:
             route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
     page.route('https://www.googleapis.com/**',drive)
     page.route('https://www.googleapis.com/oauth2/v3/userinfo',lambda route:route.fulfill(json={'sub':'synthetic-staff','name':'Synthetic Staff'}))
+    prepare_test_page(page)
     page.goto('http://127.0.0.1:8000')
-    page.locator('#drive-open').click()
+    unlock_test_drive(page,profile=True)
+    open_drive(page)
     page.get_by_role('button',name='Continue with Google').click()
     page.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()
     before=page.evaluate("localStorage.getItem('infirmary.directory.v1')")
