@@ -1,6 +1,6 @@
 """Synthetic end-to-end startup gate, partial death dates, collapse and cross-user handoff."""
 from playwright.sync_api import sync_playwright
-from browser_helpers import prepare_test_page,open_drive
+from browser_helpers import prepare_test_page,open_drive,ignore_event_log_projection
 import copy
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
@@ -17,7 +17,7 @@ with sync_playwright() as p:
             elif 'alt=media' in url:route.fulfill(json=backend['data'])
             elif 'files?q=' in url:route.fulfill(json={'files':[{'id':'directory'}]})
             else:route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
-        page.route('https://www.googleapis.com/**',api);page.goto('http://127.0.0.1:8000');return context,page
+        page.route('https://www.googleapis.com/**',api);ignore_event_log_projection(page);page.goto('http://127.0.0.1:8000');return context,page
     context,a=setup('Synthetic Staff A')
     assert a.locator('#drive-dialog').is_visible() and a.locator('.desktop').evaluate('el=>el.inert')
     assert a.locator('#drive-dialog [data-close]').is_disabled()
@@ -43,7 +43,7 @@ with sync_playwright() as p:
     a.get_by_role('button',name='Hide deceased people').click()
     top=a.locator('.menubar').bounding_box()['height']
     a.mouse.click(15,top+15,button='right');assert a.locator('#desktop-context-menu').is_visible()
-    a.get_by_role('menuitem',name='New note').click();a.locator('#sticky-text').fill('Synthetic handoff <script>safe text</script>');a.get_by_role('button',name='Leave note',exact=True).click()
+    a.get_by_role('menuitem',name='New Sticky Note').click();a.locator('#sticky-text').fill('Synthetic handoff <script>safe text</script>');a.get_by_role('button',name='Leave note',exact=True).click()
     a.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'")
     assert backend['data']['desktopNotes'][0]['text']=='Synthetic handoff <script>safe text</script>'
     card=a.locator('.sticky-note');assert card.is_visible() and '<script>' in card.inner_text()
