@@ -1,4 +1,5 @@
-import {validateDirectory,mergeDirectories} from './model.js?v=0.6.3';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.7.1';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.7.1';
 let token,expires=0,loading,authorizedClient,currentUser;
 export function disconnect(){token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
 function loadGoogle(){
@@ -31,15 +32,20 @@ export async function syncDirectory(folder,local){
   const query=new URLSearchParams({q:`'${folder}' in parents and name = 'people_directory.json' and trashed = false`,fields:'files(id,name),nextPageToken',pageSize:'100',supportsAllDrives:'true',includeItemsFromAllDrives:'true'});
   const listing=await(await api(`files?${query}`)).json();
   if(listing.files.length>1||listing.nextPageToken)throw new Error('Multiple people_directory.json files found. Resolve duplicates in Drive before syncing.');
-  const file=listing.files[0];let merged=local;
+  const file=listing.files[0];let merged=local,logFile,logText;
+  const prepareLog=async()=>{if(!merged.eventLog?.length)return;const result=await readEventLog(folder);logFile=result.file;logText=result.text;const events=mergeEventLogs(merged.eventLog,result.events);merged={...merged,eventLog:events};};
   if(file){const response=await api(`files/${file.id}?alt=media&supportsAllDrives=true`);merged=mergeDirectories(local,validateDirectory(await response.json()));
     // A second read reduces the race window; Drive media updates are not transactional.
     const latest=await(await api(`files/${file.id}?alt=media&supportsAllDrives=true`)).json();merged=mergeDirectories(merged,validateDirectory(latest));
+    await prepareLog();
     const responseWrite=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${file.id}?uploadType=media&supportsAllDrives=true`,{method:'PATCH',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(merged)});if(!responseWrite.ok)throw new Error(`Drive upload failed (${responseWrite.status}). Local notes remain saved.`);
   }else{
+    await prepareLog();
     const boundary='infirmary_'+crypto.randomUUID();const body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name:'people_directory.json',parents:[folder],mimeType:'application/json'})}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(merged)}\r\n--${boundary}--`;
     const response=await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`},body});if(!response.ok)throw new Error(`Drive file creation failed (${response.status}). Local notes remain saved.`);
-  }return merged;
+  }
+  if(merged.eventLog?.length){try{const text=eventLogText(merged.eventLog);if(!logFile||text!==logText)await writeEventLog(folder,logFile,text);}catch{throw new Error('Directory saved, but Event Log text sync failed. Retry sync to publish its protected history.');}}
+  return merged;
 }
 
 let pickerLoading;
@@ -104,4 +110,19 @@ export async function readPersonPhoto(fileId){
   if(!/^[\w-]+$/.test(fileId))throw new Error('Invalid photo reference.');
   const response=await api(`files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`),blob=await response.blob();
   if(!['image/jpeg','image/png','image/webp','image/gif'].includes(blob.type)||blob.size>10*1024*1024)throw new Error('Photo format or size is unsupported.');return blob;
+}
+
+async function readEventLog(folder){
+  const query=new URLSearchParams({q:`'${folder}' in parents and name = 'BHR_event_log.txt' and trashed = false`,fields:'files(id,name),nextPageToken',pageSize:'100',supportsAllDrives:'true',includeItemsFromAllDrives:'true'});
+  const listing=await(await api(`files?${query}`)).json();
+  if(listing.files.length>1||listing.nextPageToken)throw new Error('Multiple BHR_event_log.txt files found. Resolve duplicates before syncing.');
+  const file=listing.files[0];let events=[],text;
+  if(file){const first=await(await api(`files/${file.id}?alt=media&supportsAllDrives=true`)).text();text=await(await api(`files/${file.id}?alt=media&supportsAllDrives=true`)).text();events=mergeEventLogs(parseEventLogText(first),parseEventLogText(text));}
+  return {file,events,text};
+}
+async function writeEventLog(folder,file,text){
+  let url,options;
+  if(file){url=`https://www.googleapis.com/upload/drive/v3/files/${file.id}?uploadType=media&supportsAllDrives=true`;options={method:'PATCH',headers:{Authorization:`Bearer ${token}`,'Content-Type':'text/plain; charset=UTF-8'},body:text};}
+  else{const boundary='eventlog_'+crypto.randomUUID();url='https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true';options={method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`},body:`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name:'BHR_event_log.txt',parents:[folder],mimeType:'text/plain'})}\r\n--${boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${text}\r\n--${boundary}--`};}
+  const response=await driveFetch(url,options);if(!response.ok)throw new Error('Event log upload failed.');
 }

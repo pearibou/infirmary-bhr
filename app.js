@@ -1,19 +1,20 @@
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.6.3';
-import {makeTrashable,clearTrashSelection} from './trash.js?v=0.6.3';
-import {validatePhoto} from './photos.js?v=0.6.3';
-import './windows.js?v=0.6.3';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.6.3';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.6.3';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.7.1';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.7.1';
+import {makeTrashable,clearTrashSelection} from './trash.js?v=0.7.1';
+import {validatePhoto} from './photos.js?v=0.7.1';
+import './windows.js?v=0.7.1';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.7.1';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.7.1';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
 const photoUrls=new Map();let photoGeneration=0;
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,6000);}
 try{const stored=localStorage.getItem(KEY);if(stored)data=validateDirectory(JSON.parse(stored));}catch{storageFailed=true;toast('Stored data could not be read. Existing storage has been preserved; reload after resolving the problem.');}
-function save(next,fromSync=false){if(!fromSync&&(!workspaceReady||!hasDriveAccess())){if(workspaceReady)lockWorkspace();toast('Connect Google Drive and sync the directory first.');return false;}if(storageFailed){toast('Storage is unavailable. Existing data is protected.');return false;}try{localStorage.setItem(KEY,JSON.stringify(next));data=next;$('#storage-status').textContent='Saved on this device';return true;}catch{toast('Could not save: device storage is unavailable or full. Export your existing records.');return false;}}
+function save(next,fromSync=false){if(!fromSync&&(!workspaceReady||!hasDriveAccess())){if(workspaceReady)lockWorkspace();toast('Connect Google Drive and sync the directory first.');return false;}if(storageFailed){toast('Storage is unavailable. Existing data is protected.');return false;}try{if(!fromSync)next=recordChanges(data,next,getCurrentUser());localStorage.setItem(KEY,JSON.stringify(next));data=next;refreshEventLog();$('#storage-status').textContent='Saved on this device';return true;}catch{toast('Could not save: device storage is unavailable or full. Export your existing records.');return false;}}
 function element(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 function render(){
-  clearTrashSelection();renderDesktopNotes(data.desktopNotes||[]);
+  refreshEventLog();clearTrashSelection();renderDesktopNotes(data.desktopNotes||[]);
   const query=$('#search').value.toLowerCase();const people=data.people.filter(p=>[personName(p),p.firstName,p.middleName,p.lastName,p.preferredName,p.name].filter(Boolean).join(' ').toLowerCase().includes(query)).sort(compareDirectoryPeople);
   $('#people').replaceChildren();
   let deceasedSection=false;const deceasedCount=people.filter(person=>person.deceased).length;
@@ -96,7 +97,7 @@ $('#person-form').onsubmit=async event=>{
     if(editPersonId&&!person)throw new Error('This record was deleted while you were editing.');
     if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed while you were editing. Reopen it to review the latest details.');
     let photo=person?.photo;const folder=person?.driveFolders?.[0]?.id||'root';
-    if(file){if(!hasDriveAccess())throw new Error('Connect Google Drive before saving a photo. Your form has been kept.');await validatePhoto(file);$('#person-error').textContent='Uploading photo directly to Drive…';const uploaded=await uploadPersonFile(folder,file);if(!uploaded.id)throw new Error('Google did not return a photo file ID.');photo={fileId:uploaded.id,folderId:folder};}
+    if(file){if(!hasDriveAccess())throw new Error('Connect Google Drive before saving a photo. Your form has been kept.');await validatePhoto(file);$('#person-error').textContent='Uploading photo directly to Drive…';const photoActor=getCurrentUser(),uploaded=await uploadPersonFile(folder,file);if(uploaded.id)appendActivity('photo.uploaded','file',uploaded.id,'Profile photo uploaded to Drive folder '+folder,id,photoActor);if(!uploaded.id)throw new Error('Google did not return a photo file ID.');photo={fileId:uploaded.id,folderId:folder};}
     const next=structuredClone(data);person=next.people.find(p=>p.id===id);
     if(editPersonId&&!person)throw new Error('This record was deleted during the upload. The photo remains in Drive.');
     if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed during photo upload. The photo is in Drive; reopen the record before saving details.');
@@ -164,7 +165,7 @@ $('#google-connect').onclick=async()=>{
   // A ready SDK lets OAuth open directly from this click, avoiding popup blockers.
   if(!googleReady){await readyGoogle();return;}
   connecting=true;fillSettings();$('#drive-status').textContent='Complete sign-in in the Google window. Close it to cancel.';
-  try{await authorize(driveConfig.clientId);connected=true;clearPhotos();try{const user=await loadCurrentUser();$('#current-user').textContent='Signed in as '+user.name;}catch(error){$('#current-user').textContent='Author identity unavailable; new notes will be unattributed.';}renderKeepingDraft();$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Use My Drive (root), or configure Google folder browsing.';if(driveConfig.folder&&!workspaceReady)await runSync();}
+  try{await authorize(driveConfig.clientId);connected=true;clearPhotos();try{const user=await loadCurrentUser();$('#current-user').textContent='Signed in as '+user.name;}catch(error){$('#current-user').textContent='Author identity unavailable; new notes will be unattributed.';}appendActivity('drive.connected','directory',driveConfig.folder||'unselected','Google Drive connection established');renderKeepingDraft();$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Use My Drive (root), or configure Google folder browsing.';if(driveConfig.folder&&!workspaceReady)await runSync();}
   catch(error){connected=false;$('#drive-status').textContent=error.message;}
   finally{connecting=false;fillSettings();}
 };
@@ -172,9 +173,9 @@ async function chooseFolder(dialog){
   // Native Google Picker must appear above the app, outside a modal's top layer.
   choosingFolder=true;dialog.close();try{return await pickFolder(driveConfig);}finally{choosingFolder=false;if(!dialog.open)dialog.showModal();}
 }
-$('#choose-sync-folder').onclick=async()=>{try{await authorize(driveConfig.clientId);const folder=await chooseFolder($('#drive-dialog'));if(folder){driveConfig.folder=folder.id;driveConfig.folderName=folder.name;rememberSettings();fillSettings();$('#drive-status').textContent='Directory folder selected. Choose Sync directory to merge your records.';if(!workspaceReady)await runSync();}}catch(error){$('#drive-status').textContent=error.message;}};
-$('#use-drive-root').onclick=()=>{driveConfig.folder='root';driveConfig.folderName='My Drive (root)';rememberSettings();fillSettings();$('#drive-status').textContent='My Drive selected. Sync directory will save people_directory.json at the top level of My Drive.';if(!workspaceReady)runSync();};
-$('#disconnect').onclick=()=>{disconnect();connected=false;clearPhotos();$('#current-user').textContent='';renderKeepingDraft();fillSettings();$('#connection').textContent='Local workspace';$('#drive-status').textContent='Disconnected. Connect Google Drive to reopen the workspace.';lockWorkspace();};
+$('#choose-sync-folder').onclick=async()=>{try{await authorize(driveConfig.clientId);const folder=await chooseFolder($('#drive-dialog'));if(folder){driveConfig.folder=folder.id;driveConfig.folderName=folder.name;rememberSettings();appendActivity('directory.selected','directory',folder.id,'Directory storage folder selected');fillSettings();$('#drive-status').textContent='Directory folder selected. Choose Sync directory to merge your records.';if(!workspaceReady)await runSync();}}catch(error){$('#drive-status').textContent=error.message;}};
+$('#use-drive-root').onclick=()=>{driveConfig.folder='root';driveConfig.folderName='My Drive (root)';rememberSettings();appendActivity('directory.selected','directory','root','My Drive root selected for directory storage');fillSettings();$('#drive-status').textContent='My Drive selected. Sync directory will save people_directory.json at the top level of My Drive.';if(!workspaceReady)runSync();};
+$('#disconnect').onclick=()=>{appendActivity('drive.disconnected','directory',driveConfig.folder||'unselected','Google Drive disconnected');disconnect();connected=false;clearPhotos();$('#current-user').textContent='';renderKeepingDraft();fillSettings();$('#connection').textContent='Local workspace';$('#drive-status').textContent='Disconnected. Connect Google Drive to reopen the workspace.';lockWorkspace();};
 async function runSync(automatic=false){
   if(syncing){syncAgain=true;return;}
   if(storageFailed){if(!automatic)toast('Resolve local storage before syncing.');return;}
@@ -218,13 +219,13 @@ window.addEventListener('storage',event=>{if(event.key===KEY){toast('Records cha
 function connection(){if(!navigator.onLine)$('#connection').textContent='Offline · local notes available';else if($('#connection').textContent.startsWith('Offline'))$('#connection').textContent='Local workspace';}window.addEventListener('online',connection);window.addEventListener('offline',connection);connection();
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>toast('Offline caching unavailable. Use HTTPS or localhost.'));
 
-let uploading=false;
+let uploading=false,uploadPersonId;
 function openUpload(id){
   if(uploading){$('#upload-dialog').showModal();return;}
   const person=data.people.find(p=>p.id===id);
   if(!person?.driveFolders?.length){toast('Attach a Google Drive folder to this person first.');return;}
   if(!connected||!hasDriveAccess()){toast('Connect Google Drive before uploading a file.');if(!$('#drive-dialog').open)$('#drive-dialog').showModal();readyGoogle();return;}
-  $('#upload-form').reset();$('#upload-status').textContent='';$('#upload-person-name').textContent='For '+personName(person);
+  uploadPersonId=id;$('#upload-form').reset();$('#upload-status').textContent='';$('#upload-person-name').textContent='For '+personName(person);
   const select=$('#upload-folder');select.replaceChildren();
   if(person.driveFolders.length>1){const placeholder=element('option','Choose this person’s destination folder…');placeholder.value='';select.append(placeholder);}
   for(const folder of person.driveFolders){const option=element('option',folder.name||'Drive folder');option.value=folder.id;select.append(option);}
@@ -234,7 +235,8 @@ $('#upload-form').onsubmit=async event=>{
   event.preventDefault();if(uploading)return;
   const file=$('#upload-file').files[0],folder=$('#upload-folder').value;if(!file||!folder)return;
   uploading=true;$('#upload-submit').disabled=true;$('#upload-file').disabled=true;$('#upload-folder').disabled=true;$('#upload-status').textContent='Uploading directly to Google Drive… Keep this page open.';
-  try{await uploadPersonFile(folder,file);$('#upload-status').textContent='Uploaded to Google Drive: '+file.name;$('#upload-file').value='';toast('File uploaded to Google Drive.');}
+  const actor=getCurrentUser();
+  try{const uploaded=await uploadPersonFile(folder,file);appendActivity('file.uploaded','file',uploaded.id||'unknown-file','File uploaded to Drive folder '+folder,uploadPersonId,actor);runSync();$('#upload-status').textContent='Uploaded to Google Drive: '+file.name;$('#upload-file').value='';toast('File uploaded to Google Drive.');}
   catch(error){$('#upload-status').textContent=error.message;}
   finally{uploading=false;$('#upload-submit').disabled=false;$('#upload-file').disabled=false;$('#upload-folder').disabled=false;}
 };
@@ -281,3 +283,15 @@ $('#sticky-form').onsubmit=event=>{
   if(save(next)){$('#sticky-dialog').close();renderDesktopNotes(data.desktopNotes);runSync();}
 };
 lockWorkspace();readyGoogle();
+
+function appendActivity(action,type,id,summary,personId,user=getCurrentUser()){
+  const next={...data,eventLog:mergeEventLogs(data.eventLog,[createEvent(user,action,type,id,summary,personId)])};
+  if(!save(next,true))toast('The action completed, but its event log could not be saved. Keep this page open and resolve storage.');
+}
+function refreshEventLog(){
+  const pre=$('#event-log-text');if(!pre)return;const scroll=pre.scrollTop;
+  pre.textContent=(mergeEventLogs(data.eventLog).map(event=>`${new Date(event.createdAt).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'medium'})} | ${event.actorName} | ${event.summary} | ${event.entityType}: ${event.entityId}${event.personId?' | person: '+event.personId:''}`).join('\n\n'))||'No events recorded yet.';pre.scrollTop=scroll;
+}
+function openEventLog(){document.querySelector('#window-dock [data-window="event-log-dialog"]')?.remove();if(!workspaceReady||!hasDriveAccess()){lockWorkspace();return;}refreshEventLog();if(!$('#event-log-dialog').open)$('#event-log-dialog').showModal();}
+$('#event-log-icon').ondblclick=openEventLog;
+$('#event-log-icon').onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openEventLog();}};

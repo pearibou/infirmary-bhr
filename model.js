@@ -1,3 +1,4 @@
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.7.1';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
@@ -12,6 +13,7 @@ export function validateDirectory(data) {
     const ids=new Set();for(const note of data.desktopNotes){if(!note||typeof note.id!=='string'||!note.id||ids.has(note.id)||typeof note.text!=='string'||!note.text.trim()||!validDate(note.createdAt)||!validDate(note.updatedAt)||typeof note.authorName!=='string'||!Number.isFinite(note.x)||!Number.isFinite(note.y)||note.x<0||note.y<0)throw new Error('Invalid desktop note.');ids.add(note.id);}
   }
   if(data.deleted?.desktopNotes!==undefined&&(!Array.isArray(data.deleted.desktopNotes)||data.deleted.desktopNotes.some(id=>typeof id!=='string'||!id)||new Set(data.deleted.desktopNotes).size!==data.deleted.desktopNotes.length))throw new Error('Invalid deleted desktop notes.');
+  if(data.eventLog!==undefined)validateEventLog(data.eventLog);
   const ids=new Set();
   for(const p of data.people){
     if(!p || typeof p.id!=='string' || !p.id || ids.has(p.id) || typeof p.name!=='string' || !p.name.trim() || (p.room!==undefined && typeof p.room!=='string') || typeof p.info!=='string' || !Array.isArray(p.notes) || !validDate(p.updatedAt)) throw new Error('Invalid person in directory.');
@@ -61,7 +63,8 @@ export function mergeDirectories(local,remote){
     if(old&&['text','createdAt','authorName','authorId'].some(key=>old[key]!==note[key]))throw new Error('Conflicting desktop note. Sync stopped to protect both copies.');
     if(!old||Date.parse(note.updatedAt)>Date.parse(old.updatedAt)||note.updatedAt===old.updatedAt&&JSON.stringify([note.x,note.y])>JSON.stringify([old.x,old.y]))desktop.set(note.id,structuredClone(note));
   }
-  return {version:1,people:[...people.values()],...(desktop.size?{desktopNotes:[...desktop.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))}:{}),...((removedPeople.size||removedNotes.size||removedDesktop.size)?{deleted:{people:[...removedPeople].sort(),notes:[...removedNotes.values()].sort((a,b)=>JSON.stringify([a.personId,a.noteId]).localeCompare(JSON.stringify([b.personId,b.noteId]))),...(removedDesktop.size?{desktopNotes:[...removedDesktop].sort()}:{})}}:{})};
+  const eventLog=mergeEventLogs(local.eventLog,remote.eventLog);
+  return {version:1,people:[...people.values()],...(eventLog.length?{eventLog}:{}),...(desktop.size?{desktopNotes:[...desktop.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))}:{}),...((removedPeople.size||removedNotes.size||removedDesktop.size)?{deleted:{people:[...removedPeople].sort(),notes:[...removedNotes.values()].sort((a,b)=>JSON.stringify([a.personId,a.noteId]).localeCompare(JSON.stringify([b.personId,b.noteId]))),...(removedDesktop.size?{desktopNotes:[...removedDesktop].sort()}:{})}}:{})};
 }
 
 export function personName(person){

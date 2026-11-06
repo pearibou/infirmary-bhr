@@ -35,7 +35,10 @@ with sync_playwright() as p:
     page.wait_for_function("document.querySelector('#upload-status').textContent && !document.querySelector('#upload-status').textContent.startsWith('Uploading')")
     assert page.locator('#upload-status').inner_text().startswith('Uploaded'),page.locator('#upload-status').inner_text()
     assert uploads==[bytes([0,255,16,42])]
-    assert page.evaluate("localStorage.getItem('infirmary.directory.v1')")==before
+    after=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1'))")
+    assert after['people']==json.loads(before)['people']
+    assert any(event['action']=='file.uploaded' for event in after['eventLog'])
+    assert 'blob:' not in json.dumps(after) and 'data:application' not in json.dumps(after)
     assert page.locator('#upload-file').input_value()==''
     b.close()
     print('PASS: arbitrary file bytes sent directly to assigned Google Drive folder; no file content saved in person record; input cleared after upload')

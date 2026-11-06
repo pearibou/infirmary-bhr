@@ -1,5 +1,16 @@
 # Version history
 
+## 0.7.1
+
+- Applied a compact GitHub-style monospace font stack and tighter line spacing only to Event Log text.
+
+## 0.7.0
+
+- Renamed the desktop command to New Sticky Note; confirmed any connected user can trash shared stickies.
+- Added an Event Log clipboard icon below Trash and a read-only, newest-first log window.
+- Added append-only change metadata, cross-user immutable-ID merging/recovery and a protected BHR_event_log.txt copy in Drive. Clinical content and file bytes are excluded.
+- Documented frontend-only audit limitations and added model/API/browser coverage.
+
 ## 0.6.3
 
 - Included middle name/initial in directory and record full-name subtitles, removing the separate middle-name detail label. Preferred display names are unchanged.

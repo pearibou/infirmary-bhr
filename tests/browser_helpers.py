@@ -9,7 +9,14 @@ if(!window.google.picker){
  window.google.picker={DocsView:View,ViewId:{FOLDERS:'folders'},PickerBuilder:Builder,Action:{PICKED:'picked',CANCEL:'cancel'}};
 }
 '''
+def ignore_event_log_projection(page):
+    page.route('https://www.googleapis.com/drive/v3/files?*BHR_event_log.txt*',lambda route:route.fulfill(json={'files':[]}))
+    def upload(route):
+        if 'BHR_event_log.txt' in (route.request.post_data or ''):route.fulfill(json={'id':'synthetic-event-log'})
+        else:route.fallback()
+    page.route('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart*',upload)
 def prepare_test_page(page):
+    ignore_event_log_projection(page)
     page.add_init_script(SDK)
     page.route('https://accounts.google.com/gsi/client',lambda route:route.fulfill(content_type='application/javascript',body=SDK))
 def open_drive(page):
@@ -20,7 +27,7 @@ def unlock_test_drive(page,profile=True):
     routes=[]
     def add(pattern,handler):routes.append((pattern,handler));page.route(pattern,handler)
     add('https://www.googleapis.com/drive/v3/files/*?fields=*',lambda route:route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}}))
-    add('https://www.googleapis.com/drive/v3/files?*',lambda route:route.fulfill(json={'files':[{'id':'__test-bootstrap'}]}))
+    add('https://www.googleapis.com/drive/v3/files?*',lambda route:route.fulfill(json={'files':[] if 'BHR_event_log.txt' in route.request.url else [{'id':'__test-bootstrap'}]}))
     add('https://www.googleapis.com/drive/v3/files/__test-bootstrap?*',lambda route:route.fulfill(json=snapshot))
     add('https://www.googleapis.com/upload/drive/v3/files/__test-bootstrap?*',lambda route:route.fulfill(json={'id':'__test-bootstrap'}))
     if profile:page.route('https://www.googleapis.com/oauth2/v3/userinfo',lambda route:route.fulfill(json={'sub':'synthetic-staff','name':'Synthetic Staff'}))

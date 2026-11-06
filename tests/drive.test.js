@@ -42,3 +42,50 @@ test('photos are read as authenticated blobs and reject nonimage media',async()=
  await signIn();globalThis.fetch=async(url,opts)=>{assert.match(url,/files\/photo-file\?alt=media/);assert.equal(opts.headers.Authorization,'Bearer test-only');return new Response(new Uint8Array([1,2]),{headers:{'Content-Type':'image/png'}});};assert.equal((await readPersonPhoto('photo-file')).type,'image/png');
  globalThis.fetch=async()=>new Response('<svg/>',{headers:{'Content-Type':'image/svg+xml'}});await assert.rejects(readPersonPhoto('photo-file'),/unsupported/);disconnect();
 });
+
+import {createEvent,eventLogText,parseEventLogText} from '../events.js';
+test('sync recovers immutable event history from JSON and text and writes both copies',async()=>{
+ await signIn();
+ const user={id:'test',name:'Synthetic Staff'},event=()=>createEvent(user,'test.change','person','p','Synthetic change');
+ const localEvent=event(),remoteEvent=event(),textEvent=event();let cloud={version:1,people:[],eventLog:[remoteEvent]},text=eventLogText([textEvent]);
+ globalThis.fetch=async(url,options={})=>{
+  if(options.method==='PATCH'){if(url.includes('/files/log?'))text=options.body;else cloud=JSON.parse(options.body);return Response.json({id:'saved'});}
+  if(url.includes('files/folder?'))return Response.json({mimeType:'application/vnd.google-apps.folder',capabilities:{canAddChildren:true}});
+  if(url.includes('files?q='))return Response.json({files:[{id:url.includes('BHR_event_log.txt')?'log':'directory'}]});
+  return url.includes('files/log?')?new Response(text):Response.json(cloud);
+ };
+ let merged=await syncDirectory('folder',{version:1,people:[],eventLog:[localEvent]});assert.equal(merged.eventLog.length,3);assert.equal(cloud.eventLog.length,3);assert.equal(parseEventLogText(text).length,3);
+ merged=await syncDirectory('folder',merged);assert.equal(merged.eventLog.length,3);disconnect();
+});
+test('new event text is multipart UTF-8 with real CRLF separators',async()=>{
+ await signIn();let body;
+ globalThis.fetch=async(url,options={})=>{
+  if(options.method==='POST'){if(options.body.includes('BHR_event_log.txt'))body=options.body;return Response.json({id:'new'});}
+  if(url.includes('files/folder?'))return Response.json({mimeType:'application/vnd.google-apps.folder',capabilities:{canAddChildren:true}});
+  return Response.json({files:[]});
+ };
+ await syncDirectory('folder',{version:1,people:[],eventLog:[createEvent({name:'Synthetic'},'test.change','person','p','Created')]});assert.ok(body.includes('\r\nContent-Type: text/plain; charset=UTF-8\r\n'));assert.ok(!body.includes('\\r\\n'));disconnect();
+});
+test('unrecognized existing event text stops sync without overwriting directory or log',async()=>{
+ await signIn();let writes=0;
+ globalThis.fetch=async(url,options={})=>{
+  if(options.method){writes++;return Response.json({});}
+  if(url.includes('files/folder?'))return Response.json({mimeType:'application/vnd.google-apps.folder',capabilities:{canAddChildren:true}});
+  if(url.includes('files?q='))return Response.json({files:[{id:url.includes('BHR_event_log.txt')?'log':'directory'}]});
+  return url.includes('files/log?')?new Response('Unrecognized original text'):Response.json({version:1,people:[]});
+ };
+ await assert.rejects(syncDirectory('folder',{version:1,people:[],eventLog:[createEvent({name:'Synthetic'},'test.change','person','p','Created')]}),/not overwritten/);assert.equal(writes,0);disconnect();
+});
+
+test('text publication failure is reported after a successful JSON history save',async()=>{
+ await signIn();let saved;
+ globalThis.fetch=async(url,options={})=>{
+  if(options.method==='PATCH'){saved=JSON.parse(options.body);return Response.json({id:'directory'});}
+  if(options.method==='POST')return new Response('',{status:500});
+  if(url.includes('files/folder?'))return Response.json({mimeType:'application/vnd.google-apps.folder',capabilities:{canAddChildren:true}});
+  if(url.includes('files?q='))return Response.json({files:url.includes('BHR_event_log.txt')?[]:[{id:'directory'}]});
+  return Response.json({version:1,people:[]});
+ };
+ await assert.rejects(syncDirectory('folder',{version:1,people:[],eventLog:[createEvent({name:'Synthetic'},'test.change','person','p','Created')]}),/Directory saved, but Event Log/);
+ assert.equal(saved.eventLog.length,1);disconnect();
+});

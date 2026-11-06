@@ -89,6 +89,7 @@ with sync_playwright() as p:
     page.locator('#person-dialog').wait_for(state='hidden')
     page.wait_for_function("document.querySelector('.person-header .avatar img')?.complete")
     assert uploads==[png]
+    assert page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')).eventLog.some(event=>event.action==='photo.uploaded')")
     record=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')).people[1]")
     assert record['photo']=={'fileId':'photo-file-1','folderId':'root'}
     assert 'data:image' not in json.dumps(record) and 'blob:' not in json.dumps(record)
