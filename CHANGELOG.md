@@ -1,5 +1,10 @@
 # Version history
 
+## 0.7.2
+
+- Added a right-aligned power button and dimmed Log out/Cancel confirmation.
+- Logout records the actor, clears the BHR connection and drafts, aborts pending Drive requests and prevents stale syncs from reopening the workspace.
+
 ## 0.7.1
 
 - Applied a compact GitHub-style monospace font stack and tighter line spacing only to Event Log text.

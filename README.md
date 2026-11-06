@@ -14,6 +14,10 @@ Every opening shows the Drive connection dialog and hides/disables the workspace
 
 Right-click an empty desktop area to open its context menu, then choose **New Sticky Note**. Type a handoff message and select **Leave note**. The pastel-yellow card records the connected user's name and syncs immediately into `desktopNotes` in `people_directory.json`; the next connected user of that same Drive directory receives it during their opening sync. Drag cards to move them, or focus a card and use arrow keys. Drag a card to Trash (or focus it and press Delete) for the existing permanent-delete confirmation. Deleted card IDs sync so stale copies cannot restore them. A network failure can leave a handoff pending locally; verify successful sync before expecting the next user to receive it. Cards may contain protected information, so none are written into source, GitHub, logs or app-shell caches.
 
+## Log out
+
+The power symbol at the far right of the top bar opens a small dimmed-screen confirmation: **Do you want to log out?** **Cancel** or Escape keeps the session and draft; **Log out** clears the in-memory Google connection, aborts pending Drive requests, clears unsent editor/file drafts and photo previews, and returns to the mandatory connection window. A completed old sync cannot unlock the logged-out workspace. Saved records remain intact in local storage/Drive. Logout activity is recorded locally and may remain pending until the next connection. This logs out of the BHR connection, not every Google website or the browser's Google account; future backend staff sessions will be separate from the central Drive connection.
+
 ## Event Log
 
 Double-click the clipboard icon below Trash (or focus it and press Enter) to open the read-only Event Log window. Events appear newest first and record actor, UTC creation time, action, affected entry ID, and changed field names. Record creation/updates/deletion, clinical note entry/edits/deletion, folder attachment changes, profile-photo and other uploads, sticky creation/movement/deletion, Drive connections/disconnections and directory-location selections are recorded. Read-only viewing, mouse movements, window geometry and unchanged periodic syncs do not add noise. Logging begins with this version; past activity cannot be reconstructed retroactively.
@@ -101,6 +105,7 @@ JSON format: `{ "version": 1, "people": [...] }`. Each person contains `id`, a c
 
 ## Validate
 
+- `python tests/logout_browser.py` checks power-button placement, confirmation/cancel and logout during pending sync.
 - `python tests/event_log_browser.py` verifies icon/window behavior, JSON/text history recovery, event coverage and cross-user sticky deletion using a synthetic backend.
 - `python tests/startup_sticky_browser.py` verifies connection hard stops, partial dates, collapse preferences and two-user sticky-note sync/deletion with a synthetic Drive backend.
 - `python tests/directory_browser.py` checks group/surname sorting, plum entries, crucifix, middle-name editing and unchanged display names.
