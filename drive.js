@@ -1,5 +1,5 @@
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.7.6';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.7.6';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.7.7';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.7.7';
 let token,expires=0,loading,authorizedClient,currentUser;
 const activeRequests=new Set();
 export function disconnect(){for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
@@ -18,7 +18,7 @@ export function authorize(clientId){
 }
 async function driveFetch(url,options={},timeout=30000){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);activeRequests.add(controller);
-  try{return await fetch(url,{...options,signal:controller.signal});}
+  try{return await fetch(url,{...options,cache:'no-store',signal:controller.signal});}
   catch(error){if(error.name==='AbortError'&&controller.signal.reason?.message==='Google Drive connection closed.')throw new Error('Google Drive connection closed.');if(error.name==='AbortError')throw new Error('Google Drive request timed out. Local records are retained; sync will retry.');throw error;}
   finally{clearTimeout(timer);activeRequests.delete(controller);}
 }

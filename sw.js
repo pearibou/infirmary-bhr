@@ -1,5 +1,5 @@
-const CACHE='infirmary-shell-v25';
-const ASSETS=['./presence.js?v=0.7.6','./app-menu.js?v=0.7.6','./','./index.html','./styles.css?v=0.7.6','./clock.js?v=0.7.6','./app.js?v=0.7.6','./windows.js?v=0.7.6','./trash.js?v=0.7.6','./sticky.js?v=0.7.6','./photos.js?v=0.7.6','./model.js?v=0.7.6','./events.js?v=0.7.6','./drive.js?v=0.7.6','./config.js?v=0.7.6','./manifest.webmanifest','./icons/icon.svg','./icons/abbey-mark.svg','./icons/icon-192.png','./icons/icon-512.png'];
+const CACHE='infirmary-shell-v26';
+const ASSETS=['./presence.js?v=0.7.7','./app-menu.js?v=0.7.7','./','./index.html','./styles.css?v=0.7.7','./clock.js?v=0.7.7','./app.js?v=0.7.7','./windows.js?v=0.7.7','./trash.js?v=0.7.7','./sticky.js?v=0.7.7','./photos.js?v=0.7.7','./model.js?v=0.7.7','./events.js?v=0.7.7','./drive.js?v=0.7.7','./config.js?v=0.7.7','./manifest.webmanifest','./icons/icon.svg','./icons/abbey-mark.svg','./icons/icon-192.png','./icons/icon-512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('infirmary-shell-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(event.request.method!=='GET'||url.origin!==self.location.origin)return;

@@ -1,5 +1,10 @@
 # Version history
 
+## 0.7.7
+
+- After final sync, logout clears protected browser storage, records, drafts, photo URLs and other open BHR tabs; failed sync/cleanup retains data for retry.
+- Sync logout-request history before clearing, keep only frontend shell caching, and prevent stale requests from restoring cleared data.
+
 ## 0.7.6
 
 - Wait for a fresh, successful final Drive sync before logout; keep the session open with retry on failure.
