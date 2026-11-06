@@ -1,5 +1,5 @@
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.7.0';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.7.0';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.7.1';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.7.1';
 let token,expires=0,loading,authorizedClient,currentUser;
 export function disconnect(){token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
 function loadGoogle(){

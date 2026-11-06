@@ -1,5 +1,9 @@
 # Version history
 
+## 0.7.1
+
+- Applied a compact GitHub-style monospace font stack and tighter line spacing only to Event Log text.
+
 ## 0.7.0
 
 - Renamed the desktop command to New Sticky Note; confirmed any connected user can trash shared stickies.
