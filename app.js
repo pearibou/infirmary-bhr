@@ -1,7 +1,8 @@
-import {validatePhoto} from './photos.js?v=0.4.1';
-import './windows.js?v=0.4.1';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote} from './model.js?v=0.4.1';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.4.1';
+import {makeTrashable,clearTrashSelection} from './trash.js?v=0.5.1';
+import {validatePhoto} from './photos.js?v=0.5.1';
+import './windows.js?v=0.5.1';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople} from './model.js?v=0.5.1';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.5.1';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget;
 const photoUrls=new Map();let photoGeneration=0;
@@ -10,9 +11,11 @@ try{const stored=localStorage.getItem(KEY);if(stored)data=validateDirectory(JSON
 function save(next){if(storageFailed){toast('Storage is unavailable. Existing data is protected.');return false;}try{localStorage.setItem(KEY,JSON.stringify(next));data=next;$('#storage-status').textContent='Saved on this device';return true;}catch{toast('Could not save: device storage is unavailable or full. Export your existing records.');return false;}}
 function element(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 function render(){
-  const query=$('#search').value.toLowerCase();const people=data.people.filter(p=>[personName(p),p.firstName,p.lastName,p.preferredName,p.name].filter(Boolean).join(' ').toLowerCase().includes(query)).sort((a,b)=>(a.lastName||personName(a)).localeCompare(b.lastName||personName(b)));
+  clearTrashSelection();
+  const query=$('#search').value.toLowerCase();const people=data.people.filter(p=>[personName(p),p.firstName,p.middleName,p.lastName,p.preferredName,p.name].filter(Boolean).join(' ').toLowerCase().includes(query)).sort(compareDirectoryPeople);
   $('#people').replaceChildren();
-  for(const p of people){const button=element('button',undefined,'person'+(selected===p.id?' selected':''));button.type='button';button.setAttribute('aria-pressed',String(selected===p.id));button.append(element('strong',personName(p)));const fullName=[p.firstName,p.lastName].filter(Boolean).join(' ');if(fullName && fullName!==personName(p))button.append(element('span',fullName));button.onclick=()=>{selected=p.id;render();};const row=element('div',undefined,'person-row'),edit=element('button','✎','record-pencil');edit.type='button';edit.title='Edit record';edit.setAttribute('aria-label','Edit record for '+personName(p));edit.onclick=()=>openPerson(p.id);row.append(button,edit);$('#people').append(row);}
+  let deceasedSection=false;const hasLiving=people.some(person=>!person.deceased);
+  for(const p of people){if(p.deceased&&!deceasedSection){deceasedSection=true;if(hasLiving){const divider=element('div',undefined,'directory-divider');divider.setAttribute('role','separator');divider.setAttribute('aria-label','Deceased persons');$('#people').append(divider);}}const button=element('button',undefined,'person'+(selected===p.id?' selected':''));button.type='button';button.setAttribute('aria-pressed',String(selected===p.id));button.append(element('strong',personName(p)));const fullName=[p.firstName,p.lastName].filter(Boolean).join(' ');if(fullName && fullName!==personName(p))button.append(element('span',fullName));button.onclick=()=>{selected=p.id;render();};makeTrashable(button,{personId:p.id});const row=element('div',undefined,'person-row'+(p.deceased?' deceased-row':'')),edit=element('button','✎','record-pencil');edit.type='button';edit.title='Edit record';edit.setAttribute('aria-label','Edit record for '+personName(p));edit.onclick=()=>openPerson(p.id);row.append(button,edit);$('#people').append(row);}
   if(!people.length)$('#people').append(element('p',query?'No matching people.':'Your directory is empty.','empty'));
   $('#people-count').textContent=`${data.people.length} ${data.people.length===1?'person':'people'} in directory`;
   const panel=$('#detail');panel.replaceChildren();const person=data.people.find(p=>p.id===selected);
@@ -20,12 +23,14 @@ function render(){
   const header=element('div',undefined,'person-header'),title=element('div'),avatar=makeAvatar(person);
   title.append(element('div','PERSON RECORD','eyebrow'),element('h2',personName(person)));
   const editRecord=element('button','✎','record-pencil');editRecord.type='button';editRecord.title='Edit record';editRecord.setAttribute('aria-label','Edit this record');editRecord.onclick=()=>openPerson(person.id);
-  header.append(avatar,title,editRecord);panel.append(header);
+  const avatarGroup=element('div',undefined,'avatar-group');avatarGroup.append(avatar);if(person.deceased)avatarGroup.append(makeCrucifix());
+  header.append(avatarGroup,title,editRecord);panel.append(header);
   const legalName=[person.firstName,person.lastName].filter(Boolean).join(' ');
   if(legalName && legalName!==personName(person))panel.append(element('p',legalName,'muted'));
+  if(person.middleName)panel.append(element('p','Middle name / initial: '+person.middleName,'muted'));
   if(person.birthDate && Object.values(person.birthDate).some(Boolean)){const b=person.birthDate;panel.append(element('p',`Date of birth: ${b.month||'—'} / ${b.day||'—'} / ${b.year||'—'}`,'muted'));}
   const age=personAge(person);panel.append(element('p',`${person.deceased?'Age at death':'Age'}: ${age===null?'— (complete dates needed)':age+' years'}`,'muted age'));
-  if(person.deceased)panel.append(element('p',`Deceased · Date of death: ${person.deathDate||'Unknown'}`,'death-status'));
+  if(person.deceased)panel.append(element('p',`Date of death: ${person.deathDate||'Unknown'}`,'death-status'));
   const folderSection=element('section',undefined,'person-folders'),folderHeading=element('div',undefined,'notes-heading'),attach=element('button','Attach folder…');attach.type='button';attach.onclick=()=>openPersonFolder(person.id);const upload=element('button','Upload file…');upload.type='button';upload.onclick=()=>openUpload(person.id);folderHeading.append(element('h3','Drive folders'),attach,upload);folderSection.append(folderHeading);
   for(const folder of person.driveFolders||[]){const link=element('a',folder.name||'Drive folder','folder-link');link.href=`https://drive.google.com/drive/folders/${encodeURIComponent(folder.id)}`;link.target='_blank';link.rel='noopener noreferrer';folderSection.append(link);}
   if(!person.driveFolders?.length)folderSection.append(element('p','No folders attached.','muted'));panel.append(folderSection);
@@ -34,7 +39,7 @@ function render(){
   const form=element('form',undefined,'note-form'),input=element('input');input.required=true;input.maxLength=10000;input.placeholder='Type a note and press Enter…';input.setAttribute('aria-label','New note');input.autocomplete='off';const submit=element('button','Add');submit.type='submit';form.append(input,submit);panel.append(form,element('p',getCurrentUser()?'Each note records your Google account. Oldest entries appear first.':'Connect Google Drive to attribute notes to your account and enable author-only editing. Signed-out notes remain unattributed.','hint'));
   const notes=element('ol',undefined,'notes');
   for(const note of [...person.notes].sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)||a.id.localeCompare(b.id))){
-    const li=element('li',undefined,'note'),meta=element('div',undefined,'note-meta'),time=element('time',formatTime(note.createdAt));time.dateTime=note.createdAt;
+    const li=element('li',undefined,'note');li.tabIndex=0;makeTrashable(li,{personId:person.id,noteId:note.id});const meta=element('div',undefined,'note-meta'),time=element('time',formatTime(note.createdAt));time.dateTime=note.createdAt;
     meta.append(time,element('span','Entered by '+(note.authorName||'Unattributed (legacy or signed out)'),'note-author'));
     if(canEditNote(note,getCurrentUser())){const edit=element('button','✎','note-pencil');edit.type='button';edit.setAttribute('aria-label','Edit your note from '+formatTime(note.createdAt));edit.onclick=()=>openNoteEditor(person.id,note.id);meta.append(edit);}
     li.append(meta,element('p',currentNoteText(note)));
@@ -49,13 +54,13 @@ selected=data.people[0]?.id;render();
 $('#search').oninput=render;
 $('#add-person').onclick=()=>openPerson();
 let recordBaseline;
-const recordFields=person=>JSON.stringify(Object.fromEntries(['firstName','lastName','preferredName','name','birthDate','info','deceased','deathDate','photo'].map(key=>[key,person[key]])));
+const recordFields=person=>JSON.stringify(Object.fromEntries(['firstName','middleName','lastName','preferredName','name','birthDate','info','deceased','deathDate','photo'].map(key=>[key,person[key]])));
 function openPerson(id=null){
   if(personSaveBusy){if(!$('#person-dialog').open)$('#person-dialog').showModal();return;}
   editPersonId=id;const person=data.people.find(p=>p.id===id),form=$('#person-form');form.reset();clearPhotoPreview();
   recordBaseline=person?recordFields(person):null;
   $('#person-dialog-title').textContent=person?'Edit record':'New person';$('#person-dialog .window-control').setAttribute('aria-label',person?'Minimize Edit record':'Minimize New person');$('#person-submit').textContent=person?'Save record':'Add person';$('#person-error').textContent='';
-  for(const key of ['firstName','lastName','preferredName','info','deathDate'])form.elements.namedItem(key).value=person?.[key]||'';
+  for(const key of ['firstName','middleName','lastName','preferredName','info','deathDate'])form.elements.namedItem(key).value=person?.[key]||'';
   if(person&&!person.firstName&&!person.lastName&&!person.preferredName)form.elements.namedItem('preferredName').value=person.name;
   for(const part of ['Month','Day','Year'])form.elements.namedItem('birth'+part).value=person?.birthDate?.[part.toLowerCase()]||'';
   $('#person-deceased').checked=Boolean(person?.deceased);updateDeathFields();
@@ -70,19 +75,21 @@ $('#person-photo').onchange=async()=>{const file=$('#person-photo').files[0];cle
 $('#person-dialog').addEventListener('close',()=>{if(!personSaveBusy)clearPhotoPreview();});
 $('#person-form').onsubmit=async event=>{
   event.preventDefault();if(personSaveBusy)return;
-  const form=new FormData(event.target),firstName=form.get('firstName').trim(),lastName=form.get('lastName').trim(),preferredName=form.get('preferredName').trim();
+  const form=new FormData(event.target),firstName=form.get('firstName').trim(),middleName=form.get('middleName').trim(),lastName=form.get('lastName').trim(),preferredName=form.get('preferredName').trim();
   const birthDate={month:form.get('birthMonth'),day:form.get('birthDay'),year:form.get('birthYear')},deceased=form.get('deceased')==='on',deathDate=deceased?form.get('deathDate'):'';
-  const fields={firstName,lastName,preferredName,birthDate,deceased,deathDate,info:form.get('info').trim()};
+  const fields={firstName,middleName,lastName,preferredName,birthDate,deceased,deathDate,info:form.get('info').trim()};
   const error=(!firstName&&!lastName&&!preferredName)?'Enter at least one name.':birthDateError(birthDate)||deathDateError(fields);
   $('#person-error').textContent=error;if(error)return;
   const id=editPersonId||crypto.randomUUID(),file=$('#person-photo').files[0];
   personSaveBusy=true;for(const control of $('#person-form').elements)control.disabled=true;
   try{
     let person=data.people.find(p=>p.id===id);
+    if(editPersonId&&!person)throw new Error('This record was deleted while you were editing.');
     if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed while you were editing. Reopen it to review the latest details.');
     let photo=person?.photo;const folder=person?.driveFolders?.[0]?.id||'root';
     if(file){if(!hasDriveAccess())throw new Error('Connect Google Drive before saving a photo. Your form has been kept.');await validatePhoto(file);$('#person-error').textContent='Uploading photo directly to Drive…';const uploaded=await uploadPersonFile(folder,file);if(!uploaded.id)throw new Error('Google did not return a photo file ID.');photo={fileId:uploaded.id,folderId:folder};}
     const next=structuredClone(data);person=next.people.find(p=>p.id===id);
+    if(editPersonId&&!person)throw new Error('This record was deleted during the upload. The photo remains in Drive.');
     if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed during photo upload. The photo is in Drive; reopen the record before saving details.');
     const updated={...(person||{id,notes:[],driveFolders:[]}),...fields,updatedAt:new Date().toISOString(),...(photo?{photo}:{})};updated.name=personName({...updated,name:''});
     if(person)next.people[next.people.findIndex(p=>p.id===id)]=updated;else next.people.push(updated);
@@ -92,6 +99,11 @@ $('#person-form').onsubmit=async event=>{
 };
 function formatTime(value){return new Date(value).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'short'});}
 function initials(person){return personName(person).split(/\s+/).slice(0,2).map(x=>x[0]).join('').toUpperCase();}
+function makeCrucifix(){
+  const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 40');icon.setAttribute('class','deceased-crucifix');icon.setAttribute('role','img');icon.setAttribute('aria-label','Deceased — crucifix');icon.setAttribute('focusable','false');
+  icon.innerHTML='<path d="M9 1h6v9h8v6h-8v23H9V16H1v-6h8z" fill="currentColor"/><g fill="#eee" stroke="#332332" stroke-width="1"><circle cx="12" cy="10" r="2.3"/><path d="m11 13-6-2-1 2 6 3v9l2 7 2-1-1-7 1-8 6-3-1-2-6 2z"/></g>';
+  return icon;
+}
 function makeAvatar(person){const avatar=element('div',initials(person),'avatar');if(person.photo)displayPhoto(avatar,person);return avatar;}
 async function displayPhoto(avatar,person){
   const fileId=person.photo.fileId,generation=photoGeneration;avatar.dataset.photoFile=fileId;if(!hasDriveAccess()){avatar.title='Connect Google Drive to view profile photo';return;}
@@ -215,3 +227,21 @@ $('#upload-form').onsubmit=async event=>{
   finally{uploading=false;$('#upload-submit').disabled=false;$('#upload-file').disabled=false;$('#upload-folder').disabled=false;}
 };
 window.addEventListener('beforeunload',event=>{if(uploading){event.preventDefault();event.returnValue='';}});
+
+let trashTarget;
+document.addEventListener('trash-request',event=>{
+  const target=event.detail,person=data.people.find(p=>p.id===target.personId),note=target.noteId?person?.notes.find(n=>n.id===target.noteId):null;
+  if(!person||(target.noteId&&!note)){toast('This entry is no longer in the directory.');return;}
+  trashTarget={...target};$('#trash-error').textContent='';$('#trash-entry-label').textContent=note?`Note for ${personName(person)} · ${formatTime(note.createdAt)}`:`Person: ${personName(person)} (including ${person.notes.length} notes)`;
+  $('#trash-dialog').showModal();$('#trash-dialog [data-close]').focus();
+});
+$('#trash-form').onsubmit=event=>{
+  event.preventDefault();try{
+    const next=deleteDirectoryEntry(data,trashTarget);
+    if(save(next)){
+      if(!trashTarget.noteId&&editPersonId===trashTarget.personId){$('#person-form').reset();clearPhotoPreview();$('#person-dialog').close();document.querySelector('#window-dock [data-window="person-dialog"]')?.remove();}
+      if(noteEditTarget?.personId===trashTarget.personId&&(!trashTarget.noteId||noteEditTarget.noteId===trashTarget.noteId)){$('#note-edit-text').value='';$('#note-dialog').close();noteEditTarget=undefined;document.querySelector('#window-dock [data-window="note-dialog"]')?.remove();}
+      if(!data.people.some(p=>p.id===selected))selected=data.people[0]?.id;clearPhotos();clearTrashSelection();render();$('#trash-dialog').close();toast('Entry permanently deleted from this directory. Drive sync will propagate the deletion.');}
+  }catch(error){$('#trash-error').textContent=error.message;}
+};
+$('#trash-dialog').addEventListener('close',()=>{trashTarget=undefined;$('#trash-entry-label').textContent='';});

@@ -42,8 +42,9 @@ with sync_playwright() as p:
     assert not window.is_visible()
     page.locator('#window-dock button').click()
     assert window.is_visible()
-    page.get_by_role('button',name='Reset window size and position').click()
-    assert abs(window.bounding_box()['x']-original['x'])<2
+    page.get_by_role('button',name='Maximize window',exact=True).click()
+    page.get_by_role('button',name='Restore window',exact=True).click()
+    assert window.bounding_box()['x']>original['x']
     assert window.evaluate('(el)=>getComputedStyle(el).resize')=='both'
     rect=window.bounding_box()
     page.mouse.move(rect['x']+rect['width']-5,rect['y']+rect['height']-5)
@@ -51,7 +52,8 @@ with sync_playwright() as p:
     page.mouse.move(rect['x']+rect['width']-75,rect['y']+rect['height']-65,steps=5)
     page.mouse.up()
     assert window.bounding_box()['width']<rect['width']
-    page.get_by_role('button',name='Reset window size and position').click()
+    page.get_by_role('button',name='Maximize window',exact=True).click()
+    page.get_by_role('button',name='Restore window',exact=True).click()
     page.locator('#add-person').click()
     page.get_by_label('Minimize New person',exact=True).click()
     assert not page.locator('#person-dialog').is_visible()
@@ -82,4 +84,4 @@ with sync_playwright() as p:
     page.clock.fast_forward(10000)
     assert len(uploads)==2
     b.close()
-    print('PASS: age shown; window movement/minimize/restore/reset/resize; dialog minimize; manual sync; 10-second autosync; draft retention; disconnect stops autosync')
+    print('PASS: age shown; window movement/minimize/maximize/restore/resize; dialog minimize; manual sync; 10-second autosync; draft retention; disconnect stops autosync')
