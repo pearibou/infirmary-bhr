@@ -7,6 +7,21 @@ with sync_playwright() as p:
     prepare_test_page(page)
     page.goto('http://localhost:8000')
     unlock_test_drive(page)
+    presence=page.locator('#connected-users')
+    assert presence.inner_text()=='Connected Users: 1'
+    presence.click();assert page.locator('#connected-users-pane').is_visible()
+    page.keyboard.press('Escape');assert not page.locator('#connected-users-pane').is_visible()
+    # Provider seam accepts future shared presence, deduplicates identities and
+    # ignores stale callbacks after replacing a provider.
+    page.evaluate("""async()=>{
+        const presence=await import('./presence.js?v=0.7.6');
+        window.presenceModule=presence;
+        presence.setPresenceProvider({subscribe:cb=>{window.oldPresence=cb;cb([{id:'a',name:'Synthetic One'},{id:'a',name:'Synthetic One'},{id:'b',name:'Synthetic Two'}]);return ()=>window.presenceStopped=true;}});
+    }""")
+    assert presence.inner_text()=='Connected Users: 2'
+    page.evaluate("presenceModule.setPresenceProvider(null);oldPresence([{id:'stale',name:'Stale'}])")
+    assert presence.inner_text()=='Connected Users: 1'
+    assert page.evaluate('presenceStopped')
     toggle=page.locator('#app-menu-toggle');menu=page.locator('#app-menu')
     assert not menu.is_visible()
     toggle.click();assert menu.is_visible()

@@ -130,3 +130,10 @@ GitHub Pages publicly serves the frontend. A JavaScript-only password screen wou
 For a staff-only application, move the frontend behind an authenticated host/access gateway and use Google sign-in with an explicit allowlist of staff accounts. A small backend should verify identity tokens, issue secure HttpOnly sessions, enforce authorization on every data request, and manage the organization's Drive access server-side. The backend can retain refresh credentials securely so staff sign-in and the shared Drive connection are separate. Never embed refresh tokens or a shared account password in this repository. Choose the hosting/identity provider and authorized staff list before implementing this design.
 
 With login, the local/offline cache also needs an explicit policy: avoid unencrypted health records in localStorage on shared devices; clear or lock user data on sign-out, and determine whether authenticated offline use is allowed. Protecting the hosted URL alone does not revoke records already cached on a device.
+
+
+### Logout and presence
+
+The top-bar power button confirms logout, waits for any active sync, then performs a fresh final sync before disconnecting. A failed final sync keeps the session open for retry; Cancel becomes available again. Unsaved input drafts are not posted automatically. Closing a tab or browser does not run this logout flow.
+
+**Connected Users: N** opens a compact list. Currently it reports only the authenticated session in this browser, not all people using the shared Drive account. `presence.js` exports `setPresenceProvider(provider)` for future shared presence: `provider.subscribe(onUsers)` emits arrays of `{id, name}` and returns an unsubscribe function. The provider starts only during an unlocked session and stops at logout; stale callbacks are ignored. Supply this from a future authenticated backend with session expiry/heartbeats and authorization, without writing presence to the clinical directory or GitHub.
