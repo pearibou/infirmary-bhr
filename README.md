@@ -20,7 +20,7 @@ The power symbol at the far right of the top bar opens a small dimmed-screen con
 
 ## Event Log
 
-Double-click the clipboard icon below Trash (or focus it and press Enter) to open the read-only Event Log window. Events appear newest first and record actor, UTC creation time, action, affected entry ID, and changed field names. Record creation/updates/deletion, clinical note entry/edits/deletion, folder attachment changes, profile-photo and other uploads, sticky creation/movement/deletion, Drive connections/disconnections and directory-location selections are recorded. Read-only viewing, mouse movements, window geometry and unchanged periodic syncs do not add noise. Logging begins with this version; past activity cannot be reconstructed retroactively.
+Double-click the clipboard icon at the top right of the desktop (or focus it and press Enter) to open the read-only Event Log window. Events appear newest first and record actor, UTC creation time, action, affected entry ID, and changed field names. Record creation/updates/deletion, clinical note entry/edits/deletion, folder attachment changes, profile-photo and other uploads, sticky creation/movement/deletion, Drive connections/disconnections and directory-location selections are recorded. Read-only viewing, mouse movements, window geometry and unchanged periodic syncs do not add noise. Logging begins with this version; past activity cannot be reconstructed retroactively.
 
 Data mutations and their event metadata are saved together in browser directory JSON. Existing event IDs cannot be edited or removed through normal application actions, including deleting a person or note. Cross-user sync unions entries and rejects changes under an existing event ID. Clinical note text, record field values, attachment bytes and credentials are not copied into the log. File IDs, person IDs and staff identities remain protected information. Only synthetic test metadata belongs in source.
 
@@ -36,6 +36,8 @@ On a person's page choose **Upload file…**. Attach a Drive folder first and co
 
 Only frontend source, public configuration, documentation and synthetic test fixtures belong in this repository. All real person information, notes, birth dates, directory JSON and attachments are protected runtime data; never put them in source, fixtures, logs, screenshots, issue reports or commits. `people_directory.json`, `BHR_event_log.txt`, `uploads/`, local environment files and logs are ignored as an additional guard, not an access-control mechanism. Browser directory storage remains unencrypted; attachments themselves are not persisted locally by the app. Google Drive authentication and server-side access controls must be part of the production login design.
 
+The top bar uses a monochrome System 7-style recreation of the supplied abbey emblem and the name **Mepkin Abbey Infirmary**.
+
 ## Windows and ages
 
 Age appears below date of birth, calculated from a complete date in the device timezone; incomplete/invalid dates show no calculated age. Ages refresh while open. February 29 birthdays increment on March 1 in non-leap years.
@@ -44,7 +46,7 @@ On desktop screens at least 1000 px wide, the main window starts around 60% of s
 
 ## Desktop and permanent deletion
 
-Desktop icons occupy a grid anchored at the top right, filling downward before creating another column to the left. Future `.desktop-icon` elements added to `#desktop-icons` use the same grid. Trash stays on the desktop and comes forward during an entry drag so it can receive drops even when the main window is maximized.
+Desktop icons occupy a grid anchored at the top right, filling downward before creating another column to the left. Future `.desktop-icon` elements added to `#desktop-icons` use the same grid. Event Log occupies the first top-right grid slot; Trash is separately anchored at the bottom right and comes forward during an entry drag so it can receive drops even when the main window is maximized.
 
 Drag a directory listing or your own chronological note onto **Trash**. Individual chronological notes can only be dragged/deleted by their original connected Google account; legacy/unattributed notes cannot be individually deleted. Ownership is checked again when confirming, so a stale dialog cannot authorize a different account. Shared desktop handoff notes remain trashable by any connected user. The dialog asks **ARE YOU SURE YOU WANT TO PERMANENTLY DELETE THIS ENTRY?** Cancel is focused by default; only confirming removes the entry. Deleting a person also removes their notes and revision histories from this directory. There is no undo or recoverable in-app trash. For keyboard access, focus a person or note and press Delete. On touch devices, tap an entry to select it, then tap Trash for the same confirmation.
 

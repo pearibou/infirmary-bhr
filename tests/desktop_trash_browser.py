@@ -57,7 +57,7 @@ with sync_playwright() as p:
     page.locator('.detail').evaluate('(el)=>el.scrollTop=el.scrollHeight');assert_footer()
     # Future icons fill downward, then another column to the left.
     page.evaluate("""()=>{const icons=document.querySelector('#desktop-icons');const rows=Number(getComputedStyle(document.documentElement).getPropertyValue('--desktop-rows'));for(let i=0;i<=rows;i++){const el=document.createElement('button');el.className='desktop-icon test-icon';el.textContent='Test '+i;icons.append(el);}}""")
-    first=trash.bounding_box();second=page.locator('.test-icon').first.bounding_box()
+    first=page.locator('#event-log-icon').bounding_box();second=page.locator('.test-icon').first.bounding_box()
     assert abs(first['x']-second['x'])<1 and second['y']>first['y']
     left=page.locator('.test-icon').last.bounding_box();assert left['x']<first['x']
     page.locator('.test-icon').evaluate_all('(nodes)=>nodes.forEach(node=>node.remove())')
