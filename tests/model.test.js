@@ -136,3 +136,11 @@ test('optional allergies and no-known-allergies state validate and survive newer
  assert.throws(()=>validateDirectory({version:1,people:[{...known,allergies:123}]}),/allergies/);
  assert.throws(()=>validateDirectory({version:1,people:[{...known,noKnownAllergies:'yes'}]}),/allergies/);
 });
+
+
+test('medication linkage survives directory sync and rejects malformed destinations',()=>{
+ const linked={...person(),medicationSheet:{spreadsheetId:'synthetic-workbook',sheetId:42},updatedAt:'2026-11-07T12:00:00Z'};
+ const merged=mergeDirectories({version:1,people:[person()]},{version:1,people:[linked]});
+ assert.deepEqual(merged.people[0].medicationSheet,linked.medicationSheet);
+ for(const medicationSheet of [null,{spreadsheetId:'bad/url',sheetId:1},{spreadsheetId:'synthetic',sheetId:-1},{spreadsheetId:'synthetic',sheetId:'42'}])assert.throws(()=>validateDirectory({version:1,people:[{...linked,medicationSheet}]}),/medication sheet/);
+});

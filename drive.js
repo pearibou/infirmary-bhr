@@ -1,6 +1,6 @@
-import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.8.6';
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.8.6';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.8.6';
+import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.9.0';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.9.0';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.9.0';
 let token,expires=0,loading,authorizedClient,currentUser,workspaceFolder,workspaceName,legacyRootId,storageEpoch=0;
 const activeRequests=new Set();
 export function disconnect(){storageEpoch++;workspaceFolder=undefined;workspaceName=undefined;legacyRootId=undefined;for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
@@ -263,4 +263,20 @@ export async function changeDesktopFile(baseline,change){
   }
   if(change.trash){if(folder&&(await listDesktopFiles(file.id,null,true)).length)throw new Error('Only empty folders can be deleted. Move or delete their contents first.');body.trashed=true;}
   return (await api(`files/${safeDriveId(file.id)}?fields=${documentFields}${query}`,{method:'PATCH',headers:{'Content-Type':'application/json',...(file.etag?{'If-Match':file.etag}:{})},body:JSON.stringify(body)})).json();
+}
+
+// Sheets uses the existing full Drive OAuth scope. Tokens stay in this module.
+export function getDriveSessionEpoch(){return storageEpoch;}
+export async function findMedicationWorkbook(knownId){
+  requireFilesAccess();if(!workspaceFolder)throw new Error('Sync the Infirmary-BHR folder first.');
+  if(knownId){const file=await(await api(`files/${safeDriveId(knownId)}?fields=id,name,mimeType,parents,trashed`)).json();if(file.trashed||file.mimeType!=='application/vnd.google-apps.spreadsheet'||!file.parents?.includes(workspaceFolder))throw new Error('The linked medication spreadsheet is unavailable in Infirmary-BHR. Restore it there, then retry.');return file;}
+  const files=(await storageListing(`'${workspaceFolder}' in parents and name = 'Medication Lists (BHR)' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`)).filter(file=>file.name==='Medication Lists (BHR)'&&file.mimeType==='application/vnd.google-apps.spreadsheet');
+  if(files.length!==1)throw new Error(files.length?'Multiple Medication Lists (BHR) spreadsheets found. Keep one master spreadsheet in Infirmary-BHR.':'Place the Google spreadsheet Medication Lists (BHR) inside Infirmary-BHR, then retry.');return files[0];
+}
+export async function medicationSheetsRequest(path,options={}){
+  requireFilesAccess();const epoch=storageEpoch;
+  const response=await driveFetch('https://sheets.googleapis.com/v4/spreadsheets/'+path,{...options,headers:{Authorization:`Bearer ${token}`,...(options.body?{'Content-Type':'application/json'}:{}),...options.headers}});
+  if(epoch!==storageEpoch)throw new Error('Google Drive connection changed. Reconnect before opening medications.');
+  if(!response.ok){if(response.status===401)disconnect();let message;try{message=(await response.json()).error?.message;}catch{}const error=new Error(message||`Medication spreadsheet request failed (${response.status}).`);error.status=response.status;if(/has not been used|is disabled|accessNotConfigured|SERVICE_DISABLED/i.test(error.message))error.message='Enable Google Sheets API in the Google Cloud project for this app, then Retry. '+error.message;throw error;}
+  return response.json();
 }

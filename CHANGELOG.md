@@ -1,5 +1,11 @@
 # Version history
 
+## 0.9.0
+
+- Add chart navigation and a Sheets-backed Medications window with on-demand surname/initial tabs, Active/Discontinued views, add/edit, discontinuation and confirmed deletion.
+- Add indication/prescriber and timezone-aware short courses, checked at connection and list opening; preserve failed drafts and show pending completions.
+- Use stable sheet/row IDs, conflict checks, metadata-only activity logging and logout cleanup; keep all medication contents in Google.
+
 ## 0.8.6
 
 - Preserve unsaved clinical-note drafts in memory when switching notes instead of asking to discard them; restore editing focus when reopening and expose unfinished work through Resume Unsaved Note….

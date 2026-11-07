@@ -161,4 +161,12 @@ Right-click a note for Open, Rename note, Attach note to patient's chart, or Sen
 
 Writes check the current Drive modification time and send If-Match when an ETag is available; conflicting edits require reopening rather than silently overwriting. These browser-side checks are not a substitute for server-enforced authorization. Anyone signing into the same central Google account has the same author identity, and direct Drive access remains outside BHR restrictions. The future individual-staff-login backend must enforce these rules independently. Logout clears document/editor/list state across open BHR tabs; live files remain in Drive.
 
-The agreed medication spreadsheet design is in [docs/medication-list-design.md](docs/medication-list-design.md). This release documents that plan; it does not implement medications.
+## Medication lists
+
+The person header now offers Demographics, Medications, Medical History and Face Sheet. Demographics retains the current record; the last two are placeholders. Medications opens a dedicated window backed by the private **Medication Lists (BHR)** Google spreadsheet directly inside **Infirmary-BHR**.
+
+Enable [Google Sheets API](https://console.cloud.google.com/apis/library/sheets.googleapis.com) in the existing Google OAuth project. The current Drive scope also permits Sheets access. Open a person’s Medications and click **+ Add medication list** to initialize the blank spreadsheet and create a surname/first-initial tab. Tabs are created only when requested and remain linked by stable IDs after renaming. Existing unexpected cells are not overwritten.
+
+Add/edit entries with dose, route, frequency, instructions, indication, prescriber and start date. Active and Discontinued views preserve treatment history. Discontinue keeps the row with its date/reason; Delete entry is confirmed and intended for errors/duplicates. Short courses accept an end date and optional time; a date-only endpoint stays active through that date. New templates use America/New_York; the workbook timezone governs subsequent checks. Overdue courses are processed at connection and list opening, with failed updates explicitly pending.
+
+Saves go directly to Sheets; failures preserve the form. Medication contents are held in memory and cleared on logout, never stored in the repository, localStorage or service-worker cache. Client conflict checks reduce accidental overwrites but are not atomic across simultaneous users. See [the design and operational limits](docs/medication-list-design.md).
