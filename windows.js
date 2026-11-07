@@ -32,7 +32,7 @@ function minimize(win,title){
   if(dock.querySelector(`[data-window="${win.id}"]`))return;
   if(win instanceof HTMLDialogElement)win.close();else win.hidden=true;
   const restore=document.createElement('button');restore.textContent=`▣ ${title}`;restore.dataset.window=win.id;restore.title='Restore '+title;
-  restore.onclick=()=>{if(win instanceof HTMLDialogElement)win.showModal();else win.hidden=false;restore.remove();constrain(win);win.querySelector('.titlebar,.dialog-title')?.focus();};dock.append(restore);restore.focus();
+  restore.onclick=()=>{if(win instanceof HTMLDialogElement)win[win.dataset.nonmodal==='true'?'show':'showModal']();else win.hidden=false;restore.remove();constrain(win);win.querySelector('.titlebar,.dialog-title')?.focus();};dock.append(restore);restore.focus();
 }
 main.id='records-window';movable(main,main.querySelector('.titlebar'));
 document.querySelector('#minimize-main').onclick=()=>minimize(main,'Brother Health Records - Main');

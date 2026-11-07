@@ -103,3 +103,35 @@
 .allergy-fields:disabled textarea{background:#ddd;cursor:default}
 #person-dialog .allergy-check{margin-top:8px}
 .detail .allergies{font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+/* Drive desktop documents; stickies retain their foreground layer. */
+#desktop-icons{max-width:calc(100vw - 24px);overflow-x:auto}
+.drive-file{min-width:88px;position:relative}
+.drive-file span{max-width:84px;max-height:34px;overflow:hidden;text-overflow:ellipsis;overflow-wrap:anywhere;line-height:14px}
+.drive-file input{width:84px;padding:2px;font-size:12px;min-height:26px;background:#fff}
+#file-browser{position:fixed;inset:auto;left:12vw;top:calc(var(--desktop-top,38px) + 36px);margin:0;z-index:1;width:min(640px,calc(100vw - 24px));height:440px;max-height:calc(100dvh - var(--desktop-top,38px) - 24px);padding:16px}
+#file-browser:not([open]){display:none}
+.file-browser-toolbar,.rich-toolbar{display:flex;gap:6px;flex-wrap:wrap}
+.file-browser-toolbar button,.rich-toolbar button{font-size:12px;padding:4px 8px;min-height:28px}
+.file-grid{display:grid;grid-template-columns:repeat(auto-fill,88px);gap:8px;align-content:start;min-height:160px;padding:12px 0}
+#rich-note-dialog{width:min(660px,calc(100vw - 24px));min-height:360px}
+#rich-note-dialog label{font-size:12px;margin:10px 0}
+#rich-note-body{min-height:220px;max-height:48dvh;overflow:auto;padding:12px;background:#fff;border:1px solid #111;line-height:1.5;overflow-wrap:anywhere;font-size:14px;white-space:pre-wrap}
+#rich-note-body[contenteditable="false"]{background:#f4f4f4}
+#rich-note-body:focus{outline:2px solid #354b96;outline-offset:1px}
+#rich-note-body p,#rich-note-body div{margin:0 0 8px}
+#rich-note-error,#file-action-error{font-size:12px;color:#8a1717;overflow-wrap:anywhere}
+#file-context-menu{position:fixed;width:230px;background:#ddd;border:1px solid #111;box-shadow:2px 2px #111;padding:3px;z-index:10}
+#file-context-menu[hidden]{display:none}
+#file-context-menu button{display:block;width:100%;text-align:left;border:0;border-radius:0;box-shadow:none;font-size:12px;padding:6px}
+#file-context-menu button[hidden]{display:none}
+#file-context-menu button:not(:disabled):is(:hover,:focus){background:#111;color:#fff}
+#file-action-dialog{min-height:0;resize:none}
+#file-patient{width:100%;font:inherit;padding:6px;margin-top:8px}
+#file-patient-label[hidden]{display:none}
+#file-status{position:fixed;left:12px;bottom:58px;max-width:calc(100vw - 140px);padding:8px;background:#fff;border:1px solid #111;z-index:4;font-size:12px;overflow-wrap:anywhere}
+.chart-documents{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;margin:10px 0 22px}
+.chart-documents button{font-size:12px}
+#desktop-context-menu button:not(:disabled):hover{background:#111;color:#fff}
+@media(max-width:700px){#file-browser{left:12px}#rich-note-body{min-height:180px}}
+
+#desktop-context-menu button[hidden]{display:none}

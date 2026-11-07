@@ -1,5 +1,11 @@
 # Version history
 
+## 0.8.0
+
+- Save the agreed medication-list plan in docs/medication-list-design.md for later implementation.
+- Add Drive-root rich-text clinical notes, native nested folders, desktop grid icons, rename/move/trash actions and chart links. Clinical notes are editable/deletable only by their creator; folders must be empty before deletion.
+- Preserve drafts on write failure, check stale Drive versions, sanitize formatting, and clear all document UI/memory on disconnect/logout.
+
 ## 0.7.9
 
 - Add optional allergies text and No known allergies checkbox to person records; show the selected state below age, sync fields and log changes without clinical values.
