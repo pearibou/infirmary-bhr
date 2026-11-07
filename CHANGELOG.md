@@ -1,5 +1,10 @@
 # Version history
 
+## 0.8.4
+
+- Reflect the current selection/caret formatting with depressed toolbar buttons, including keyboard changes and mixed selections.
+- Replace list labels with compact bulleted/numbered SVG icons while retaining accessible names.
+
 ## 0.8.3
 
 - Create/reuse Infirmary-BHR for directory, Event Log, desktop notes/folders and fallback photos; the BHR desktop now represents that folder.
