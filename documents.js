@@ -1,11 +1,12 @@
-import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.8.5';
-import {clearTrashSelection} from './trash.js?v=0.8.5';
-import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.8.5';
-import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.8.5';
+import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.8.6';
+import {clearTrashSelection} from './trash.js?v=0.8.6';
+import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.8.6';
+import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.8.6';
 const $=selector=>document.querySelector(selector),noteDialog=$('#rich-note-dialog'),folderTemplate=$('#file-browser-template'),context=$('#file-context-menu');
 let hooks,active=false,generation=0,refreshNumber=0,busy=false,editor=null,contextFile,contextView,actionFile,actionKind,dragged,dirty=false,renaming=false,refreshPending=false,editorRequest=0;
 let desktopFiles=[],tooltipTimer,tooltipTarget,windowNumber=0;
-const folderViews=new Map();
+const folderViews=new Map(),noteDrafts=new Map();
+let openingEditor=false;
 function hideFilename(){clearTimeout(tooltipTimer);tooltipTarget?.removeAttribute('aria-describedby');tooltipTarget=null;$('#filename-tooltip').hidden=true;$('#filename-tooltip').textContent='';}
 function filenameHint(button,name){
   const show=()=>{hideFilename();tooltipTimer=setTimeout(()=>{
@@ -45,21 +46,23 @@ function updateFormatButtons(){
 }
 export function initDocuments(options){
   hooks=options;document.addEventListener('keydown',event=>{if(event.key==='Escape')hideFilename();});window.addEventListener('resize',hideFilename);document.addEventListener('scroll',hideFilename,true);document.addEventListener('pointerdown',hideFilename,true);
+  $('#resume-note-drafts').onclick=openDrafts;
   $('#new-rich-note').onclick=()=>{options.closeDesktopMenu();openEditor(null,'root');};
   $('#new-drive-folder').onclick=()=>{options.closeDesktopMenu();newFolder('root');};
   $('#rich-note-form').onsubmit=event=>{event.preventDefault();saveEditor();};
   for(const button of document.querySelectorAll('[data-format]')){
     button.addEventListener('mousedown',event=>event.preventDefault());
-    button.onclick=()=>{if($('#rich-note-body').contentEditable!=='true')return;$('#rich-note-body').focus();document.execCommand(button.dataset.format,false,null);dirty=true;updateFormatButtons();};
+    button.onclick=()=>{if($('#rich-note-body').contentEditable!=='true')return;$('#rich-note-body').focus();document.execCommand(button.dataset.format,false,null);dirty=true;refreshDraftControls();updateFormatButtons();};
   }
   document.addEventListener('selectionchange',updateFormatButtons);
   noteDialog.addEventListener('focusin',updateFormatButtons);noteDialog.addEventListener('close',updateFormatButtons);
   for(const event of ['input','keyup','mouseup'])$('#rich-note-body').addEventListener(event,updateFormatButtons);
   $('#rich-note-body').addEventListener('paste',event=>{event.preventDefault();document.execCommand('insertText',false,event.clipboardData.getData('text/plain'));});
   $('#rich-note-body').addEventListener('drop',event=>event.preventDefault());
-  for(const id of ['rich-note-name','rich-note-time','rich-note-body'])$('#'+id).addEventListener('input',()=>dirty=true);
-  // Closing/minimizing keeps an unsaved draft in memory until explicit discard or logout.
+  for(const id of ['rich-note-name','rich-note-time','rich-note-body'])$('#'+id).addEventListener('input',()=>{dirty=true;refreshDraftControls();});
+  // Closing/minimizing and switching retain drafts in memory until save or logout.
   noteDialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});
+  noteDialog.addEventListener('close',()=>{if(openingEditor){editorRequest++;openingEditor=false;noteDialog.setAttribute('aria-busy','false');}refreshDraftControls();});
   $('#file-action-dialog').addEventListener('cancel',event=>{if(busy)event.preventDefault();});
   $('#file-action-form').onsubmit=event=>{event.preventDefault();performAction();};
   for(const button of context.querySelectorAll('[data-file-action]'))button.onclick=()=>{const file=contextFile,view=contextView,action=button.dataset.fileAction;closeContext();if(file)handleAction(file,action,view);};
@@ -73,15 +76,15 @@ export function initDocuments(options){
   $('#desktop-trash').addEventListener('drop',event=>{if(!dragged)return;event.preventDefault();const file=dragged;endDrag();handleAction(file,'trash');});
   $('.desktop').addEventListener('dragover',event=>{if(dragged&&!event.target.closest('.desktop-icon,dialog,.window'))event.preventDefault();});
   $('.desktop').addEventListener('drop',event=>{if(!dragged||event.target.closest('.desktop-icon,dialog,.window'))return;event.preventDefault();const file=dragged;endDrag();moveFile(file,'root');});
-  window.addEventListener('beforeunload',event=>{if(dirty||busy){event.preventDefault();event.returnValue='';}});
+  window.addEventListener('beforeunload',event=>{if(dirty||noteDrafts.size||busy){event.preventDefault();event.returnValue='';}});
 }
 export function documentsSession(ready){
   if(ready){if(!active){active=true;generation++;refreshFiles();}return;}
   if(!active&&!editor&&!desktopFiles.length)return;
-  hideFilename();active=false;renaming=false;refreshPending=false;generation++;refreshNumber++;dirty=false;editor=null;desktopFiles=[];contextFile=null;contextView=null;actionFile=null;for(const view of [...folderViews.values()])closeFolder(view);endDrag();closeContext();status('');
+  hideFilename();noteDrafts.clear();openingEditor=false;noteDialog.setAttribute('aria-busy','false');active=false;renaming=false;refreshPending=false;generation++;refreshNumber++;dirty=false;editor=null;desktopFiles=[];contextFile=null;contextView=null;actionFile=null;for(const view of [...folderViews.values()])closeFolder(view);endDrag();closeContext();status('');
   document.querySelectorAll('.drive-file').forEach(item=>item.remove());
-  $('#rich-note-form').reset();$('#rich-note-body').replaceChildren();$('#rich-note-author').textContent='';$('#rich-note-error').textContent='';$('#file-action-form').reset();$('#file-patient').replaceChildren();$('#file-action-description').textContent='';$('#file-action-error').textContent='';
-  for(const dialog of [noteDialog,$('#file-action-dialog')]){if(dialog.open)dialog.close();document.querySelector(`#window-dock [data-window="${dialog.id}"]`)?.remove();}
+  $('#rich-note-form').reset();$('#rich-note-body').replaceChildren();$('#rich-note-author').textContent='';$('#rich-note-error').textContent='';$('#file-action-form').reset();$('#file-patient').replaceChildren();$('#file-action-description').textContent='';$('#file-action-error').textContent='';$('#note-drafts-list').replaceChildren();refreshDraftControls();
+  for(const dialog of [noteDialog,$('#file-action-dialog'),$('#note-drafts-dialog')]){if(dialog.open)dialog.close();document.querySelector(`#window-dock [data-window="${dialog.id}"]`)?.remove();}
 }
 function closeFolder(view){
   folderViews.delete(view.parent);view.request++;document.querySelector(`#window-dock [data-window="${view.element.id}"]`)?.remove();
@@ -156,7 +159,7 @@ function fileIcon(file,view=null){
   button.append(svg,node('span',file.name));
   button.addEventListener('pointerdown',clearTrashSelection);button.addEventListener('focus',clearTrashSelection);
   button.ondblclick=()=>handleAction(file,'open',view);
-  button.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();handleAction(file,'open',view);}if(event.key==='Delete'){event.preventDefault();handleAction(file,'trash',view);}if(event.key==='F2'){event.preventDefault();handleAction(file,'rename',view);}});
+  button.addEventListener('keydown',event=>{if(event.target!==button||openingEditor||noteDialog.open)return;if(event.key==='Enter'){event.preventDefault();handleAction(file,'open',view);}if(event.key==='Delete'){event.preventDefault();handleAction(file,'trash',view);}if(event.key==='F2'){event.preventDefault();handleAction(file,'rename',view);}});
   button.oncontextmenu=event=>{event.preventDefault();event.stopPropagation();contextFile=file;contextView=view;
     for(const action of context.querySelectorAll('button')){action.hidden=folder(file)&&action.dataset.fileAction==='attach';action.disabled=action.dataset.fileAction!=='open'&&!allowed(file);}
     context.querySelector('[data-file-action="rename"]').textContent=folder(file)?'Rename folder':'Rename note';
@@ -230,21 +233,48 @@ function showFolderMenu(event,view){
 document.querySelector('.desktop').addEventListener('contextmenu',()=>{
   if(!hooks)return;$('#new-desktop-note').hidden=false;$('#new-rich-note').onclick=()=>{hooks.closeDesktopMenu();openEditor(null,'root');};$('#new-drive-folder').onclick=()=>{hooks.closeDesktopMenu();newFolder('root');};
 });
+function draftSnapshot(){return {entry:editor,name:$('#rich-note-name').value,time:$('#rich-note-time').value,html:$('#rich-note-body').innerHTML};}
+function refreshDraftControls(){
+  const count=noteDrafts.size+(dirty&&editor&&!noteDrafts.has(editor.key)?1:0);
+  $('#resume-note-drafts').hidden=count===0;
+}
+function openDrafts(){
+  if(!active)return;hooks.closeDesktopMenu();const drafts=new Map(noteDrafts);if(dirty&&editor)drafts.set(editor.key,draftSnapshot());
+  $('#note-drafts-list').replaceChildren();
+  for(const draft of drafts.values()){
+    const button=node('button',draft.name.trim()||genericName(draft.entry.document.noteAt));button.type='button';button.className='draft-choice';
+    button.onclick=()=>{$('#note-drafts-dialog').close();openEditor(draft.entry.file,draft.entry.target);};$('#note-drafts-list').append(button);
+  }
+  if(drafts.size&&!$('#note-drafts-dialog').open)$('#note-drafts-dialog').showModal();
+}
+function focusNoteEditor(){
+  document.querySelector('#window-dock [data-window="rich-note-dialog"]')?.remove();
+  if(!noteDialog.open)noteDialog.showModal();$('#rich-note-body').focus();
+}
 async function openEditor(file=null,target='root'){
   if(!active)return;
-  if(dirty&&editor){if(editor.file?.id===file?.id){if(!noteDialog.open)noteDialog.showModal();return;}if(!confirm('Discard the unsaved clinical note draft?'))return;}
-  const epoch=generation,request=++editorRequest;
+  const key=file?'file:'+file.id:'new';
+  if(dirty&&editor?.key===key){focusNoteEditor();return;}
+  if(dirty&&editor)noteDrafts.set(editor.key,draftSnapshot());
+  const draft=noteDrafts.get(key),epoch=generation,request=++editorRequest;
+  dirty=false;editor=null;refreshDraftControls();openingEditor=true;noteDialog.setAttribute('aria-busy','true');
+  $('#rich-note-body').replaceChildren();$('#rich-note-body').contentEditable='false';
+  $('#rich-note-name').value=file?.name||'';$('#rich-note-name').disabled=true;$('#rich-note-time').value='';$('#rich-note-time').disabled=true;
+  $('#rich-note-author').textContent='';$('#rich-note-error').textContent=file?'Opening note from Google Drive…':'';
+  documentButtons(true);$('#rich-note-save').disabled=true;$('#rich-note-save').hidden=false;noteDialog.querySelector('.window-control').disabled=true;
+  document.querySelector('#window-dock [data-window="rich-note-dialog"]')?.remove();if(!noteDialog.open)noteDialog.showModal();
   try{
-    let document,fileMetadata=file;
-    if(file){const loaded=await readDesktopDocument(file.id);fileMetadata=loaded.file;document=validateDocument(loaded.content);if(document.authorId!==fileMetadata.appProperties.authorId)throw new Error('Note author metadata does not match. The note was not opened.');}
-    else {const user=getCurrentUser();if(!user)throw new Error('Reconnect to identify the clinical note author.');const now=new Date().toISOString();document={kind:'bhr-rich-note',version:1,html:'',noteAt:now,createdAt:now,updatedAt:now,authorId:user.id,authorName:user.name};}
+    let content,fileMetadata=file;
+    if(draft){content=draft.entry.document;fileMetadata=draft.entry.file;target=draft.entry.target;}
+    else if(file){const loaded=await readDesktopDocument(file.id);fileMetadata=loaded.file;content=validateDocument(loaded.content);if(content.authorId!==fileMetadata.appProperties.authorId)throw new Error('Note author metadata does not match. The note was not opened.');}
+    else {const user=getCurrentUser();if(!user)throw new Error('Reconnect to identify the clinical note author.');const now=new Date().toISOString();content={kind:'bhr-rich-note',version:1,html:'',noteAt:now,createdAt:now,updatedAt:now,authorId:user.id,authorName:user.name};}
     if(epoch!==generation||request!==editorRequest)return;
-    editor={file:fileMetadata,document,target};dirty=false;const editable=!file||canManageDocument(fileMetadata,getCurrentUser());
-    $('#rich-note-name').value=fileMetadata?.name||genericName(document.noteAt);$('#rich-note-time').value=localDate(document.noteAt);$('#rich-note-body').innerHTML=cleanNoteHtml(document.html);$('#rich-note-author').textContent='Entered by '+document.authorName+(editable?'':' · Read-only: only the creator can edit or delete');
-    $('#rich-note-name').disabled=!editable;$('#rich-note-time').disabled=!editable;$('#rich-note-body').contentEditable=String(editable);$('#rich-note-save').hidden=!editable;documentButtons(!editable);$('#rich-note-error').textContent='';
-    window.document.querySelector('#window-dock [data-window="rich-note-dialog"]')?.remove();
-    if(!noteDialog.open)noteDialog.showModal();$('#rich-note-body').focus();
-  }catch(error){if(epoch===generation)status(error.message);}
+    openingEditor=false;noteDialog.setAttribute('aria-busy','false');noteDrafts.delete(key);editor={file:fileMetadata,document:content,target,key};dirty=Boolean(draft);const editable=!fileMetadata||canManageDocument(fileMetadata,getCurrentUser());
+    $('#rich-note-name').value=draft?draft.name:fileMetadata?.name||genericName(content.noteAt);$('#rich-note-time').value=draft?draft.time:localDate(content.noteAt);$('#rich-note-body').innerHTML=cleanNoteHtml(draft?draft.html:content.html);$('#rich-note-author').textContent='Entered by '+content.authorName+(editable?'':' · Read-only: only the creator can edit or delete');
+    noteDialog.querySelectorAll('button').forEach(button=>button.disabled=false);
+    $('#rich-note-name').disabled=!editable;$('#rich-note-time').disabled=!editable;$('#rich-note-body').contentEditable=String(editable);$('#rich-note-save').hidden=!editable;documentButtons(!editable);$('#rich-note-error').textContent=draft?'Unsaved draft restored. Save note to store these changes in Drive.':'';
+    refreshDraftControls();focusNoteEditor();
+  }catch(error){if(epoch===generation&&request===editorRequest){openingEditor=false;noteDialog.setAttribute('aria-busy','false');$('#rich-note-error').textContent=error.message;noteDialog.querySelector('.window-control').disabled=false;}}
 }
 function documentButtons(disabled){for(const button of window.document.querySelectorAll('[data-format]'))button.disabled=disabled;updateFormatButtons();}
 async function saveEditor(){
@@ -255,7 +285,7 @@ async function saveEditor(){
   const entry=editor,name=$('#rich-note-name').value.trim()||genericName(date),content={...entry.document,html,noteAt:date.toISOString(),updatedAt:new Date().toISOString()};
   setEditorBusy(true);$('#rich-note-error').textContent='Saving directly to Google Drive…';
   try{
-    await operation(async epoch=>{const saved=await saveDesktopDocument(entry.target,name,content,entry.file);if(epoch!==generation)return;record(entry.file?'updated':'created',saved);dirty=false;editor={file:saved,document:content,target:entry.target};noteDialog.close();});
+    await operation(async epoch=>{const saved=await saveDesktopDocument(entry.target,name,content,entry.file);if(epoch!==generation)return;record(entry.file?'updated':'created',saved);dirty=false;noteDrafts.delete(entry.key);editor={file:saved,document:content,target:entry.target,key:'file:'+saved.id};refreshDraftControls();noteDialog.close();});
     await refreshFiles();hooks.chartChanged();
   }catch(error){if(active)$('#rich-note-error').textContent=error.message;}
   finally{setEditorBusy(false);}
