@@ -1,5 +1,10 @@
 # Version history
 
+## 0.9.2
+
+- Search row-scoped Sheets developer metadata explicitly before reading or changing medication entries; recover already-saved entries without duplicating them.
+- Make the synthetic Sheets GET response omit row metadata so the browser test exercises the real lookup path.
+
 ## 0.9.1
 
 - Correct Sheets metadata creation requests for workbook setup, person tabs and medication rows; validate request shapes in the synthetic backend.

@@ -56,7 +56,13 @@ with sync_playwright() as p:
     def sheets_api(route):
         req=route.request;path=urllib.parse.urlparse(req.url).path;body=req.post_data_json if req.method=='POST' else None
         if disabled_api[0]:route.fulfill(status=403,json={'error':{'message':'Google Sheets API is disabled'}});return
-        if path.endswith('/workbook'):route.fulfill(json=book);return
+        if path.endswith('/workbook'):
+            response=copy.deepcopy(book)
+            for tab in response['sheets']:tab['developerMetadata']=[m for m in tab['developerMetadata'] if 'dimensionRange' not in m['location']]
+            route.fulfill(json=response);return
+        if path.endswith('/developerMetadata:search'):
+            assert body=={'dataFilters':[{'developerMetadataLookup':{'metadataKey':'bhr.medicationId','visibility':'DOCUMENT'}}]}
+            route.fulfill(json={'matchedDeveloperMetadata':[{'developerMetadata':m} for tab in book['sheets'] for m in tab['developerMetadata'] if m['metadataKey']=='bhr.medicationId']});return
         if path.endswith('/values:batchGetByDataFilter'):
             route.fulfill(json={'valueRanges':[{'dataFilters':[f],'valueRange':{'values':filter_rows(f)}} for f in body['dataFilters']]});return
         if path.endswith('/values:batchUpdateByDataFilter'):

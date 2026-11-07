@@ -1,5 +1,5 @@
-import {findMedicationWorkbook,medicationSheetsRequest,getDriveSessionEpoch,getCurrentUser} from './drive.js?v=0.9.1';
-import {MED_FIELDS,MED_HEADERS,EDITABLE_MED_FIELDS,parseMedicationRows,medicationToRow,medicationSheetTitle,medicationSheetId,medicationDue,reviseMedication} from './medications-model.js?v=0.9.1';
+import {findMedicationWorkbook,medicationSheetsRequest,getDriveSessionEpoch,getCurrentUser} from './drive.js?v=0.9.2';
+import {MED_FIELDS,MED_HEADERS,EDITABLE_MED_FIELDS,parseMedicationRows,medicationToRow,medicationSheetTitle,medicationSheetId,medicationDue,reviseMedication} from './medications-model.js?v=0.9.2';
 const PERSON_KEY='bhr.personId',ROW_KEY='bhr.medicationId',SCHEMA_KEY='bhr.medications.schema';
 let source,sourceEpoch=-1;
 export function resetMedicationSource(){source=null;sourceEpoch=-1;}
@@ -12,6 +12,11 @@ export async function medicationWorkbook(knownIds=[]){
  if(!source||unique[0]&&source.id!==unique[0]){const file=await findMedicationWorkbook(unique[0]);if(epoch!==getDriveSessionEpoch())throw new Error('Connection changed.');source=file;sourceEpoch=epoch;}
  const book=await medicationSheetsRequest(id(source.id)+'?fields=spreadsheetId,properties(timeZone),sheets(properties(sheetId,title,gridProperties),developerMetadata),developerMetadata');
  if(!book.spreadsheetId||!Array.isArray(book.sheets))throw new Error('Google returned an invalid medication workbook.');
+ // Row metadata must be searched explicitly; Sheet.developerMetadata does not
+ // reliably include metadata attached to row dimensions.
+ const found=await post(id(book.spreadsheetId)+'/developerMetadata:search',{dataFilters:[{developerMetadataLookup:{metadataKey:ROW_KEY,visibility:'DOCUMENT'}}]});
+ for(const sheet of book.sheets)sheet.developerMetadata=(sheet.developerMetadata||[]).filter(meta=>meta.metadataKey!==ROW_KEY);
+ for(const match of found.matchedDeveloperMetadata||[]){const meta=match.developerMetadata;if(meta?.metadataKey!==ROW_KEY)continue;const sheet=book.sheets.find(item=>item.properties.sheetId===meta.location?.dimensionRange?.sheetId);if(!sheet)throw new Error('A medication row marker points to an unavailable sheet.');sheet.developerMetadata.push(meta);}
  return book;
 }
 function binding(sheet){return (sheet.developerMetadata||[]).filter(meta=>meta.metadataKey===PERSON_KEY&&meta.location?.sheetId===sheet.properties.sheetId);}
