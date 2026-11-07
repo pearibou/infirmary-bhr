@@ -1,5 +1,9 @@
 # Version history
 
+## 0.12.4
+
+- Remove the scheduling/timezone explanation from the medication print report.
+
 ## 0.12.3
 
 - Match medication startup batch results to permanent sheet IDs rather than response positions, preventing rows from being checked against another patient’s metadata. Reject missing/ambiguous matches without writes.

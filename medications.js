@@ -1,8 +1,8 @@
-import {printDocument,clearPrint} from './printing.js?v=0.12.3';
-import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.12.3';
-import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.12.3';
-import {isPrnMedication,compareMedications,EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.12.3';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.12.3';
+import {printDocument,clearPrint} from './printing.js?v=0.12.4';
+import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.12.4';
+import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.12.4';
+import {isPrnMedication,compareMedications,EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.12.4';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.12.4';
 const $=selector=>document.querySelector(selector),dialog=$('#medications-dialog'),formDialog=$('#medication-form-dialog'),actionDialog=$('#medication-action-dialog');
 let hooks,active=false,epoch=0,queue=Promise.resolve(),pending=0,currentPerson=null,context=null,tab='Active',formState=null,actionState=null,formDirty=false;
 const node=(tag,text,cls)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;};
@@ -122,6 +122,6 @@ function printMedications(){
   const columns=['Medication','Dose / Route','Frequency / Instructions','Indication / Prescriber','Dates'];
   const rows=entries=>entries.map(row=>[row.medication,[row.dose,row.route].filter(Boolean).join('\n'),[row.frequency,row.instructions].filter(Boolean).join('\n'),[row.indication&&'Indication: '+row.indication,row.prescriber&&'Prescriber: '+row.prescriber].filter(Boolean).join('\n'),[row.startDate&&'Start: '+row.startDate,row.scheduledEnd&&'Scheduled end: '+row.scheduledEnd.replace('T',' ')+(row.scheduledEnd.length===10?' (through this date)':''),row.status==='Discontinued'&&'Discontinued: '+(row.discontinuedAt||'Not recorded'),row.discontinuationReason].filter(Boolean).join('\n')]);
   const sections=[];for(const state of history?['Active','Discontinued']:['Active']){const entries=snapshot.rows.filter(row=>row.status===state).sort(compareMedications);sections.push(entries.length?{title:state+' medications',repeatIdentity:false,columns,rows:rows(entries)}:{title:state+' medications',lines:['No '+state.toLowerCase()+' medications.']});}
-  status('Opening print dialog…');await printDocument({title:'Medication List',person:structuredClone(person),sections,retrievedAt:snapshot.retrievedAt,subtitle:'Scheduled ends use '+snapshot.timezone+'. A date without time stays active through that date.'});alive(stamp);audit('print_requested',String(snapshot.sheetId),personId);status('Print dialog requested.');
+  status('Opening print dialog…');await printDocument({title:'Medication List',person:structuredClone(person),sections,retrievedAt:snapshot.retrievedAt});alive(stamp);audit('print_requested',String(snapshot.sheetId),personId);status('Print dialog requested.');
  }).catch(error=>{if(active)status('Could not print: '+error.message);});
 }
