@@ -1,7 +1,8 @@
-import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.9.2';
-import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.9.2';
-import {EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.9.2';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.9.2';
+import {printDocument,clearPrint} from './printing.js?v=0.10.0';
+import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.10.0';
+import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.10.0';
+import {EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.10.0';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.10.0';
 const $=selector=>document.querySelector(selector),dialog=$('#medications-dialog'),formDialog=$('#medication-form-dialog'),actionDialog=$('#medication-action-dialog');
 let hooks,active=false,epoch=0,queue=Promise.resolve(),pending=0,currentPerson=null,context=null,tab='Active',formState=null,actionState=null,formDirty=false;
 const node=(tag,text,cls)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;};
@@ -13,7 +14,7 @@ function run(work){
  const next=queue.catch(()=>{}).then(()=>{alive(stamp);return work(stamp);});queue=next;
  return next.finally(()=>{if(stamp===epoch){pending=Math.max(0,pending-1);hooks.busy(pending>0);controls();}});
 }
-function controls(){for(const id of ['med-add','med-refresh','med-active','med-discontinued'])$('#'+id).disabled=pending>0;for(const button of document.querySelectorAll('.med-entry-actions button'))button.disabled=pending>0;}
+function controls(){for(const id of ['med-add','med-refresh','med-active','med-discontinued','med-print','med-print-history'])$('#'+id).disabled=pending>0;for(const button of document.querySelectorAll('.med-entry-actions button'))button.disabled=pending>0;}
 function status(text){$('#med-status').textContent=text;}
 function audit(action,entryId,personId,automatic=false){hooks.activity('medication.'+action,'medication',entryId,'Medication '+action.replaceAll('_',' '),personId,automatic?{id:getCurrentUser()?.id,name:`Automatic (checked by ${getCurrentUser()?.name||'connected staff'})`}:getCurrentUser());}
 function failure(error,prefix=''){
@@ -25,10 +26,10 @@ async function load(personId,stamp){
  let loaded=await readMedicationList(person,knownIds());alive(stamp);await rememberLink(loaded,stamp);
  let result={pending:[],completed:[]};
  if(!loaded.missing){result=await completeScheduledCourses(loaded,getCurrentUser());alive(stamp);for(const id of result.completed)audit('scheduled_course_completed',id,personId,true);if(result.completed.length)loaded=await readMedicationList(personById(personId),knownIds());}
- alive(stamp);if(currentPerson!==personId)return;context=loaded;render();status(result.pending.length?'Scheduled end passed—update pending. '+result.pending[0].error:result.completed.length?'Scheduled course completed. See Discontinued.':'');
+ alive(stamp);if(currentPerson!==personId)return;loaded.retrievedAt=new Date().toISOString();context=loaded;render();status(result.pending.length?'Scheduled end passed—update pending. '+result.pending[0].error:result.completed.length?'Scheduled course completed. See Discontinued.':'');return result.pending.length===0;
 }
 export function initMedications(options){
- hooks=options;$('#med-refresh').onclick=()=>openMedications(currentPerson,true);
+ hooks=options;$('#med-print').onclick=printMedications;$('#med-refresh').onclick=()=>openMedications(currentPerson,true);
  $('#med-active').onclick=()=>{tab='Active';render();};$('#med-discontinued').onclick=()=>{tab='Discontinued';render();};$('#med-add').onclick=()=>openForm();
  $('#med-short-course').onchange=endFields;
  $('#medication-form').addEventListener('input',()=>formDirty=true);
@@ -41,7 +42,7 @@ export function initMedications(options){
 }
 export function medicationsSession(ready){
  if(ready){if(!active){active=true;epoch++;startupCheck();}return;}
- if(!active)return;active=false;epoch++;pending=0;queue=Promise.resolve();resetMedicationSource();context=null;currentPerson=null;formState=null;actionState=null;formDirty=false;
+ if(!active)return;active=false;epoch++;pending=0;queue=Promise.resolve();resetMedicationSource();clearPrint();$('#med-print-history').checked=false;context=null;currentPerson=null;formState=null;actionState=null;formDirty=false;
  hooks.busy(false);for(const win of [dialog,formDialog,actionDialog]){if(win.open)win.close();document.querySelector(`#window-dock [data-window="${win.id}"]`)?.remove();}
  $('#med-content').replaceChildren();$('#medications-title').textContent='Medications';$('#med-form-title').textContent='Add medication';$('#medication-form').reset();$('#medication-action-form').reset();
  formDisabled(false);actionDialog.querySelectorAll('button').forEach(button=>button.disabled=false);
@@ -64,7 +65,7 @@ function render(){
   run(async stamp=>{const person=personById(currentPerson);const result=await createMedicationList(person,knownIds(),window.INFIRMARY_CONFIG?.medicationTimeZone||'America/New_York');alive(stamp);await rememberLink(result,stamp);audit('list_created',String(result.sheetId),person.id);await load(person.id,stamp);}).catch(error=>{if(active)failure(error);});
  };area.append(add);$('#med-content').append(area);return;}
  $('#med-active').setAttribute('aria-pressed',String(tab==='Active'));$('#med-discontinued').setAttribute('aria-pressed',String(tab==='Discontinued'));
- $('#med-retrieved').textContent='Last retrieved '+new Date().toLocaleString()+' · Scheduled ends: '+context.timezone;
+ $('#med-retrieved').textContent='Last retrieved '+new Date(context.retrievedAt).toLocaleString()+' · Scheduled ends: '+context.timezone;
  const rows=context.rows.filter(row=>row.status===tab).sort((a,b)=>tab==='Discontinued'?(b.discontinuedAt||b.updatedAt).localeCompare(a.discontinuedAt||a.updatedAt):a.medication.localeCompare(b.medication));
  if(!rows.length)$('#med-content').append(node('p',tab==='Active'?'No active medications.':'No discontinued medications.','empty'));
  for(const entry of rows){
@@ -108,4 +109,17 @@ function performAction(){
  try{if(state.action==='discontinue')changed=reviseMedication(state.entry,{status:'Discontinued',discontinuedAt:$('#med-discontinue-date').value,discontinuationReason:$('#med-discontinue-reason').value.trim()},getCurrentUser());}catch(error){$('#med-action-error').textContent=error.message;return;}
  for(const control of $('#medication-action-form').elements)control.disabled=true;$('#med-action-error').textContent='Saving to spreadsheet…';
  run(async stamp=>{if(!personById(state.personId))throw new Error('This person was removed.');await (state.action==='delete'?deleteMedication(state.ctx,state.entry):updateMedication(state.ctx,state.entry,changed));alive(stamp);audit(state.action==='delete'?'deleted':'discontinued',state.entry.id,state.personId);actionDialog.close();await refreshAfterWrite(state.personId,stamp);}).catch(error=>{if(active)$('#med-action-error').textContent=error.message;}).finally(()=>{for(const control of $('#medication-action-form').elements)control.disabled=false;$('#med-discontinue-date').disabled=state.action==='delete';$('#med-discontinue-reason').disabled=state.action==='delete';});
+}
+
+function printMedications(){
+ if(pending||!context||context.missing)return;const personId=currentPerson,history=$('#med-print-history').checked;
+ run(async stamp=>{
+  const complete=await load(personId,stamp);alive(stamp);if(!complete)throw new Error('Printing stopped: scheduled medication updates are pending. Retry after they succeed.');
+  if(currentPerson!==personId||!context||context.missing)throw new Error('Medication list changed. Reopen it before printing.');
+  const person=personById(personId);if(!person)throw new Error('This person was removed.');const snapshot=context;
+  const columns=['Medication','Dose / Route','Frequency / Instructions','Indication / Prescriber','Dates'];
+  const rows=entries=>entries.map(row=>[row.medication,[row.dose,row.route].filter(Boolean).join('\n'),[row.frequency,row.instructions].filter(Boolean).join('\n'),[row.indication&&'Indication: '+row.indication,row.prescriber&&'Prescriber: '+row.prescriber].filter(Boolean).join('\n'),[row.startDate&&'Start: '+row.startDate,row.scheduledEnd&&'Scheduled end: '+row.scheduledEnd.replace('T',' ')+(row.scheduledEnd.length===10?' (through this date)':''),row.status==='Discontinued'&&'Discontinued: '+(row.discontinuedAt||'Not recorded'),row.discontinuationReason].filter(Boolean).join('\n')]);
+  const sections=[];for(const state of history?['Active','Discontinued']:['Active']){const entries=snapshot.rows.filter(row=>row.status===state).sort((a,b)=>state==='Active'?a.medication.localeCompare(b.medication):(b.discontinuedAt||b.updatedAt).localeCompare(a.discontinuedAt||a.updatedAt));sections.push(entries.length?{title:state+' medications',columns,rows:rows(entries)}:{title:state+' medications',lines:['No '+state.toLowerCase()+' medications.']});}
+  status('Opening print dialog…');await printDocument({title:'Medication List',person:structuredClone(person),sections,retrievedAt:snapshot.retrievedAt,subtitle:'Scheduled ends use '+snapshot.timezone+'. A date without time stays active through that date.'});alive(stamp);audit('print_requested',String(snapshot.sheetId),personId);status('Print dialog requested.');
+ }).catch(error=>{if(active)status('Could not print: '+error.message);});
 }

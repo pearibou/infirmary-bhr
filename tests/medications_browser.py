@@ -110,6 +110,7 @@ with sync_playwright() as p:
     page.route('https://www.googleapis.com/**',drive);ignore_event_log_projection(page);page.route('https://sheets.googleapis.com/**',sheets_api)
     page.goto('http://127.0.0.1:8000');unlock_test_drive(page)
     page.wait_for_function("!document.querySelector('#logout-power').disabled")
+    page.locator('.person strong').filter(has_text='Synthetic John').click()
     nav=page.locator('.chart-navigation');assert nav.get_by_role('button').all_text_contents()==['Demographics','Medications','Medical History','Face Sheet']
     nav.get_by_role('button',name='Medications',exact=True).click();page.get_by_role('button',name='+ Add medication list',exact=True).wait_for()
     assert len(book['sheets'])==1 and grids[0]==[] and page.locator('#med-controls').is_hidden()
@@ -132,6 +133,20 @@ with sync_playwright() as p:
     assert len(entry_rows(sid))==1
     card=page.locator('.med-entry').filter(has_text='Synthetic tablet 10 mg');assert 'Synthetic indication' in card.inner_text() and 'Synthetic clinician' in card.inner_text()
     assert 'Synthetic tablet 10 mg' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
+    def print_current(history=False):
+        page.locator('#med-print-history').set_checked(history)
+        print_routes=[];page.route('**/icons/abbey-letterhead.png',lambda route:print_routes.append(route))
+        page.locator('#med-print').click();page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Medication List')")
+        page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
+        page.wait_for_timeout(100);assert print_routes;print_routes.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes())
+        page.wait_for_function('window.printCalls===1');page.wait_for_function("!document.querySelector('#med-print').disabled")
+        result=page.frame_locator('#bhr-print-frame').locator('body').inner_text()
+        preview=browser.new_page();preview.set_content(page.locator('#bhr-print-frame').evaluate('frame=>frame.contentDocument.documentElement.outerHTML'));preview.locator('img').evaluate('image=>image.decode()');preview.pdf(path='/tmp/bhr-medications-print.pdf',format='Letter');preview.close()
+        page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))")
+        page.unroute('**/icons/abbey-letterhead.png');return result
+    print_body=print_current();assert 'Active medications' in print_body and 'Discontinued medications' not in print_body and 'Synthetic indication' in print_body and 'Last retrieved:' in print_body
+    disabled_api[0]=True;page.locator('#med-print').click();page.wait_for_function("document.querySelector('#med-status').textContent.startsWith('Could not print:')");assert page.locator('#bhr-print-frame').count()==0;disabled_api[0]=False
+
     card.get_by_role('button',name='Edit…',exact=True).click();form.get_by_label('Dose',exact=True).fill('Changed dose')
     entry_rows(sid)[0][2]='Externally changed dose';page.locator('#med-form-save').click();page.wait_for_function("document.querySelector('#med-form-error').textContent.includes('changed')")
     assert form.get_by_label('Dose',exact=True).input_value()=='Changed dose'
@@ -147,8 +162,10 @@ with sync_playwright() as p:
         page.locator('#med-add').click();form.get_by_label('Medication and strength',exact=True).fill(name);page.locator('#med-short-course').check();form.get_by_label('End date',exact=True).fill('2000-01-01');page.locator('#med-form-save').click();page.wait_for_function("!document.querySelector('#medication-form-dialog').open && !document.querySelector('#med-add').disabled")
     add_course('Synthetic completed course');row=next(row for row in entry_rows(sid) if row[1]=='Synthetic completed course');assert row[9]=='Discontinued' and row[12]=='Scheduled course completed' and row[19]
     fail_updates[0]=True;add_course('Synthetic pending course');assert 'Scheduled end passed—update pending' in page.locator('#med-content').inner_text()
+    page.locator('#med-print').click();page.wait_for_function("document.querySelector('#med-status').textContent.includes('Printing stopped')");assert page.locator('#bhr-print-frame').count()==0
     fail_updates[0]=False;sheet(sid)['properties']['title']='Freely renamed tab';page.locator('#med-refresh').click();page.wait_for_function("!document.querySelector('#med-add').disabled")
     assert next(row for row in entry_rows(sid) if row[1]=='Synthetic pending course')[9]=='Discontinued' and len(book['sheets'])==2
+    print_body=print_current(True);assert 'Discontinued medications' in print_body and 'Synthetic completed course' in print_body
     sheet(sid)['properties']['title']='Smith J'
     page.locator('#medications-dialog [data-close]').click();page.locator('.person strong').filter(has_text='Synthetic James').click();page.get_by_role('button',name='Medications',exact=True).click();page.get_by_role('button',name='+ Add medication list',exact=True).click();page.wait_for_function("!document.querySelector('#med-add').disabled")
     assert any(s['properties']['title']=='Smith J (2)' for s in book['sheets'])

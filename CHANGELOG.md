@@ -1,5 +1,11 @@
 # Version history
 
+## 0.10.0
+
+- Add browser printing for medications and demographics with transparent, print-only abbey letterhead, patient identity, allergies, timestamps and repeated table headings. Refresh medications before printing; block stale or pending course updates.
+- Add Additional Information tabs with language, religion, origin, address, phones, pharmacy, authorized/emergency contacts and multiple insurance policies; display in a dedicated Demographics window and retain protected sync/audit/logout handling.
+- Select the first living person alphabetically by surname at session start, independent of stored record order.
+
 ## 0.9.2
 
 - Search row-scoped Sheets developer metadata explicitly before reading or changing medication entries; recover already-saved entries without duplicating them.
