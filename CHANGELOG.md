@@ -1,5 +1,11 @@
 # Version history
 
+## 0.8.6
+
+- Preserve unsaved clinical-note drafts in memory when switching notes instead of asking to discard them; restore editing focus when reopening and expose unfinished work through Resume Unsaved Note….
+- Show a protected loading state immediately and scope file deletion shortcuts to file icons outside an opening/open editor. Clear paused drafts on disconnect/logout.
+- Keep the existing empty-folder-only Trash restriction.
+
 ## 0.8.5
 
 - Lift the note formatting toolbar 3px and add a small gap above the editor focus outline.

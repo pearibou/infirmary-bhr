@@ -47,6 +47,38 @@ with sync_playwright() as p:
     page.route('https://www.googleapis.com/**',drive);ignore_event_log_projection(page)
     page.goto('http://127.0.0.1:8000');unlock_test_drive(page)
     page.route('https://www.googleapis.com/oauth2/v3/userinfo',lambda route:route.fulfill(json=account))
+    prompts=[]
+    page.on('dialog',lambda dialog:(prompts.append(dialog.message),dialog.dismiss()))
+    page.locator('.desktop').click(button='right',position={'x':20,'y':210});page.locator('#new-rich-note').click()
+    page.locator('#rich-note-name').fill('Synthetic blank note');page.locator('#rich-note-save').click()
+    page.wait_for_function("!document.querySelector('#rich-note-dialog').open&&document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
+    blank=page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic blank note');blank.wait_for()
+    blankid=next(file['id'] for file in files.values() if file['name']=='Synthetic blank note');pending_read=[]
+    pattern=f'https://www.googleapis.com/drive/v3/files/{blankid}?fields=*'
+    page.route(pattern,lambda route:pending_read.append(route));blank.dblclick()
+    page.wait_for_function("document.querySelector('#rich-note-dialog').getAttribute('aria-busy')==='true'")
+    page.keyboard.press('Delete');assert not page.locator('#file-action-dialog').is_visible()
+    page.wait_for_timeout(50);assert len(pending_read)==1
+    pending_read[0].fulfill(json=files[blankid]);page.unroute(pattern)
+    page.wait_for_function("document.querySelector('#rich-note-dialog').open&&document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
+    assert page.evaluate("document.activeElement.id")=='rich-note-body'
+    page.keyboard.type('Editable blank note')
+    page.keyboard.press('Enter');page.keyboard.type('Second line');page.keyboard.press('Backspace');page.keyboard.press('Delete')
+    assert page.locator('#rich-note-body').inner_text().startswith('Editable blank note')
+    assert not page.locator('#file-action-dialog').is_visible() and not prompts,prompts
+    page.locator('#rich-note-dialog .window-control').click();page.locator('#window-dock [data-window=rich-note-dialog]').click()
+    assert page.evaluate("document.activeElement.id")=='rich-note-body'
+    page.locator('#rich-note-dialog [data-close]').click()
+    page.locator('.desktop').click(button='right',position={'x':20,'y':210});page.locator('#new-rich-note').click()
+    assert not prompts,prompts
+    page.locator('#rich-note-dialog [data-close]').click()
+    page.locator('.desktop').click(button='right',position={'x':20,'y':210});page.locator('#resume-note-drafts').click()
+    page.locator('#note-drafts-list button').filter(has_text='Synthetic blank note').click()
+    page.wait_for_function("document.querySelector('#rich-note-dialog').open&&document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
+    assert page.locator('#rich-note-body').inner_text().startswith('Editable blank note')
+    page.locator('#rich-note-save').click();page.wait_for_function("!document.querySelector('#rich-note-dialog').open&&document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
+    blank.click(button='right');page.get_by_role('menuitem',name='Send to Trash (delete)…').click();page.locator('#file-action-confirm').click()
+    page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     page.locator('.desktop').click(button='right',position={'x':20,'y':210});page.locator('#new-rich-note').click()
     page.locator('#rich-note-name').fill('Synthetic clinical note');page.locator('#rich-note-time').fill('2026-01-02T08:30')
     body=page.locator('#rich-note-body');body.fill('Synthetic clinical text');body.press('Control+a')
@@ -70,8 +102,8 @@ with sync_playwright() as p:
     fail[0]=True;page.locator('#rich-note-save').click()
     page.wait_for_function("document.querySelector('#rich-note-error').textContent.includes('failed')")
     assert 'Synthetic clinical text' in body.inner_text()
-    page.locator('#rich-note-save').click();page.wait_for_function("!document.querySelector('#rich-note-dialog').open")
-    note=next(file for file in files.values() if file['appProperties']['kind']=='note');noteid=note['id']
+    page.locator('#rich-note-save').click();page.wait_for_function("!document.querySelector('#rich-note-dialog').open&&document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
+    note=next(file for file in files.values() if file['name']=='Synthetic clinical note');noteid=note['id']
     assert note['parents']==['root'] and contents[noteid]['authorId']=='synthetic-staff'
     assert '<ol>' in contents[noteid]['html'] and '<script' not in contents[noteid]['html']
     assert 'Synthetic clinical text' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
@@ -89,7 +121,9 @@ with sync_playwright() as p:
     folder_icon=page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic Folder');folder_icon.wait_for()
     folderid=next(file['id'] for file in files.values() if file['name']=='Synthetic Folder')
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic clinical note').drag_to(folder_icon)
-    page.wait_for_function('(id)=>!document.querySelector(`#desktop-icons [data-file-id="${id}"]`)',arg=noteid)
+    try:page.wait_for_function('(id)=>!document.querySelector(`#desktop-icons [data-file-id="${id}"]`)',arg=noteid,timeout=10000)
+    except Exception:
+        print({'note':files[noteid],'folder':files[folderid],'status':page.locator('#file-status').text_content(),'prompts':prompts});raise
     assert files[noteid]['parents']==[folderid]
     folder_icon.dblclick()
     topview=page.locator(f'.folder-window[data-folder-id="{folderid}"]');topview.wait_for()
@@ -142,18 +176,24 @@ with sync_playwright() as p:
     assert files[noteid]['appProperties']['personId']=='person'
     page.locator('.folder-window[open]').evaluate_all("windows=>windows.forEach(el=>el.querySelector('[data-field=close]').click())")
     page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
+    page.wait_for_function("document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
     assert body.inner_text().strip()=='Synthetic clinical text'
     # Drive content is treated as untrusted on read; scripts and attributes disappear.
     page.locator('#rich-note-dialog [data-close]').click();contents[noteid]['html']='<p onclick="alert(1)"><b>Safe</b><script>window.bad=true</script><img src=x onerror="window.bad=true"></p>'
     page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
-    page.wait_for_function("document.querySelector('#rich-note-dialog').open")
+    page.wait_for_function("document.querySelector('#rich-note-dialog').open&&document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
     assert body.inner_html()=='<p><b>Safe</b></p>' and page.evaluate('window.bad') is None
+    body.fill('Synthetic unsaved private draft')
     page.locator('#rich-note-dialog [data-close]').click()
+    page.locator('.desktop').click(button='right',position={'x':20,'y':210});page.locator('#new-rich-note').click()
+    page.locator('#rich-note-dialog [data-close]').click()
+    assert not prompts,prompts
     # A second connected identity can read but cannot edit, rename, move or trash this note.
     open_drive(page);page.locator('#disconnect').click();account.update(sub='other-staff',name='Other Synthetic Staff')
     page.locator('#google-connect').click();page.wait_for_function("!document.body.classList.contains('drive-locked')")
     page.locator('#drive-dialog [data-close]').click();page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
-    page.wait_for_function("document.querySelector('#rich-note-dialog').open")
+    page.wait_for_function("document.querySelector('#rich-note-dialog').open&&document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
+    assert 'Synthetic unsaved private draft' not in body.inner_text()
     assert body.get_attribute('contenteditable')=='false' and page.locator('#rich-note-save').is_hidden()
     assert page.locator('#rich-note-name').is_disabled()
     page.locator('#rich-note-dialog [data-close]').click()
@@ -169,6 +209,7 @@ with sync_playwright() as p:
     page.keyboard.press('Escape')
     open_drive(page);page.locator('#disconnect').click()
     assert body.text_content()==''
+    assert page.locator('#resume-note-drafts').is_hidden() and page.locator('#note-drafts-list').text_content()==''
     assert page.locator('.folder-window').count()==0
     assert page.locator('#window-dock .dock-folder-icon').count()==0
     account.update(sub='synthetic-staff',name='Synthetic Staff')
@@ -189,4 +230,4 @@ with sync_playwright() as p:
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     assert not errors,errors
     browser.close()
-print('PASS: independent folder windows; named/icon dock entries; minimized rename refresh; geometry restoration; formatted note save/failure/retry; workspace storage; inline folder naming; drag/nesting; chart attachment; HTML sanitization; second-user read-only; nonempty-folder delete guard; creator trash; empty-folder trash; mobile')
+print('PASS: blank-note typing and Delete; safe loading; prompt-free draft switching; cross-user draft cleanup; independent folder windows; named/icon dock entries; minimized rename refresh; geometry restoration; formatted note save/failure/retry; workspace storage; inline folder naming; drag/nesting; chart attachment; HTML sanitization; second-user read-only; nonempty-folder delete guard; creator trash; empty-folder trash; mobile')
