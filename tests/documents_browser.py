@@ -76,15 +76,47 @@ with sync_playwright() as p:
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic clinical note').drag_to(folder_icon)
     page.wait_for_function('(id)=>!document.querySelector(`#desktop-icons [data-file-id="${id}"]`)',arg=noteid)
     assert files[noteid]['parents']==[folderid]
-    folder_icon.dblclick();page.wait_for_function("document.querySelector('#file-browser').open")
-    page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note').wait_for()
-    page.locator('#folder-new-folder').click();rename=page.get_by_label('Folder name',exact=True);rename.wait_for();rename.fill('Nested');rename.press('Enter')
-    nested=page.locator('#folder-files .drive-file').filter(has_text='Nested');nested.wait_for()
-    page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note').drag_to(nested)
-    nested.dblclick();page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note').wait_for()
-    page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note').click(button='right')
+    folder_icon.dblclick()
+    topview=page.locator(f'.folder-window[data-folder-id="{folderid}"]');topview.wait_for()
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').wait_for()
+    topview.locator('[data-field=folder-new-folder]').click();rename=page.get_by_label('Folder name',exact=True);rename.wait_for();rename.fill('Nested');rename.press('Enter')
+    nested=topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested');nested.wait_for()
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').drag_to(nested)
+    nestedid=next(file['id'] for file in files.values() if file['name']=='Nested')
+    nested.dblclick();nestedview=page.locator(f'.folder-window[data-folder-id="{nestedid}"]');nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').wait_for()
+    assert page.locator('.folder-window[open]').count()==2
+    topid=topview.get_attribute('id');nestedwinid=nestedview.get_attribute('id')
+    initial=nestedview.bounding_box()
+    nestedview.locator('.window-control').click();topview.locator('.window-control').click()
+    for id,name in [(topid,'Synthetic Folder'),(nestedwinid,'Nested')]:
+        item=page.locator(f'#window-dock [data-window="{id}"]');assert item.inner_text()==name and item.locator('svg.dock-folder-icon').count()==1
+    page.locator('#minimize-main').click()
+    assert page.locator('#window-dock [data-window=records-window] svg.dock-folder-icon').count()==0
+    # Refresh a minimized folder's name without losing its identity/geometry.
+    files[folderid]['name']='Synthetic Folder renamed';bump(files[folderid])
+    page.locator('#window-dock [data-window=records-window]').click();page.locator('#manual-sync').click()
+    page.wait_for_function('(id)=>document.querySelector(`#window-dock [data-window="${id}"]`).textContent.includes("renamed")',arg=topid)
+    page.locator(f'#window-dock [data-window="{topid}"]').click();page.locator(f'#window-dock [data-window="{nestedwinid}"]').click()
+    assert nestedview.bounding_box()==initial and page.locator('.folder-window[open]').count()==2
+    # Up restores the parent window; opening its child again reuses the child.
+    nestedview.locator('[data-field=file-up]').click()
+    def move_window(win,delta):
+        box=win.locator('.dialog-title').bounding_box();x=box['x']+box['width']-30;y=box['y']+box['height']/2
+        page.mouse.move(x,y);page.mouse.down();page.mouse.move(x+delta,y,steps=5);page.mouse.up()
+    move_window(topview,-500)
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').dblclick()
+    assert page.locator('.folder-window[open]').count()==2
+    move_window(nestedview,700)
+    nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').drag_to(topview.locator('[data-field=folder-files]'),target_position={'x':180,'y':100})
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').wait_for()
+    assert files[noteid]['parents']==[folderid]
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').drag_to(topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested'))
+    nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').wait_for()
+    assert files[noteid]['parents']==[nestedid]
+
+    nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').click(button='right')
     page.wait_for_timeout(100)
-    assert page.locator('#file-context-menu').is_visible(),page.evaluate("({menu:document.querySelector('#file-context-menu').outerHTML,folder:document.querySelector('#file-path').textContent,status:document.querySelector('#file-status').textContent})")
+    assert page.locator('#file-context-menu').is_visible(),page.evaluate("({menu:document.querySelector('#file-context-menu').outerHTML,folder:document.querySelector('[data-field=file-path]')?.textContent,status:document.querySelector('#file-status').textContent})")
     page.get_by_role('menuitem',name='Attach note to patient’s chart…').click()
     options=page.locator('#file-patient option').evaluate_all("items=>items.map(item=>({text:item.textContent,value:item.value,disabled:item.disabled}))")
     assert options[1]['value']=='person' and options[2]['disabled'] and '─' in options[2]['text']
@@ -93,7 +125,7 @@ with sync_playwright() as p:
     page.locator('#file-patient').select_option('person');page.locator('#file-action-confirm').click()
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert files[noteid]['appProperties']['personId']=='person'
-    page.locator('#file-browser [data-close]').click()
+    page.locator('.folder-window[open]').evaluate_all("windows=>windows.forEach(el=>el.querySelector('[data-field=close]').click())")
     page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
     assert body.inner_text().strip()=='Synthetic clinical text'
     # Drive content is treated as untrusted on read; scripts and attributes disappear.
@@ -115,29 +147,31 @@ with sync_playwright() as p:
     assert not files[folderid].get('trashed') and not files[noteid].get('trashed')
     page.locator('#file-action-dialog [data-close]').click()
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic Folder').dblclick()
-    page.locator('#folder-files .drive-file').filter(has_text='Nested').dblclick()
-    readonly=page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note');readonly.wait_for();readonly.click(button='right')
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').dblclick()
+    readonly=nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note');readonly.wait_for();readonly.click(button='right')
     for action in ['rename','attach','trash']:assert page.locator(f'#file-context-menu [data-file-action="{action}"]').is_disabled()
     assert readonly.get_attribute('draggable')=='false'
     page.keyboard.press('Escape')
     open_drive(page);page.locator('#disconnect').click()
     assert body.text_content()==''
+    assert page.locator('.folder-window').count()==0
+    assert page.locator('#window-dock .dock-folder-icon').count()==0
     account.update(sub='synthetic-staff',name='Synthetic Staff')
     page.locator('#google-connect').click();page.wait_for_function("!document.body.classList.contains('drive-locked')");page.locator('#drive-dialog [data-close]').click()
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic Folder').dblclick()
-    page.locator('#folder-files .drive-file').filter(has_text='Nested').dblclick()
-    own=page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note');own.wait_for();own.click(button='right')
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').dblclick()
+    own=nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note');own.wait_for();own.click(button='right')
     page.get_by_role('menuitem',name='Send to Trash (delete)…').click();page.locator('#file-action-confirm').click()
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert files[noteid]['trashed'] is True
     page.wait_for_function("!document.querySelector('.chart-documents').textContent.includes('Synthetic clinical note')")
-    page.locator('#file-up').click()
-    page.locator('#folder-files .drive-file').filter(has_text='Nested').click(button='right')
+    nestedview.locator('[data-field=file-up]').click()
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').click(button='right')
     page.get_by_role('menuitem',name='Send to Trash (delete)…').click();page.locator('#file-action-confirm').click()
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert any(file.get('trashed') for file in files.values() if file['name']=='Nested')
-    page.locator('#file-browser [data-close]').click()
+    page.locator('.folder-window[open]').evaluate_all("windows=>windows.forEach(el=>el.querySelector('[data-field=close]').click())")
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     assert not errors,errors
     browser.close()
-print('PASS: formatted note save/failure/retry; Drive-root storage; inline folder naming; drag/nesting; chart attachment; HTML sanitization; second-user read-only; nonempty-folder delete guard; creator trash; empty-folder trash; mobile')
+print('PASS: independent folder windows; named/icon dock entries; minimized rename refresh; geometry restoration; formatted note save/failure/retry; Drive-root storage; inline folder naming; drag/nesting; chart attachment; HTML sanitization; second-user read-only; nonempty-folder delete guard; creator trash; empty-folder trash; mobile')
