@@ -49,3 +49,6 @@ export function medicationSheetTitle(person,used=[]){
  const base=`${surname} ${initial}`.replace(/[\[\]:*?\\/]/g,' ').trim().slice(0,90)||'Person';let title=base,n=2;const names=new Set(used.map(name=>name.toLowerCase()));while(names.has(title.toLowerCase()))title=`${base} (${n++})`;return title;
 }
 export function medicationSheetId(personId,used=[]){const ids=new Set(used);for(let n=0;n<10000;n++){let hash=2166136261;for(const char of `${personId}:${n}`)hash=Math.imul(hash^char.charCodeAt(0),16777619);const id=(hash>>>0)%2147483646+1;if(!ids.has(id))return id;}throw new Error('Could not allocate a medication sheet ID.');}
+
+export function isPrnMedication(entry){return /\bp\.?\s*r\.?\s*n\b/i.test(entry.frequency||'');}
+export function compareMedications(a,b){return Number(isPrnMedication(a))-Number(isPrnMedication(b))||(a.status==='Discontinued'&&b.status==='Discontinued'?(b.discontinuedAt||b.updatedAt).localeCompare(a.discontinuedAt||a.updatedAt):a.medication.localeCompare(b.medication))||a.id.localeCompare(b.id);}

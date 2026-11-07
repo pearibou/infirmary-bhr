@@ -140,10 +140,22 @@ with sync_playwright() as p:
         page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
         page.wait_for_timeout(100);assert print_routes;print_routes.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes())
         page.wait_for_function('window.printCalls===1');page.wait_for_function("!document.querySelector('#med-print').disabled")
+        assert all(table.locator('thead tr').count()==1 for table in page.frame_locator('#bhr-print-frame').locator('table').all())
         result=page.frame_locator('#bhr-print-frame').locator('body').inner_text()
         preview=browser.new_page();preview.set_content(page.locator('#bhr-print-frame').evaluate('frame=>frame.contentDocument.documentElement.outerHTML'));preview.locator('img').evaluate('image=>image.decode()');preview.pdf(path='/tmp/bhr-medications-print.pdf',format='Letter');preview.close()
         page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))")
         page.unroute('**/icons/abbey-letterhead.png');return result
+    assert page.locator('#med-add .diagnosis-plus').inner_text()=='+'
+    for name,frequency in [('Zulu scheduled','Daily'),('Alpha as-needed','PRN'),('Beta as-needed','Q6H prn')]:
+        page.locator('#med-add').click();form.get_by_label('Medication and strength',exact=True).fill(name);form.get_by_label('Frequency',exact=True).fill(frequency);page.locator('#med-form-save').click();page.wait_for_function("!document.querySelector('#medication-form-dialog').open && !document.querySelector('#med-add').disabled")
+    assert page.locator('.med-entry h3').all_text_contents()==['Synthetic tablet 10 mg','Zulu scheduled','Alpha as-needed','Beta as-needed']
+    assert page.locator('.med-prn').count()==2 and page.locator('.med-prn-divider').count()==1
+    assert page.locator('.med-prn').first.evaluate('el=>getComputedStyle(el).backgroundColor')=='rgb(231, 240, 224)'
+    print_body=print_current();assert print_body.index('Zulu scheduled')<print_body.index('Alpha as-needed')
+    beta=page.locator('.med-entry').filter(has_text='Beta as-needed');beta.get_by_role('button',name='Edit…',exact=True).click();form.get_by_label('Frequency',exact=True).fill('Daily');page.locator('#med-form-save').click();page.wait_for_function("!document.querySelector('#medication-form-dialog').open && !document.querySelector('#med-add').disabled")
+    assert page.locator('.med-entry h3').first.inner_text()=='Beta as-needed' and page.locator('.med-prn').count()==1
+    for name in ['Zulu scheduled','Alpha as-needed','Beta as-needed']:
+        page.locator('.med-entry').filter(has_text=name).get_by_role('button',name='Delete entry…',exact=True).click();page.locator('#med-action-confirm').click();page.wait_for_function("!document.querySelector('#medication-action-dialog').open && !document.querySelector('#med-add').disabled")
     print_body=print_current();assert 'Active medications' in print_body and 'Discontinued medications' not in print_body and 'Synthetic indication' in print_body and 'Last retrieved:' in print_body
     disabled_api[0]=True;page.locator('#med-print').click();page.wait_for_function("document.querySelector('#med-status').textContent.startsWith('Could not print:')");assert page.locator('#bhr-print-frame').count()==0;disabled_api[0]=False
 
