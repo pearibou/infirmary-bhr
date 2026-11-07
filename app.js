@@ -1,13 +1,13 @@
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.8.0';
-import {updateSessionPresence} from './presence.js?v=0.8.0';
-import {closeAppMenu} from './app-menu.js?v=0.8.0';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.8.0';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.8.0';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.8.0';
-import {validatePhoto} from './photos.js?v=0.8.0';
-import './windows.js?v=0.8.0';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.8.0';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.8.0';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.8.1';
+import {updateSessionPresence} from './presence.js?v=0.8.1';
+import {closeAppMenu} from './app-menu.js?v=0.8.1';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.8.1';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.8.1';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.8.1';
+import {validatePhoto} from './photos.js?v=0.8.1';
+import './windows.js?v=0.8.1';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.8.1';
+import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.8.1';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
@@ -362,7 +362,7 @@ $('#sticky-form').onsubmit=event=>{
   next.desktopNotes.push({id:crypto.randomUUID(),text,createdAt:now,updatedAt:now,authorName:user?.name||'Connected staff',...(user?{authorId:user.id}:{}),x:stickyOrigin.x,y:stickyOrigin.y});
   if(save(next)){$('#sticky-dialog').close();renderDesktopNotes(data.desktopNotes);runSync();}
 };
-initDocuments({closeDesktopMenu,people:()=>[...data.people].sort(compareDirectoryPeople).map(person=>({id:person.id,name:personName(person)})),activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>{fileBusy=value;fillSettings();},chartChanged:()=>renderKeepingDraft()});
+initDocuments({closeDesktopMenu,people:()=>[...data.people].sort(compareDirectoryPeople).map(person=>({id:person.id,name:personName(person),deceased:Boolean(person.deceased)})),activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>{fileBusy=value;fillSettings();},chartChanged:()=>renderKeepingDraft()});
 lockWorkspace();readyGoogle();
 
 function appendActivity(action,type,id,summary,personId,user=getCurrentUser()){

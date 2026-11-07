@@ -1,5 +1,10 @@
 # Version history
 
+## 0.8.1
+
+- Ellipsize desktop/folder icon names without clipping artwork; show full names in a small white hover/focus tooltip.
+- Mark deceased people in chart attachment choices and separate the living/deceased groups with a thin non-selectable divider.
+
 ## 0.8.0
 
 - Save the agreed medication-list plan in docs/medication-list-design.md for later implementation.

@@ -7,6 +7,7 @@ with sync_playwright() as p:
     page=browser.new_page(viewport={'width':1440,'height':1000},service_workers='block');prepare_test_page(page)
     errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
     seed={'version':1,'people':[{'id':'person','name':'Synthetic Brother','info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]}]}
+    seed['people'].append({'id':'departed','name':'Synthetic Departed','preferredName':'Synthetic Departed','lastName':'Zimmer','deceased':True,'deathDate':{'year':'2020'},'info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]})
     page.add_init_script("if(!localStorage.getItem('infirmary.directory.v1'))localStorage.setItem('infirmary.directory.v1',"+json.dumps(json.dumps(seed))+");")
     files={};contents={};counter=[0];directory=[seed];account={'sub':'synthetic-staff','name':'Synthetic Staff'};fail=[False]
     def bump(file):
@@ -60,6 +61,13 @@ with sync_playwright() as p:
     assert '<ol>' in contents[noteid]['html'] and '<script' not in contents[noteid]['html']
     assert 'Synthetic clinical text' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     assert 'Synthetic clinical note' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
+    icon=page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic clinical note');icon.wait_for();icon.hover()
+    page.locator('#filename-tooltip').wait_for(state='visible')
+    assert page.locator('#filename-tooltip').inner_text()=='Synthetic clinical note'
+    assert icon.locator('span').evaluate("el=>el.scrollWidth>el.clientWidth&&getComputedStyle(el).whiteSpace==='nowrap'&&getComputedStyle(el).textOverflow==='ellipsis'")
+    assert icon.locator('svg').bounding_box()['height']==44
+    assert page.locator('#filename-tooltip').evaluate("el=>getComputedStyle(el).backgroundColor")=='rgb(255, 255, 255)'
+    page.keyboard.press('Escape');assert page.locator('#filename-tooltip').is_hidden()
     page.locator('.desktop').click(button='right',position={'x':20,'y':210});page.locator('#new-drive-folder').click()
     rename=page.get_by_label('Folder name',exact=True);rename.wait_for();assert rename.input_value()=='New Folder'
     rename.fill('Synthetic Folder');rename.press('Enter')
@@ -77,7 +85,12 @@ with sync_playwright() as p:
     page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note').click(button='right')
     page.wait_for_timeout(100)
     assert page.locator('#file-context-menu').is_visible(),page.evaluate("({menu:document.querySelector('#file-context-menu').outerHTML,folder:document.querySelector('#file-path').textContent,status:document.querySelector('#file-status').textContent})")
-    page.get_by_role('menuitem',name='Attach note to patient’s chart…').click();page.locator('#file-patient').select_option('person');page.locator('#file-action-confirm').click()
+    page.get_by_role('menuitem',name='Attach note to patient’s chart…').click()
+    options=page.locator('#file-patient option').evaluate_all("items=>items.map(item=>({text:item.textContent,value:item.value,disabled:item.disabled}))")
+    assert options[1]['value']=='person' and options[2]['disabled'] and '─' in options[2]['text']
+    assert options[3]['text']=='Synthetic Departed (Deceased)'
+    page.locator('#file-patient').select_option('departed');assert page.locator('#file-patient').input_value()=='departed'
+    page.locator('#file-patient').select_option('person');page.locator('#file-action-confirm').click()
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert files[noteid]['appProperties']['personId']=='person'
     page.locator('#file-browser [data-close]').click()

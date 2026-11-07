@@ -1,9 +1,22 @@
-import {clearTrashSelection} from './trash.js?v=0.8.0';
-import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.8.0';
-import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.8.0';
+import {clearTrashSelection} from './trash.js?v=0.8.1';
+import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.8.1';
+import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.8.1';
 const $=selector=>document.querySelector(selector),noteDialog=$('#rich-note-dialog'),browser=$('#file-browser'),context=$('#file-context-menu');
 let hooks,active=false,generation=0,refreshNumber=0,busy=false,parent='root',folderStack=[],editor=null,contextFile,actionFile,actionKind,dragged,dirty=false,renaming=false,refreshPending=false,editorRequest=0;
-let desktopFiles=[],folderFiles=[];
+let desktopFiles=[],folderFiles=[],tooltipTimer,tooltipTarget;
+function hideFilename(){clearTimeout(tooltipTimer);tooltipTarget?.removeAttribute('aria-describedby');tooltipTarget=null;$('#filename-tooltip').hidden=true;$('#filename-tooltip').textContent='';}
+function filenameHint(button,name){
+  const show=()=>{hideFilename();tooltipTimer=setTimeout(()=>{
+    const label=button.querySelector('span');if(!active||!context.hidden||!button.isConnected||!label||label.scrollWidth<=label.clientWidth)return;
+    const tip=$('#filename-tooltip');tip.textContent=name;tip.hidden=false;tooltipTarget=button;button.setAttribute('aria-describedby','filename-tooltip');
+    const box=button.getBoundingClientRect(),size=tip.getBoundingClientRect();
+    tip.style.left=Math.max(8,Math.min(box.left+(box.width-size.width)/2,innerWidth-size.width-8))+'px';
+    tip.style.top=Math.max(8,box.bottom+5+size.height<=innerHeight?box.bottom+5:box.top-size.height-5)+'px';
+  },400);};
+  button.addEventListener('pointerenter',show);button.addEventListener('focus',show);
+  for(const event of ['pointerleave','blur','pointerdown'])button.addEventListener(event,hideFilename);
+}
+
 const folder=file=>file.appProperties?.kind==='folder';
 function node(tag,text,cls){const result=document.createElement(tag);if(text!==undefined)result.textContent=text;if(cls)result.className=cls;return result;}
 function status(message){$('#file-status').textContent=message;$('#file-status').hidden=!message;}
@@ -20,7 +33,7 @@ async function operation(work){
 }
 function record(action,file,personId){hooks.activity('document.'+action,folder(file)?'folder':'document',file.id,'Desktop '+(folder(file)?'folder':'clinical note')+' '+action,personId);}
 export function initDocuments(options){
-  hooks=options;
+  hooks=options;document.addEventListener('keydown',event=>{if(event.key==='Escape')hideFilename();});window.addEventListener('resize',hideFilename);document.addEventListener('scroll',hideFilename,true);document.addEventListener('pointerdown',hideFilename,true);
   $('#new-rich-note').onclick=()=>{options.closeDesktopMenu();openEditor(null,'root');};
   $('#new-drive-folder').onclick=()=>{options.closeDesktopMenu();newFolder('root');};
   $('#folder-new-note').onclick=()=>openEditor(null,parent);
@@ -56,7 +69,7 @@ export function initDocuments(options){
 export function documentsSession(ready){
   if(ready){if(!active){active=true;generation++;refreshFiles();}return;}
   if(!active&&!editor&&!desktopFiles.length)return;
-  active=false;renaming=false;refreshPending=false;generation++;refreshNumber++;dirty=false;editor=null;desktopFiles=[];folderFiles=[];contextFile=null;actionFile=null;parent='root';folderStack=[];endDrag();closeContext();status('');
+  hideFilename();active=false;renaming=false;refreshPending=false;generation++;refreshNumber++;dirty=false;editor=null;desktopFiles=[];folderFiles=[];contextFile=null;actionFile=null;parent='root';folderStack=[];endDrag();closeContext();status('');
   document.querySelectorAll('.drive-file').forEach(item=>item.remove());$('#folder-files').replaceChildren();$('#file-folder-title').textContent='Folder';$('#file-path').textContent='';$('#folder-empty').textContent='';
   $('#rich-note-form').reset();$('#rich-note-body').replaceChildren();$('#rich-note-author').textContent='';$('#rich-note-error').textContent='';$('#file-action-form').reset();$('#file-patient').replaceChildren();$('#file-action-description').textContent='';$('#file-action-error').textContent='';
   for(const dialog of [browser,noteDialog,$('#file-action-dialog')]){if(dialog.open)dialog.close();document.querySelector(`#window-dock [data-window="${dialog.id}"]`)?.remove();}
@@ -73,6 +86,7 @@ export async function refreshFiles(){
   }catch(error){if(epoch===generation&&request===refreshNumber)status('Could not load Drive notes and folders. '+error.message);}
 }
 function renderFiles(){
+  hideFilename();
   document.querySelectorAll('#desktop-icons > .drive-file').forEach(item=>item.remove());
   for(const file of sort(desktopFiles))$('#desktop-icons').append(fileIcon(file));
   $('#folder-files').replaceChildren(...sort(folderFiles).map(file=>fileIcon(file)));
@@ -83,7 +97,7 @@ function renderFiles(){
 }
 const sort=files=>[...files].sort((a,b)=>Number(folder(b))-Number(folder(a))||a.name.localeCompare(b.name));
 function fileIcon(file){
-  const button=node('button',undefined,'desktop-icon drive-file');button.type='button';button.dataset.fileId=file.id;button.title=file.name+(folder(file)?'':' · '+(allowed(file)?'Your clinical note':'Read-only · another author'));
+  const button=node('button',undefined,'desktop-icon drive-file');button.type='button';button.dataset.fileId=file.id;button.setAttribute('aria-label',file.name);button.setAttribute('aria-description',folder(file)?'Folder':allowed(file)?'Your clinical note':'Read-only · another author');filenameHint(button,file.name);
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 48 48');svg.setAttribute('aria-hidden','true');
   svg.innerHTML=folder(file)?'<path d="M4 12h17l5 5h18v25H4z" fill="#ddd" stroke="#111" stroke-width="2"/><path d="M4 19h40" stroke="#111"/>':'<path d="M10 3h20l9 9v33H10z" fill="#fff" stroke="#111" stroke-width="2"/><path d="M30 3v10h9M16 20h17m-17 6h17m-17 6h17m-17 6h12" fill="none" stroke="#555" stroke-width="2"/>';
   button.append(svg,node('span',file.name));
@@ -116,7 +130,13 @@ async function handleAction(file,action){
   $('#file-patient-label').hidden=action!=='attach';$('#file-patient').disabled=action!=='attach';$('#file-patient').replaceChildren();
   if(action==='attach'){
     const empty=node('option','Choose a person…');empty.value='';$('#file-patient').append(empty);
-    for(const person of hooks.people()){const item=node('option',person.name);item.value=person.id;$('#file-patient').append(item);}
+    let deceasedGroup=false;
+    for(const person of hooks.people()){
+      if(person.deceased&&!deceasedGroup){deceasedGroup=true;
+        if($('#file-patient').options.length>1){const divider=node('option','────────────────');divider.value='';divider.disabled=true;divider.className='person-divider';divider.setAttribute('aria-label','Deceased people below');$('#file-patient').append(divider);}
+      }
+      const item=node('option',person.name+(person.deceased?' (Deceased)':''));item.value=person.id;$('#file-patient').append(item);
+    }
   }
   if(!$('#file-action-dialog').open)$('#file-action-dialog').showModal();
 }

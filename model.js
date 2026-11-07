@@ -1,4 +1,4 @@
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.8.0';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.8.1';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
