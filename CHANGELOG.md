@@ -1,5 +1,9 @@
 # Version history
 
+## 0.11.1
+
+- Reorder demographics details as requested and shorten the displayed e-mail label to E-mail address.
+
 ## 0.11.0
 
 - Simplify pharmacy display; add optional primary care provider/e-mail fields, printer icons, top-right upload action and bottom-of-chart Drive folders.
