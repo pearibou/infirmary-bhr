@@ -1,7 +1,7 @@
-import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.8.3';
-import {clearTrashSelection} from './trash.js?v=0.8.3';
-import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.8.3';
-import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.8.3';
+import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.8.4';
+import {clearTrashSelection} from './trash.js?v=0.8.4';
+import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.8.4';
+import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.8.4';
 const $=selector=>document.querySelector(selector),noteDialog=$('#rich-note-dialog'),folderTemplate=$('#file-browser-template'),context=$('#file-context-menu');
 let hooks,active=false,generation=0,refreshNumber=0,busy=false,editor=null,contextFile,contextView,actionFile,actionKind,dragged,dirty=false,renaming=false,refreshPending=false,editorRequest=0;
 let desktopFiles=[],tooltipTimer,tooltipTarget,windowNumber=0;
@@ -34,6 +34,15 @@ async function operation(work){
   finally{busy=false;hooks.busy(false);}
 }
 function record(action,file,personId){hooks.activity('document.'+action,folder(file)?'folder':'document',file.id,'Desktop '+(folder(file)?'folder':'clinical note')+' '+action,personId);}
+function updateFormatButtons(){
+  const body=$('#rich-note-body'),selection=document.getSelection(),focus=document.activeElement;
+  const inEditor=noteDialog.open&&body.contentEditable==='true'&&selection?.rangeCount&&body.contains(selection.anchorNode)&&body.contains(selection.focusNode)&&(focus===body||body.contains(focus)||focus?.closest('.rich-toolbar'));
+  for(const button of document.querySelectorAll('[data-format]')){
+    let state='false';
+    if(inEditor&&!button.disabled){try{state=document.queryCommandIndeterm(button.dataset.format)?'mixed':String(document.queryCommandState(button.dataset.format));}catch{}}
+    button.setAttribute('aria-pressed',state);
+  }
+}
 export function initDocuments(options){
   hooks=options;document.addEventListener('keydown',event=>{if(event.key==='Escape')hideFilename();});window.addEventListener('resize',hideFilename);document.addEventListener('scroll',hideFilename,true);document.addEventListener('pointerdown',hideFilename,true);
   $('#new-rich-note').onclick=()=>{options.closeDesktopMenu();openEditor(null,'root');};
@@ -41,8 +50,11 @@ export function initDocuments(options){
   $('#rich-note-form').onsubmit=event=>{event.preventDefault();saveEditor();};
   for(const button of document.querySelectorAll('[data-format]')){
     button.addEventListener('mousedown',event=>event.preventDefault());
-    button.onclick=()=>{if($('#rich-note-body').contentEditable!=='true')return;$('#rich-note-body').focus();document.execCommand(button.dataset.format,false,null);dirty=true;};
+    button.onclick=()=>{if($('#rich-note-body').contentEditable!=='true')return;$('#rich-note-body').focus();document.execCommand(button.dataset.format,false,null);dirty=true;updateFormatButtons();};
   }
+  document.addEventListener('selectionchange',updateFormatButtons);
+  noteDialog.addEventListener('focusin',updateFormatButtons);noteDialog.addEventListener('close',updateFormatButtons);
+  for(const event of ['input','keyup','mouseup'])$('#rich-note-body').addEventListener(event,updateFormatButtons);
   $('#rich-note-body').addEventListener('paste',event=>{event.preventDefault();document.execCommand('insertText',false,event.clipboardData.getData('text/plain'));});
   $('#rich-note-body').addEventListener('drop',event=>event.preventDefault());
   for(const id of ['rich-note-name','rich-note-time','rich-note-body'])$('#'+id).addEventListener('input',()=>dirty=true);
@@ -234,7 +246,7 @@ async function openEditor(file=null,target='root'){
     if(!noteDialog.open)noteDialog.showModal();$('#rich-note-body').focus();
   }catch(error){if(epoch===generation)status(error.message);}
 }
-function documentButtons(disabled){for(const button of window.document.querySelectorAll('[data-format]'))button.disabled=disabled;}
+function documentButtons(disabled){for(const button of window.document.querySelectorAll('[data-format]'))button.disabled=disabled;updateFormatButtons();}
 async function saveEditor(){
   if(!editor||busy)return;
   const time=$('#rich-note-time').value,date=new Date(time);

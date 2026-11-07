@@ -50,7 +50,22 @@ with sync_playwright() as p:
     page.locator('.desktop').click(button='right',position={'x':20,'y':210});page.locator('#new-rich-note').click()
     page.locator('#rich-note-name').fill('Synthetic clinical note');page.locator('#rich-note-time').fill('2026-01-02T08:30')
     body=page.locator('#rich-note-body');body.fill('Synthetic clinical text');body.press('Control+a')
-    for name in ['Bold','Italic','Underline','Bulleted list']:page.get_by_role('button',name=name,exact=True).click()
+    for name in ['Bold','Italic','Underline','Bulleted list']:
+        button=page.get_by_role('button',name=name,exact=True);button.click()
+        assert button.get_attribute('aria-pressed')=='true'
+    assert page.get_by_role('button',name='Bulleted list',exact=True).locator('svg circle').count()==3
+    assert page.get_by_role('button',name='Numbered list',exact=True).locator('svg text').all_text_contents()==['1','2','3']
+    formatted=body.inner_html()
+    page.evaluate("""()=>{
+        const body=document.querySelector('#rich-note-body');body.innerHTML='<p><b>Bold sample</b></p><p>Plain sample</p>';body.focus();
+        const range=document.createRange();range.setStart(body.querySelector('b').firstChild,1);range.collapse(true);const selection=getSelection();selection.removeAllRanges();selection.addRange(range);
+    }""")
+    page.wait_for_function("document.querySelector('[data-format=bold]').getAttribute('aria-pressed')==='true'")
+    page.evaluate("""()=>{const body=document.querySelector('#rich-note-body'),range=document.createRange();range.setStart(body.lastChild.firstChild,1);range.collapse(true);getSelection().removeAllRanges();getSelection().addRange(range);} """)
+    page.wait_for_function("document.querySelector('[data-format=bold]').getAttribute('aria-pressed')==='false'")
+    body.press('Control+b');assert page.get_by_role('button',name='Bold',exact=True).get_attribute('aria-pressed')=='true'
+    body.press('Control+b');assert page.get_by_role('button',name='Bold',exact=True).get_attribute('aria-pressed')=='false'
+    page.evaluate("html=>{const body=document.querySelector('#rich-note-body');body.innerHTML=html;body.focus();const range=document.createRange();range.selectNodeContents(body);getSelection().removeAllRanges();getSelection().addRange(range);}",formatted)
     assert '<ul>' in body.inner_html();page.get_by_role('button',name='Numbered list',exact=True).click();assert '<ol>' in body.inner_html()
     fail[0]=True;page.locator('#rich-note-save').click()
     page.wait_for_function("document.querySelector('#rich-note-error').textContent.includes('failed')")
