@@ -1,0 +1,51 @@
+"""Synthetic chart, demographics, printable letterhead and logout checks."""
+import json
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+from browser_helpers import prepare_test_page,unlock_test_drive
+with sync_playwright() as p:
+    browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
+    page=browser.new_page(viewport={'width':1440,'height':1000},service_workers='block');prepare_test_page(page)
+    errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
+    def person(id,last,deceased=False):return {'id':id,'name':'Synthetic '+last,'firstName':'Synthetic','middleName':'M','lastName':last,'preferredName':'Synthetic '+last,'info':'','notes':[],'deceased':deceased,'updatedAt':'2026-01-01T00:00:00Z'}
+    seed={'version':1,'people':[person('z','Zulu'),person('dead','Aardvark',True),person('a','Alpha')]}
+    page.add_init_script("if(!localStorage.getItem('infirmary.directory.v1'))localStorage.setItem('infirmary.directory.v1',"+json.dumps(json.dumps(seed))+");")
+    directory=[seed]
+    page.route('https://www.googleapis.com/drive/v3/files/root?*',lambda route:route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}}))
+    page.route('https://www.googleapis.com/drive/v3/files?*',lambda route:route.fulfill(json={'files':[] if 'Medication Lists' in route.request.url or 'BHR_event_log' in route.request.url or 'bhrDesktop' in route.request.url else [{'id':'__test-bootstrap'}]}))
+    page.route('https://www.googleapis.com/drive/v3/files/__test-bootstrap?*',lambda route:route.fulfill(json=directory[0]))
+    def write(route):
+        directory[0]=route.request.post_data_json;route.fulfill(json={'id':'__test-bootstrap'})
+    page.route('https://www.googleapis.com/upload/drive/v3/files/__test-bootstrap?*',write)
+    page.goto('http://127.0.0.1:8000');unlock_test_drive(page)
+    assert page.locator('.person.selected strong').inner_text()=='Synthetic Alpha'
+    page.locator('#detail .record-pencil').click();page.locator('#person-additional-tab').click()
+    assert page.locator('#person-additional-fields').is_visible() and page.locator('#person-basic-fields').is_hidden()
+    page.get_by_label('Primary language',exact=True).fill('Synthetic language');page.get_by_label('Religion',exact=True).fill('Synthetic religion');page.get_by_label('Originally from',exact=True).fill('Synthetic origin');page.get_by_label('Patient address',exact=True).fill('Synthetic private address\nSecond line');page.get_by_label('Home phone number',exact=True).fill('555 0100');page.get_by_label('Cell phone number',exact=True).fill('555 0101');page.get_by_label('Preferred pharmacy',exact=True).fill('Synthetic pharmacy')
+    page.locator('#dem-add-contacts').click();contact=page.locator('#dem-contacts fieldset').first;contact.get_by_label('Name',exact=True).fill('Synthetic contact');contact.get_by_label('Relationship to patient').fill('Sibling');contact.get_by_label('Phone number',exact=True).fill('555 0102');contact.get_by_label('Emergency contact',exact=True).check()
+    page.locator('#dem-add-contacts').click();page.locator('#dem-contacts fieldset').last.get_by_label('Name',exact=True).fill('Synthetic second contact')
+    page.locator('#dem-add-policies').click();policy=page.locator('#dem-policies fieldset');policy.get_by_label('Insurance company',exact=True).fill('Synthetic insurer');policy.get_by_label('Policy / member number',exact=True).fill('Synthetic policy number')
+    page.locator('#person-submit').click();page.wait_for_function("!document.querySelector('#person-dialog').open")
+    saved=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')).people.find(p=>p.id==='a').demographics")
+    assert saved['contacts'][0]['emergency'] is True and len(saved['contacts'])==2 and saved['policies'][0]['policyNumber']=='Synthetic policy number'
+    page.get_by_role('button',name='Demographics',exact=True).click();assert 'Synthetic private address' in page.locator('#demographics-content').inner_text()
+    pending=[];page.route('**/icons/abbey-letterhead.png',lambda route:pending.append(route));page.locator('#demographics-print').click()
+    page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Synthetic private address')")
+    page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
+    page.wait_for_timeout(100);assert pending;pending.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes())
+    page.wait_for_function('window.printCalls===1');frame=page.frame_locator('#bhr-print-frame');assert frame.locator('h1').inner_text()=='Mepkin Abbey Infirmary';assert 'Synthetic policy number' in frame.locator('body').inner_text()
+    assert page.locator('body > img[src*="abbey-letterhead"]').count()==0
+    preview=browser.new_page(viewport={'width':816,'height':1056});preview.set_content(page.locator('#bhr-print-frame').evaluate('frame=>frame.contentDocument.documentElement.outerHTML'));preview.locator('img').evaluate('image=>image.decode()');preview.screenshot(path='/tmp/bhr-demographics-print.png');preview.pdf(path='/tmp/bhr-demographics-print.pdf',format='Letter');preview.close()
+    page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))")
+    assert page.locator('#bhr-print-frame').count()==0
+    page.locator('#demographics-dialog [data-close]').click();page.locator('#detail .record-pencil').click();page.locator('#person-additional-tab').click();assert page.get_by_label('Primary language',exact=True).input_value()=='Synthetic language';page.locator('#person-dialog [data-close]').click()
+    page.set_viewport_size({'width':390,'height':844});page.get_by_role('button',name='Demographics',exact=True).click();assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.locator('#demographics-dialog [data-close]').click()
+    page.locator('.person strong').filter(has_text='Synthetic Zulu').click()
+    page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
+    assert 'Synthetic private address' not in page.locator('body').text_content();assert page.locator('#dem-contacts').inner_text()=='';assert page.get_by_label('Primary language',exact=True).input_value()=='';assert page.locator('#bhr-print-frame').count()==0
+    page.locator('#google-connect').click();page.locator('#use-drive-root').click();page.wait_for_function("!document.body.classList.contains('drive-locked')")
+    assert page.locator('.person.selected strong').inner_text()=='Synthetic Alpha'
+    assert directory[0]['people'][2]['demographics']['language']=='Synthetic language'
+    assert not errors,errors
+    browser.close()
+print('PASS: deterministic initial chart; additional information tabs; structured contacts/policies save and reload; demographics; print-only letterhead; standard print invocation; mobile; logout cleanup')

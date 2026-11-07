@@ -22,7 +22,7 @@ export function recordChanges(before,after,user){
   for(const person of after.people){
     const old=oldPeople.get(person.id);
     if(!old)emit('person.created','person',person.id,'Person record created');
-    else{const changed=['firstName','middleName','lastName','preferredName','name','birthDate','info','allergies','noKnownAllergies','medicationSheet','deceased','deathDate','photo'].filter(key=>JSON.stringify(old[key])!==JSON.stringify(person[key]));if(changed.length)emit('person.updated','person',person.id,'Record fields changed: '+changed.join(', '));}
+    else{const changed=['firstName','middleName','lastName','preferredName','name','birthDate','info','allergies','noKnownAllergies','medicationSheet','demographics','deceased','deathDate','photo'].filter(key=>JSON.stringify(old[key])!==JSON.stringify(person[key]));if(changed.length)emit('person.updated','person',person.id,'Record fields changed: '+changed.join(', '));}
     const oldNotes=new Map((old?.notes||[]).map(n=>[n.id,n])),newNotes=new Set(person.notes.map(n=>n.id));
     for(const note of old?.notes||[])if(!newNotes.has(note.id))emit('note.deleted','note',note.id,'Chronological note permanently deleted',person.id);
     for(const note of person.notes){const prior=oldNotes.get(note.id);if(!prior)emit('note.created','note',note.id,'Chronological note entered',person.id);else if(JSON.stringify(prior)!==JSON.stringify(note))emit('note.edited','note',note.id,'Chronological note edited; original and revisions retained',person.id);}

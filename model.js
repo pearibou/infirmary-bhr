@@ -1,4 +1,5 @@
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.9.2';
+import {validateDemographics} from './demographics-model.js?v=0.10.0';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.10.0';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
@@ -20,6 +21,7 @@ export function validateDirectory(data) {
     for(const field of ['firstName','middleName','lastName','preferredName'])if(p[field]!==undefined && typeof p[field]!=='string')throw new Error('Invalid name field.');
     if(p.allergies!==undefined&&(typeof p.allergies!=='string'||p.allergies.length>2000))throw new Error('Invalid allergies field.');
     if(p.noKnownAllergies!==undefined&&typeof p.noKnownAllergies!=='boolean')throw new Error('Invalid no-known-allergies field.');
+    if(p.demographics!==undefined)validateDemographics(p.demographics);
     if(p.medicationSheet!==undefined&&(!p.medicationSheet||typeof p.medicationSheet.spreadsheetId!=='string'||!(/^[\w-]+$/).test(p.medicationSheet.spreadsheetId)||!Number.isInteger(p.medicationSheet.sheetId)||p.medicationSheet.sheetId<0))throw new Error('Invalid medication sheet link.');
     if(p.birthDate!==undefined && (!p.birthDate || typeof p.birthDate!=='object' || birthDateError(p.birthDate)))throw new Error('Invalid birth date.');
     if(p.driveFolders!==undefined){
