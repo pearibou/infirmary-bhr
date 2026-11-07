@@ -1,21 +1,55 @@
 // Print documents live only in an ephemeral same-origin frame, never in storage.
-import {personName} from './model.js?v=0.10.0';
-let frame=null,generation=0;
-export function clearPrint(){generation++;frame?.remove();frame=null;}
+import {readPersonPhoto} from './drive.js?v=0.10.1';
+import {personName} from './model.js?v=0.10.1';
+let frame=null,generation=0,photoUrl=null;
+export function clearPrint(){generation++;frame?.remove();frame=null;if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=null;}
 export const fullPersonName=person=>[person.firstName,person.middleName,person.lastName].filter(Boolean).join(' ')||personName(person);
 export function personBirthDate(person){const b=person.birthDate;return b&&Object.values(b).some(Boolean)?`${b.month||'—'} / ${b.day||'—'} / ${b.year||'—'}`:'Not recorded';}
 export const allergiesText=person=>person.noKnownAllergies?'No known allergies':person.allergies?.trim()||'Not recorded';
 const el=(doc,tag,text)=>{const node=doc.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
-export async function printDocument({title,person,sections,retrievedAt,subtitle=''}){
- clearPrint();const stamp=generation;frame=document.createElement('iframe');const target=frame;target.id='bhr-print-frame';target.title='Print document';target.setAttribute('aria-hidden','true');target.style.cssText='position:fixed;width:1px;height:1px;left:-10000px;border:0';document.body.append(target);
+export async function printDocument({title,person,sections,retrievedAt,subtitle='',layout='standard'}){
+ clearPrint();const stamp=generation;frame=document.createElement('iframe');const target=frame;target.id='bhr-print-frame';target.title='Print document';target.setAttribute('aria-hidden','true');target.style.cssText='position:fixed;width:720px;height:960px;left:-10000px;border:0';document.body.append(target);
  const doc=target.contentDocument;doc.open();doc.write('<!doctype html><html><head><meta charset="utf-8"><title>Infirmary document</title></head><body></body></html>');doc.close();
- const style=el(doc,'style');style.textContent='@page{size:auto;margin:16mm}body{font:10pt Arial,sans-serif;color:#000;background:white;margin:0}header{display:flex;align-items:center;gap:18pt;border-bottom:1pt solid #111;padding-bottom:10pt;margin-bottom:14pt}header img{width:78pt;height:78pt;object-fit:contain}header p{margin:4pt 0}h1{font: bold 17pt Georgia,serif;margin:4pt 0}h2{font-size:12pt;margin:16pt 0 6pt}h3{font-size:11pt;margin:8pt 0}p{line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:9pt}thead{display:table-header-group}th,td{text-align:left;vertical-align:top;border:1px solid #999;padding:5pt;white-space:pre-wrap;overflow-wrap:anywhere}th{background:#eee}tr{break-inside:avoid}section{margin-bottom:12pt}.identity{border-bottom:1px solid #aaa;padding-bottom:8pt}.identity p{margin:4pt 0}.stamp{font-size:8pt;color:#444}';doc.head.append(style);
+ const style=el(doc,'style');style.textContent=`
+ @page{size:auto;margin:13mm}
+ *{box-sizing:border-box;min-width:0}html,body{width:auto;max-width:100%;margin:0;padding:0}
+ body{font:9.5pt/1.25 Arial,sans-serif;color:#000;background:white}
+ header{display:flex;align-items:center;gap:14pt;border-bottom:1pt solid #111;padding-bottom:7pt;margin-bottom:9pt;break-inside:avoid}
+ header img{width:63pt;height:63pt;object-fit:contain;flex:none}header p{margin:3pt 0}
+ h1{font:bold 16pt Georgia,serif;margin:3pt 0}h2{font-size:11pt;margin:8pt 0 5pt}h3{font-size:10pt;margin:6pt 0}
+ p{margin:4pt 0;white-space:pre-wrap;overflow-wrap:anywhere}
+ .identity{display:flex;justify-content:space-between;align-items:center;gap:12pt;border-bottom:1px solid #aaa;padding-bottom:6pt;margin-bottom:7pt;break-inside:avoid}
+ .identity h2{margin:0 0 5pt}.identity p{margin:3pt 0}.profile-photo{width:66pt;height:66pt;object-fit:cover;flex:none;border:1px solid #aaa}
+ .sections{width:100%;max-width:100%}section{margin-bottom:7pt}
+ .demographics{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16pt;align-items:start}
+ .demographics section{break-inside:avoid}.demographics .full-width{grid-column:1/-1}
+ .fields{display:grid;grid-template-columns:fit-content(42%) minmax(0,1fr);gap:4pt 7pt;margin:0;font-size:9pt}
+ .fields dt,.fields dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}.fields dt{font-weight:500}
+ table{border-collapse:collapse;width:calc(100% - 1pt);max-width:100%;table-layout:fixed;font-size:8.5pt;box-sizing:border-box}
+ thead{display:table-header-group}th,td{text-align:left;vertical-align:top;border:0.6pt solid #888;padding:4pt;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal}
+ th{background:#eee}tr{break-inside:avoid}.stamp{font-size:7.5pt;color:#444;margin-top:8pt}
+ `;doc.head.append(style);
  const header=el(doc,'header'),logo=el(doc,'img');logo.src=new URL('./icons/abbey-letterhead.png',location.href).href;logo.alt='Mepkin Abbey';const heading=el(doc,'div');heading.append(el(doc,'h1','Mepkin Abbey Infirmary'),el(doc,'p',title));header.append(logo,heading);doc.body.append(header);
- const identity=el(doc,'div');identity.className='identity';identity.append(el(doc,'h2',fullPersonName(person)));
- if(personName(person)!==fullPersonName(person))identity.append(el(doc,'p',personName(person)));
- identity.append(el(doc,'p','Date of birth: '+personBirthDate(person)),el(doc,'p','Allergies: '+allergiesText(person)));if(person.deceased)identity.append(el(doc,'p','Deceased'));doc.body.append(identity);
+ const identity=el(doc,'div');identity.className='identity';const identityText=el(doc,'div');identityText.append(el(doc,'h2',fullPersonName(person)));identity.append(identityText);
+ if(personName(person)!==fullPersonName(person))identityText.append(el(doc,'p',personName(person)));
+ identityText.append(el(doc,'p','Date of birth: '+personBirthDate(person)),el(doc,'p','Allergies: '+allergiesText(person)));if(person.deceased)identityText.append(el(doc,'p','Deceased'));doc.body.append(identity);
  if(subtitle)doc.body.append(el(doc,'p',subtitle));
- for(const section of sections){const wrap=el(doc,'section');if(section.title)wrap.append(el(doc,'h2',section.title));if(section.columns){const table=el(doc,'table'),head=el(doc,'thead'),row=el(doc,'tr');for(const column of section.columns){const th=el(doc,'th',column);th.scope='col';row.append(th);}const patientRow=el(doc,'tr'),patientCell=el(doc,'th',fullPersonName(person)+' · DOB: '+personBirthDate(person));patientCell.colSpan=section.columns.length;patientRow.append(patientCell);head.append(patientRow,row);table.append(head);const body=el(doc,'tbody');for(const values of section.rows){const tr=el(doc,'tr');for(const value of values)tr.append(el(doc,'td',String(value??'')));body.append(tr);}table.append(body);wrap.append(table);}else for(const line of section.lines||[])wrap.append(el(doc,'p',line));doc.body.append(wrap);}
+ const bodySections=el(doc,'div');bodySections.className='sections'+(layout==='demographics'?' demographics':'');doc.body.append(bodySections);
+ for(const section of sections){
+  const wrap=el(doc,'section');if(section.fullWidth)wrap.className='full-width';if(section.title)wrap.append(el(doc,'h2',section.title));
+  if(section.columns){
+   const table=el(doc,'table'),columns=el(doc,'colgroup'),head=el(doc,'thead'),row=el(doc,'tr');
+   for(const [i,column] of section.columns.entries()){const col=el(doc,'col');col.style.width=(section.widths?.[i]||100/section.columns.length)+'%';columns.append(col);const th=el(doc,'th',column);th.scope='col';row.append(th);}
+   table.append(columns);
+   if(section.repeatIdentity!==false){const patientRow=el(doc,'tr'),patientCell=el(doc,'th',fullPersonName(person)+' · DOB: '+personBirthDate(person));patientCell.colSpan=section.columns.length;patientRow.append(patientCell);head.append(patientRow);}
+   head.append(row);table.append(head);const body=el(doc,'tbody');for(const values of section.rows){const tr=el(doc,'tr');for(const value of values)tr.append(el(doc,'td',String(value??'')));body.append(tr);}table.append(body);wrap.append(table);
+  }else if(section.fields){const fields=el(doc,'dl');fields.className='fields';for(const [label,value] of section.fields)fields.append(el(doc,'dt',label+':'),el(doc,'dd',value||'Not recorded'));wrap.append(fields);}
+  else for(const line of section.lines||[])wrap.append(el(doc,'p',line));bodySections.append(wrap);
+ }
+ const photoReady=(async()=>{
+  if(!person.photo?.fileId)return;
+  try{const blob=await readPersonPhoto(person.photo.fileId);if(stamp!==generation)return;photoUrl=URL.createObjectURL(blob);const image=el(doc,'img');image.className='profile-photo';image.alt='Profile photo';image.src=photoUrl;await image.decode();if(stamp===generation)identity.append(image);}catch{/* An unavailable optional photo must not prevent printing. */}
+ })();
  doc.body.append(el(doc,'p','Printed: '+new Date().toLocaleString()+(retrievedAt?' · Last retrieved: '+new Date(retrievedAt).toLocaleString():'')));doc.body.lastChild.className='stamp';
- try{await logo.decode();if(stamp!==generation||!target.isConnected)throw new Error('Printing cancelled.');await doc.fonts.ready;if(stamp!==generation)throw new Error('Printing cancelled.');target.contentWindow.addEventListener('afterprint',()=>{if(frame===target)clearPrint();},{once:true});target.contentWindow.focus();target.contentWindow.print();}catch(error){if(frame===target)clearPrint();throw error;}
+ try{await Promise.all([logo.decode(),photoReady]);if(stamp!==generation||!target.isConnected)throw new Error('Printing cancelled.');await doc.fonts.ready;if(stamp!==generation)throw new Error('Printing cancelled.');target.contentWindow.addEventListener('afterprint',()=>{if(frame===target)clearPrint();},{once:true});target.contentWindow.focus();target.contentWindow.print();}catch(error){if(frame===target)clearPrint();throw error;}
 }

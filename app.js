@@ -1,15 +1,15 @@
-import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.10.0';
-import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.10.0';
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.10.0';
-import {updateSessionPresence} from './presence.js?v=0.10.0';
-import {closeAppMenu} from './app-menu.js?v=0.10.0';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.10.0';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.10.0';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.10.0';
-import {validatePhoto} from './photos.js?v=0.10.0';
-import './windows.js?v=0.10.0';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.10.0';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.10.0';
+import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.10.1';
+import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.10.1';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.10.1';
+import {updateSessionPresence} from './presence.js?v=0.10.1';
+import {closeAppMenu} from './app-menu.js?v=0.10.1';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.10.1';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.10.1';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.10.1';
+import {validatePhoto} from './photos.js?v=0.10.1';
+import './windows.js?v=0.10.1';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.10.1';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.10.1';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
@@ -42,7 +42,7 @@ function render(){
   const avatarGroup=element('div',undefined,'avatar-group');avatarGroup.append(avatar);if(person.deceased)avatarGroup.append(makeCrucifix());
   header.append(avatarGroup,title,editRecord);panel.append(header);
   const navigation=element('nav',undefined,'chart-navigation');navigation.setAttribute('aria-label','Chart sections');
-  for(const section of ['Demographics','Medications','Medical History','Face Sheet']){const item=element('button',section);item.type='button';item.setAttribute('aria-haspopup','dialog');item.onclick=()=>{if(section==='Demographics'){openDemographics(person.id);return;}if(section==='Medications'){openMedications(person.id);return;}$('#chart-section-title').textContent=section;$('#chart-section-message').textContent=section+' is not available yet.';$('#chart-section-dialog').showModal();};navigation.append(item);}panel.append(navigation);
+  for(const section of ['Demographics','Medications','Medical History']){const item=element('button',section);item.type='button';item.setAttribute('aria-haspopup','dialog');item.onclick=()=>{if(section==='Demographics'){openDemographics(person.id);return;}if(section==='Medications'){openMedications(person.id);return;}$('#chart-section-title').textContent=section;$('#chart-section-message').textContent=section+' is not available yet.';$('#chart-section-dialog').showModal();};navigation.append(item);}panel.append(navigation);
   const legalName=[person.firstName,person.middleName,person.lastName].filter(Boolean).join(' ');
   if(legalName && legalName!==personName(person))panel.append(element('p',legalName,'muted legal-name'));
   if(person.birthDate && Object.values(person.birthDate).some(Boolean)){const b=person.birthDate;panel.append(element('p',`Date of birth: ${b.month||'—'} / ${b.day||'—'} / ${b.year||'—'}`,'muted'));}
