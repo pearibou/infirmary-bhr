@@ -1,6 +1,6 @@
-# Medication lists — agreed design for later development
+# Medication lists — design and implementation
 
-Planning only; no medication integration is implemented by this document.
+Implemented in 0.9.0. The private master spreadsheet is named **Medication Lists (BHR)** and lives directly inside **Infirmary-BHR**.
 
 ## Storage and linkage
 
@@ -55,12 +55,18 @@ Use dropdown validation for status and muted formatting for discontinued rows. F
 
 - Optional **Short course** exposes scheduled end date and optional time.
 - Clearly show the endpoint in the active list. An endpoint is not evidence of an administered last dose.
-- Define an infirmary timezone before implementation. A date without a time stays active through that date.
+- New templates use **America/New_York** (configurable before initialization). After initialization, the spreadsheet timezone is authoritative. A date without a time stays active through that date.
 - Check overdue endpoints after connecting at startup and when opening a list; continuous background operation is unnecessary.
 - On confirmation from Sheets, mark Discontinued with reason **Scheduled course completed**. Retain the scheduled endpoint and processing time; identify automation as the actor type.
 - On write failure show **Scheduled end passed—update pending**, with Retry; do not misrepresent the item as current or successfully discontinued.
 - Allow changing/removing a scheduled end as treatment plans change.
 
-## Before implementation
+## Setup and operational limits
 
-Agree exact headings, date/timezone rules, editable fields and clinical authorization. Enable Sheets API and request its OAuth scope. Inspect only synthetic examples when developing/testing. A blank spreadsheet is sufficient; BHR can initialize the template.
+Enable **Google Sheets API** in the existing OAuth application project. The existing full Drive OAuth scope already permits these Sheets requests; no new client secret is needed. Open Medications and choose **+ Add medication list** to initialize the blank master and create that person’s tab. An unrelated nonblank workbook is never overwritten. Medical History and Face Sheet are placeholders for later work.
+
+Entry IDs and Google row developer metadata protect targeting when rows shift. Deleting an erroneous entry clears its cells and leaves the empty row/marker; it does not delete rows by position. Extra hidden columns retain creation/update identities, timestamps, processing time and revision. Do not change headers or technical markers manually.
+
+The client checks existing contents before updates and preserves drafts on conflicts. Sheets does not provide an atomic compare-and-swap for this workflow: simultaneous edits to the same medication can still race. Server-side serialization, authorization and durable audit are required for stronger multi-user guarantees. Current users still share the connected Google account identity. Medication contents remain in session memory, are cleared on logout and are excluded from browser persistent storage and shell caching; only the spreadsheet/sheet link is included in protected directory sync.
+
+Scheduled completion runs on connection and list opening, not continuously or on a backend timer. It changes list status; it does not establish that any dose was administered. Failed completion writes remain explicitly pending. Tests use synthetic Drive/Sheets responses only; live project/API setup must be verified in the browser.

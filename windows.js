@@ -9,7 +9,7 @@ export function updateWindowTitle(win){const options=windowOptions.get(win);if(!
 export function showWindow(win){dock.querySelector(`[data-window="${win.id}"]`)?.remove();if(!win.open)win[win.dataset.nonmodal==='true'?'show':'showModal']();bringToFront(win);constrain(win);}
 export function registerWindow(win,options={}){
  if(registered.has(win))return;registered.add(win);const bar=win.querySelector('.dialog-title'),name=bar.textContent;
- const settings={title:options.title||(()=>bar.querySelector('#person-dialog-title')?.textContent||name),icon:options.icon};windowOptions.set(win,settings);
+ const settings={title:options.title||(()=>bar.querySelector('#person-dialog-title,[data-window-title]')?.textContent||name),icon:options.icon};windowOptions.set(win,settings);
  const button=document.createElement('button');button.type='button';button.className='window-control';button.textContent='−';button.onclick=()=>minimize(win,settings.title(),settings.icon);bar.prepend(button);movable(win,bar);updateWindowTitle(win);
  if(win.dataset.nonmodal==='true')win.addEventListener('pointerdown',()=>bringToFront(win));
 }

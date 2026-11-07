@@ -3,5 +3,6 @@
 window.INFIRMARY_CONFIG = {
   clientId: '1034461868363-1v6on01hilrd8kfnj9mf9h0mnob52bks.apps.googleusercontent.com',
   pickerApiKey: 'AIzaSyDethWR4ZYtiGM_SCuS3OWbtkXg2P3wMYE',
+  medicationTimeZone: 'America/New_York',
   projectNumber: '1034461868363'
 };
