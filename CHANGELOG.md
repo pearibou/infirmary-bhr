@@ -1,5 +1,9 @@
 # Version history
 
+## 0.9.1
+
+- Correct Sheets metadata creation requests for workbook setup, person tabs and medication rows; validate request shapes in the synthetic backend.
+
 ## 0.9.0
 
 - Add chart navigation and a Sheets-backed Medications window with on-demand surname/initial tabs, Active/Discontinued views, add/edit, discontinuation and confirmed deletion.

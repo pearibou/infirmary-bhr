@@ -1,7 +1,31 @@
 """Synthetic Drive + Sheets backend. No real clinical data or Google writes."""
 import copy,json,urllib.parse
+from pathlib import Path
 from playwright.sync_api import sync_playwright
 from browser_helpers import prepare_test_page,unlock_test_drive,ignore_event_log_projection
+# Selected public Google discovery schemas, including their transitive types.
+SCHEMAS=json.loads(Path(__file__).with_name('sheets-request-schema.json').read_text())['schemas']
+def validate_request(value,schema,path='request'):
+    if '$ref' in schema:schema=SCHEMAS[schema['$ref']]
+    kind=schema.get('type')
+    if kind=='object':
+        assert isinstance(value,dict),path
+        for key,item in value.items():
+            child=schema.get('properties',{}).get(key,schema.get('additionalProperties'))
+            assert child is not None,f'Unknown Google Sheets field: {path}.{key}'
+            validate_request(item,child,path+'.'+key)
+    elif kind=='array':
+        assert isinstance(value,list),path
+        for item in value:validate_request(item,schema['items'],path+'[]')
+    elif kind=='string':assert isinstance(value,str),path
+    elif kind=='boolean':assert isinstance(value,bool),path
+    elif kind in ['integer','number']:assert isinstance(value,(int,float)) and not isinstance(value,bool),path
+    if 'enum' in schema:assert value in schema['enum'],path
+try:
+    validate_request({'addDeveloperMetadata':{}},SCHEMAS['Request'])
+    raise AssertionError('Obsolete metadata request name was accepted')
+except AssertionError as error:
+    assert 'Unknown Google Sheets field' in str(error)
 HEADERS=['Entry ID','Medication','Dose','Route','Frequency','Instructions','Indication','Prescriber','Start date','Status','Scheduled end','Discontinued date','Discontinuation reason','Entered by','Entered by ID','Entered at','Updated by','Updated by ID','Updated at','Completion processed at','Revision']
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
@@ -42,6 +66,7 @@ with sync_playwright() as p:
                 meta=marker(change['dataFilter']['developerMetadataLookup']['metadataId']);loc=meta['location']['dimensionRange'];grids[loc['sheetId']][loc['startIndex']]=change['values'][0]
             route.fulfill(json={'totalUpdatedRows':len(body['data'])});return
         if path.endswith('/workbook:batchUpdate'):
+            for request in body['requests']:validate_request(request,SCHEMAS['Request'])
             batches.append(body['requests']);is_add=any('insertDimension' in item for item in body['requests'])
             for request in body['requests']:
                 if 'addSheet' in request:
@@ -49,8 +74,8 @@ with sync_playwright() as p:
                 elif 'updateSheetProperties' in request:
                     props=request['updateSheetProperties']['properties'];sheet(props['sheetId'])['properties'].update(props)
                 elif 'updateSpreadsheetProperties' in request:book['properties'].update(request['updateSpreadsheetProperties']['properties'])
-                elif 'addDeveloperMetadata' in request:
-                    meta=copy.deepcopy(request['addDeveloperMetadata']['developerMetadata']);meta['metadataId']=serial[0];serial[0]+=1;loc=meta['location']
+                elif 'createDeveloperMetadata' in request:
+                    meta=copy.deepcopy(request['createDeveloperMetadata']['developerMetadata']);meta['metadataId']=serial[0];serial[0]+=1;loc=meta['location']
                     if loc.get('spreadsheet'):book['developerMetadata'].append(meta)
                     else:sheet(loc.get('sheetId',loc.get('dimensionRange',{}).get('sheetId')))['developerMetadata'].append(meta)
                 elif 'insertDimension' in request:
