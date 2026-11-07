@@ -1,6 +1,19 @@
 // Window controls remain usable without Google services.
 const dock=document.querySelector('#window-dock'),main=document.querySelector('.window'),menu=document.querySelector('.menubar'),maximize=document.querySelector('#maximize-main');
 let beforeMaximize;
+const registered=new WeakSet(),windowOptions=new WeakMap();
+export function bringToFront(win){for(const item of document.querySelectorAll('.window,.folder-window'))item.style.zIndex='1';win.style.zIndex='2';}
+function folderMark(){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 48 48');svg.setAttribute('aria-hidden','true');svg.classList.add('dock-folder-icon');svg.innerHTML='<path d="M4 12h17l5 5h18v25H4z" fill="#ddd" stroke="#111" stroke-width="2"/><path d="M4 19h40" stroke="#111"/>';return svg;}
+function dockLabel(button,title,icon){button.replaceChildren();if(icon==='folder')button.append(folderMark());else button.append(document.createTextNode('▣ '));const label=document.createElement('span');label.textContent=title;button.append(label);button.title='Restore '+title;button.setAttribute('aria-label','Restore '+title);}
+export function updateWindowTitle(win){const options=windowOptions.get(win);if(!options)return;const title=options.title();win.querySelector('.window-control')?.setAttribute('aria-label','Minimize '+title);const item=dock.querySelector(`[data-window="${win.id}"]`);if(item)dockLabel(item,title,options.icon);}
+export function showWindow(win){dock.querySelector(`[data-window="${win.id}"]`)?.remove();if(!win.open)win[win.dataset.nonmodal==='true'?'show':'showModal']();bringToFront(win);constrain(win);}
+export function registerWindow(win,options={}){
+ if(registered.has(win))return;registered.add(win);const bar=win.querySelector('.dialog-title'),name=bar.textContent;
+ const settings={title:options.title||(()=>bar.querySelector('#person-dialog-title')?.textContent||name),icon:options.icon};windowOptions.set(win,settings);
+ const button=document.createElement('button');button.type='button';button.className='window-control';button.textContent='−';button.onclick=()=>minimize(win,settings.title(),settings.icon);bar.prepend(button);movable(win,bar);updateWindowTitle(win);
+ if(win.dataset.nonmodal==='true')win.addEventListener('pointerdown',()=>bringToFront(win));
+}
+
 function constrain(win){
   if(win.hidden||(win instanceof HTMLDialogElement&&!win.open)||win.classList.contains('maximized'))return;
   const rect=win.getBoundingClientRect(),top=menu.getBoundingClientRect().bottom;
@@ -28,13 +41,13 @@ function movable(win,bar){
   });
   bar.addEventListener('keydown',event=>{if(win.classList.contains('maximized')||event.target!==bar||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();const rect=win.getBoundingClientRect();move(rect.left+(event.key==='ArrowRight'?10:event.key==='ArrowLeft'?-10:0),rect.top+(event.key==='ArrowDown'?10:event.key==='ArrowUp'?-10:0));});
 }
-function minimize(win,title){
+function minimize(win,title,icon){
   if(dock.querySelector(`[data-window="${win.id}"]`))return;
   if(win instanceof HTMLDialogElement)win.close();else win.hidden=true;
-  const restore=document.createElement('button');restore.textContent=`▣ ${title}`;restore.dataset.window=win.id;restore.title='Restore '+title;
-  restore.onclick=()=>{if(win instanceof HTMLDialogElement)win[win.dataset.nonmodal==='true'?'show':'showModal']();else win.hidden=false;restore.remove();constrain(win);win.querySelector('.titlebar,.dialog-title')?.focus();};dock.append(restore);restore.focus();
+  const restore=document.createElement('button');restore.dataset.window=win.id;dockLabel(restore,title,icon);
+  restore.onclick=()=>{if(win instanceof HTMLDialogElement)win[win.dataset.nonmodal==='true'?'show':'showModal']();else win.hidden=false;restore.remove();bringToFront(win);constrain(win);win.querySelector('.titlebar,.dialog-title')?.focus();};dock.append(restore);restore.focus();
 }
-main.id='records-window';movable(main,main.querySelector('.titlebar'));
+main.id='records-window';movable(main,main.querySelector('.titlebar'));main.addEventListener('pointerdown',()=>bringToFront(main));
 document.querySelector('#minimize-main').onclick=()=>minimize(main,'Brother Health Records - Main');
 maximize.onclick=()=>{
   const isMaximized=main.classList.contains('maximized');
@@ -42,8 +55,5 @@ maximize.onclick=()=>{
   else{beforeMaximize=main.style.cssText;main.style.cssText='';main.classList.add('maximized');}
   maximize.setAttribute('aria-pressed',String(!isMaximized));maximize.setAttribute('aria-label',isMaximized?'Maximize window':'Restore window');maximize.title=isMaximized?'Maximize window':'Restore window';maximize.textContent=isMaximized?'□':'▣';
 };
-for(const dialog of document.querySelectorAll('dialog')){
-  if(dialog.dataset.simple==='true')continue;
-  const title=dialog.querySelector('.dialog-title'),name=title.textContent,button=document.createElement('button');button.type='button';button.className='window-control';button.textContent='−';button.setAttribute('aria-label','Minimize '+name);button.onclick=()=>minimize(dialog,title.querySelector('#person-dialog-title')?.textContent||name);title.prepend(button);movable(dialog,title);
-}
+for(const dialog of document.querySelectorAll('dialog'))if(dialog.dataset.simple!=='true')registerWindow(dialog);
 new ResizeObserver(layout).observe(menu);window.addEventListener('resize',layout);layout();

@@ -108,8 +108,8 @@
 .drive-file{min-width:88px;position:relative}
 .drive-file span{max-width:84px;max-height:34px;overflow:hidden;text-overflow:ellipsis;overflow-wrap:anywhere;line-height:14px}
 .drive-file input{width:84px;padding:2px;font-size:12px;min-height:26px;background:#fff}
-#file-browser{position:fixed;inset:auto;left:12vw;top:calc(var(--desktop-top,38px) + 36px);margin:0;z-index:1;width:min(640px,calc(100vw - 24px));height:440px;max-height:calc(100dvh - var(--desktop-top,38px) - 24px);padding:16px}
-#file-browser:not([open]){display:none}
+.folder-window{position:fixed;inset:auto;left:12vw;top:calc(var(--desktop-top,38px) + 36px);margin:0;z-index:1;width:min(640px,calc(100vw - 24px));height:440px;max-height:calc(100dvh - var(--desktop-top,38px) - 24px);padding:16px}
+.folder-window:not([open]){display:none}
 .file-browser-toolbar,.rich-toolbar{display:flex;gap:6px;flex-wrap:wrap}
 .file-browser-toolbar button,.rich-toolbar button{font-size:12px;padding:4px 8px;min-height:28px}
 .file-grid{display:grid;grid-template-columns:repeat(auto-fill,88px);gap:8px;align-content:start;min-height:160px;padding:12px 0}
@@ -132,6 +132,18 @@
 .chart-documents{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;margin:10px 0 22px}
 .chart-documents button{font-size:12px}
 #desktop-context-menu button:not(:disabled):hover{background:#111;color:#fff}
-@media(max-width:700px){#file-browser{left:12px}#rich-note-body{min-height:180px}}
+@media(max-width:700px){.folder-window{left:12px}#rich-note-body{min-height:180px}}
 
 #desktop-context-menu button[hidden]{display:none}
+
+/* Keep icon artwork stable and ellipsize names on one line. */
+.drive-file svg{flex-shrink:0}
+.drive-file span{display:block;width:100%;min-width:0;max-height:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal;line-height:16px;flex-shrink:0}
+#filename-tooltip{position:fixed;z-index:20;max-width:min(340px,calc(100vw - 16px));padding:4px 7px;background:#fff;color:#111;border:1px solid #aaa;box-shadow:1px 1px 2px #0002;font-size:12px;line-height:1.35;overflow-wrap:anywhere;pointer-events:none}
+#filename-tooltip[hidden]{display:none}
+#file-patient .person-divider{color:#aaa;font-size:10px}
+
+.sticky-note{z-index:4}
+#window-dock button{display:flex;align-items:center;gap:5px;max-width:min(340px,calc(100vw - 140px))}
+#window-dock button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dock-folder-icon{width:18px;height:18px;flex-shrink:0}

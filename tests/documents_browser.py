@@ -7,6 +7,7 @@ with sync_playwright() as p:
     page=browser.new_page(viewport={'width':1440,'height':1000},service_workers='block');prepare_test_page(page)
     errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
     seed={'version':1,'people':[{'id':'person','name':'Synthetic Brother','info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]}]}
+    seed['people'].append({'id':'departed','name':'Synthetic Departed','preferredName':'Synthetic Departed','lastName':'Zimmer','deceased':True,'deathDate':{'year':'2020'},'info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]})
     page.add_init_script("if(!localStorage.getItem('infirmary.directory.v1'))localStorage.setItem('infirmary.directory.v1',"+json.dumps(json.dumps(seed))+");")
     files={};contents={};counter=[0];directory=[seed];account={'sub':'synthetic-staff','name':'Synthetic Staff'};fail=[False]
     def bump(file):
@@ -60,6 +61,13 @@ with sync_playwright() as p:
     assert '<ol>' in contents[noteid]['html'] and '<script' not in contents[noteid]['html']
     assert 'Synthetic clinical text' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     assert 'Synthetic clinical note' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
+    icon=page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic clinical note');icon.wait_for();icon.hover()
+    page.locator('#filename-tooltip').wait_for(state='visible')
+    assert page.locator('#filename-tooltip').inner_text()=='Synthetic clinical note'
+    assert icon.locator('span').evaluate("el=>el.scrollWidth>el.clientWidth&&getComputedStyle(el).whiteSpace==='nowrap'&&getComputedStyle(el).textOverflow==='ellipsis'")
+    assert icon.locator('svg').bounding_box()['height']==44
+    assert page.locator('#filename-tooltip').evaluate("el=>getComputedStyle(el).backgroundColor")=='rgb(255, 255, 255)'
+    page.keyboard.press('Escape');assert page.locator('#filename-tooltip').is_hidden()
     page.locator('.desktop').click(button='right',position={'x':20,'y':210});page.locator('#new-drive-folder').click()
     rename=page.get_by_label('Folder name',exact=True);rename.wait_for();assert rename.input_value()=='New Folder'
     rename.fill('Synthetic Folder');rename.press('Enter')
@@ -68,19 +76,56 @@ with sync_playwright() as p:
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic clinical note').drag_to(folder_icon)
     page.wait_for_function('(id)=>!document.querySelector(`#desktop-icons [data-file-id="${id}"]`)',arg=noteid)
     assert files[noteid]['parents']==[folderid]
-    folder_icon.dblclick();page.wait_for_function("document.querySelector('#file-browser').open")
-    page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note').wait_for()
-    page.locator('#folder-new-folder').click();rename=page.get_by_label('Folder name',exact=True);rename.wait_for();rename.fill('Nested');rename.press('Enter')
-    nested=page.locator('#folder-files .drive-file').filter(has_text='Nested');nested.wait_for()
-    page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note').drag_to(nested)
-    nested.dblclick();page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note').wait_for()
-    page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note').click(button='right')
+    folder_icon.dblclick()
+    topview=page.locator(f'.folder-window[data-folder-id="{folderid}"]');topview.wait_for()
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').wait_for()
+    topview.locator('[data-field=folder-new-folder]').click();rename=page.get_by_label('Folder name',exact=True);rename.wait_for();rename.fill('Nested');rename.press('Enter')
+    nested=topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested');nested.wait_for()
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').drag_to(nested)
+    nestedid=next(file['id'] for file in files.values() if file['name']=='Nested')
+    nested.dblclick();nestedview=page.locator(f'.folder-window[data-folder-id="{nestedid}"]');nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').wait_for()
+    assert page.locator('.folder-window[open]').count()==2
+    topid=topview.get_attribute('id');nestedwinid=nestedview.get_attribute('id')
+    initial=nestedview.bounding_box()
+    nestedview.locator('.window-control').click();topview.locator('.window-control').click()
+    for id,name in [(topid,'Synthetic Folder'),(nestedwinid,'Nested')]:
+        item=page.locator(f'#window-dock [data-window="{id}"]');assert item.inner_text()==name and item.locator('svg.dock-folder-icon').count()==1
+    page.locator('#minimize-main').click()
+    assert page.locator('#window-dock [data-window=records-window] svg.dock-folder-icon').count()==0
+    # Refresh a minimized folder's name without losing its identity/geometry.
+    files[folderid]['name']='Synthetic Folder renamed';bump(files[folderid])
+    page.locator('#window-dock [data-window=records-window]').click();page.locator('#manual-sync').click()
+    page.wait_for_function('(id)=>document.querySelector(`#window-dock [data-window="${id}"]`).textContent.includes("renamed")',arg=topid)
+    page.locator(f'#window-dock [data-window="{topid}"]').click();page.locator(f'#window-dock [data-window="{nestedwinid}"]').click()
+    assert nestedview.bounding_box()==initial and page.locator('.folder-window[open]').count()==2
+    # Up restores the parent window; opening its child again reuses the child.
+    nestedview.locator('[data-field=file-up]').click()
+    def move_window(win,delta):
+        box=win.locator('.dialog-title').bounding_box();x=box['x']+box['width']-30;y=box['y']+box['height']/2
+        page.mouse.move(x,y);page.mouse.down();page.mouse.move(x+delta,y,steps=5);page.mouse.up()
+    move_window(topview,-500)
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').dblclick()
+    assert page.locator('.folder-window[open]').count()==2
+    move_window(nestedview,700)
+    nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').drag_to(topview.locator('[data-field=folder-files]'),target_position={'x':180,'y':100})
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').wait_for()
+    assert files[noteid]['parents']==[folderid]
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').drag_to(topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested'))
+    nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').wait_for()
+    assert files[noteid]['parents']==[nestedid]
+
+    nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note').click(button='right')
     page.wait_for_timeout(100)
-    assert page.locator('#file-context-menu').is_visible(),page.evaluate("({menu:document.querySelector('#file-context-menu').outerHTML,folder:document.querySelector('#file-path').textContent,status:document.querySelector('#file-status').textContent})")
-    page.get_by_role('menuitem',name='Attach note to patient’s chart…').click();page.locator('#file-patient').select_option('person');page.locator('#file-action-confirm').click()
+    assert page.locator('#file-context-menu').is_visible(),page.evaluate("({menu:document.querySelector('#file-context-menu').outerHTML,folder:document.querySelector('[data-field=file-path]')?.textContent,status:document.querySelector('#file-status').textContent})")
+    page.get_by_role('menuitem',name='Attach note to patient’s chart…').click()
+    options=page.locator('#file-patient option').evaluate_all("items=>items.map(item=>({text:item.textContent,value:item.value,disabled:item.disabled}))")
+    assert options[1]['value']=='person' and options[2]['disabled'] and '─' in options[2]['text']
+    assert options[3]['text']=='Synthetic Departed (Deceased)'
+    page.locator('#file-patient').select_option('departed');assert page.locator('#file-patient').input_value()=='departed'
+    page.locator('#file-patient').select_option('person');page.locator('#file-action-confirm').click()
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert files[noteid]['appProperties']['personId']=='person'
-    page.locator('#file-browser [data-close]').click()
+    page.locator('.folder-window[open]').evaluate_all("windows=>windows.forEach(el=>el.querySelector('[data-field=close]').click())")
     page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
     assert body.inner_text().strip()=='Synthetic clinical text'
     # Drive content is treated as untrusted on read; scripts and attributes disappear.
@@ -102,29 +147,31 @@ with sync_playwright() as p:
     assert not files[folderid].get('trashed') and not files[noteid].get('trashed')
     page.locator('#file-action-dialog [data-close]').click()
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic Folder').dblclick()
-    page.locator('#folder-files .drive-file').filter(has_text='Nested').dblclick()
-    readonly=page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note');readonly.wait_for();readonly.click(button='right')
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').dblclick()
+    readonly=nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note');readonly.wait_for();readonly.click(button='right')
     for action in ['rename','attach','trash']:assert page.locator(f'#file-context-menu [data-file-action="{action}"]').is_disabled()
     assert readonly.get_attribute('draggable')=='false'
     page.keyboard.press('Escape')
     open_drive(page);page.locator('#disconnect').click()
     assert body.text_content()==''
+    assert page.locator('.folder-window').count()==0
+    assert page.locator('#window-dock .dock-folder-icon').count()==0
     account.update(sub='synthetic-staff',name='Synthetic Staff')
     page.locator('#google-connect').click();page.wait_for_function("!document.body.classList.contains('drive-locked')");page.locator('#drive-dialog [data-close]').click()
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic Folder').dblclick()
-    page.locator('#folder-files .drive-file').filter(has_text='Nested').dblclick()
-    own=page.locator('#folder-files .drive-file').filter(has_text='Synthetic clinical note');own.wait_for();own.click(button='right')
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').dblclick()
+    own=nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note');own.wait_for();own.click(button='right')
     page.get_by_role('menuitem',name='Send to Trash (delete)…').click();page.locator('#file-action-confirm').click()
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert files[noteid]['trashed'] is True
     page.wait_for_function("!document.querySelector('.chart-documents').textContent.includes('Synthetic clinical note')")
-    page.locator('#file-up').click()
-    page.locator('#folder-files .drive-file').filter(has_text='Nested').click(button='right')
+    nestedview.locator('[data-field=file-up]').click()
+    topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').click(button='right')
     page.get_by_role('menuitem',name='Send to Trash (delete)…').click();page.locator('#file-action-confirm').click()
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert any(file.get('trashed') for file in files.values() if file['name']=='Nested')
-    page.locator('#file-browser [data-close]').click()
+    page.locator('.folder-window[open]').evaluate_all("windows=>windows.forEach(el=>el.querySelector('[data-field=close]').click())")
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     assert not errors,errors
     browser.close()
-print('PASS: formatted note save/failure/retry; Drive-root storage; inline folder naming; drag/nesting; chart attachment; HTML sanitization; second-user read-only; nonempty-folder delete guard; creator trash; empty-folder trash; mobile')
+print('PASS: independent folder windows; named/icon dock entries; minimized rename refresh; geometry restoration; formatted note save/failure/retry; Drive-root storage; inline folder naming; drag/nesting; chart attachment; HTML sanitization; second-user read-only; nonempty-folder delete guard; creator trash; empty-folder trash; mobile')
