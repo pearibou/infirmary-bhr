@@ -1,4 +1,4 @@
-import {makeTrashable,draggedEntry,finishEntryDrag} from './trash.js?v=0.12.0';
+import {makeTrashable,draggedEntry,finishEntryDrag} from './trash.js?v=0.12.1';
 const desktop=document.querySelector('.desktop'),layer=document.querySelector('#sticky-notes'),menu=document.querySelector('#desktop-context-menu');
 let createNote,moveNote,dropOffset={x:0,y:0},menuOrigin={x:24,y:24};
 const top=()=>document.querySelector('.menubar').getBoundingClientRect().bottom;
@@ -8,8 +8,8 @@ export function initDesktopNotes(create,move){
   createNote=create;moveNote=move;
   desktop.addEventListener('contextmenu',event=>{
     if(document.body.classList.contains('drive-locked')||event.target.closest('.window,.sticky-note,.desktop-icon,dialog,#file-context-menu'))return;
-    event.preventDefault();document.querySelector('#new-desktop-note').hidden=false;menuOrigin={x:Math.max(0,event.clientX),y:Math.max(0,event.clientY-top())};menu.hidden=false;
-    menu.style.left=`${Math.max(0,Math.min(event.clientX,innerWidth-180))}px`;menu.style.top=`${Math.max(top(),Math.min(event.clientY,innerHeight-menu.offsetHeight-8))}px`;menu.querySelector('button').focus();
+    event.preventDefault();document.querySelector('#new-desktop-note').hidden=false;document.querySelector('#change-background').hidden=false;menuOrigin={x:Math.max(0,event.clientX),y:Math.max(0,event.clientY-top())};menu.hidden=false;
+    menu.style.left=`${Math.max(0,Math.min(event.clientX,innerWidth-menu.offsetWidth-8))}px`;menu.style.top=`${Math.max(top(),Math.min(event.clientY,innerHeight-menu.offsetHeight-8))}px`;menu.querySelector('button').focus();
   });
   document.querySelector('#new-desktop-note').onclick=()=>{closeDesktopMenu();createNote(menuOrigin);};
   document.addEventListener('pointerdown',event=>{if(!menu.contains(event.target))closeDesktopMenu();});

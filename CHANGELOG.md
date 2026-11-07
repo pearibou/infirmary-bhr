@@ -1,5 +1,11 @@
 # Version history
 
+## 0.12.1
+
+- Show Medical History as monospaced code — diagnosis name, omit per-entry catalog labels, and emphasize Add diagnosis with a plus sign.
+- Add refreshed letterhead printing for Medical History, with monospaced codes and failure-safe print blocking.
+- Default to textured light French Blue and add a desktop background chooser with preview, cancel, presets and a device-only saved color.
+
 ## 0.12.0
 
 - Add private Sheets-backed Medical History with on-demand workbook/person tabs, add/edit, optional partial onset, uncoded conditions and confirmed deletion; omit status.

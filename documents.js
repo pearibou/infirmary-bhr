@@ -1,9 +1,9 @@
-import {smallIcon} from './icons-ui.js?v=0.12.0';
-import {printDocument} from './printing.js?v=0.12.0';
-import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.12.0';
-import {clearTrashSelection} from './trash.js?v=0.12.0';
-import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.12.0';
-import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.12.0';
+import {smallIcon} from './icons-ui.js?v=0.12.1';
+import {printDocument} from './printing.js?v=0.12.1';
+import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.12.1';
+import {clearTrashSelection} from './trash.js?v=0.12.1';
+import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.12.1';
+import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.12.1';
 const $=selector=>document.querySelector(selector),noteDialog=$('#rich-note-dialog'),folderTemplate=$('#file-browser-template'),context=$('#file-context-menu');
 let hooks,active=false,generation=0,refreshNumber=0,busy=false,editor=null,contextFile,contextView,actionFile,actionKind,dragged,dirty=false,renaming=false,refreshPending=false,editorRequest=0;
 let desktopFiles=[],tooltipTimer,tooltipTarget,windowNumber=0;
@@ -231,12 +231,12 @@ async function moveFile(file,target){
 }
 function showFolderMenu(event,view){
   // Reuse desktop commands, targeting this folder rather than the Drive root.
-  const menu=$('#desktop-context-menu');$('#new-desktop-note').hidden=true;menu.hidden=false;menu.style.left=Math.min(event.clientX,innerWidth-188)+'px';menu.style.top=Math.max($('.menubar').getBoundingClientRect().bottom,Math.min(event.clientY,innerHeight-menu.offsetHeight-8))+'px';
+  const menu=$('#desktop-context-menu');$('#new-desktop-note').hidden=true;$('#change-background').hidden=true;menu.hidden=false;menu.style.left=Math.min(event.clientX,innerWidth-menu.offsetWidth-8)+'px';menu.style.top=Math.max($('.menubar').getBoundingClientRect().bottom,Math.min(event.clientY,innerHeight-menu.offsetHeight-8))+'px';
   $('#new-rich-note').onclick=()=>{hooks.closeDesktopMenu();openEditor(null,view.parent);};$('#new-drive-folder').onclick=()=>{hooks.closeDesktopMenu();newFolder(view.parent,view);};menu.querySelector('button:not([hidden])')?.focus();
   // Restore root targeting as soon as the desktop receives a context-menu event.
 }
 document.querySelector('.desktop').addEventListener('contextmenu',()=>{
-  if(!hooks)return;$('#new-desktop-note').hidden=false;$('#new-rich-note').onclick=()=>{hooks.closeDesktopMenu();openEditor(null,'root');};$('#new-drive-folder').onclick=()=>{hooks.closeDesktopMenu();newFolder('root');};
+  if(!hooks)return;$('#new-desktop-note').hidden=false;$('#change-background').hidden=false;$('#new-rich-note').onclick=()=>{hooks.closeDesktopMenu();openEditor(null,'root');};$('#new-drive-folder').onclick=()=>{hooks.closeDesktopMenu();newFolder('root');};
 });
 function draftSnapshot(){return {entry:editor,name:$('#rich-note-name').value,time:$('#rich-note-time').value,html:$('#rich-note-body').innerHTML};}
 function refreshDraftControls(){

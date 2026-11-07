@@ -134,6 +134,19 @@ with sync_playwright() as p:
     assert len(entry_rows(sid))==1
     assert 'Synthetic private history note' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     assert not any('hypertension' in url.lower() or 'Synthetic%20short' in url for url in traffic)
+    card=page.locator('.history-entry').filter(has_text='Synthetic short label')
+    assert card.locator('h3').inner_text()=='I10 — Synthetic short label'
+    assert 'Courier' in card.locator('.diagnosis-code').evaluate('el=>getComputedStyle(el).fontFamily')
+    assert card.locator('small').count()==0 and 'FY2026' not in card.inner_text()
+    assert page.locator('#history-add .diagnosis-plus').inner_text()=='+' and page.locator('#history-print svg').count()==1
+    print_routes=[];page.route('**/icons/abbey-letterhead.png',lambda route:print_routes.append(route));page.locator('#history-print').click()
+    page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Synthetic short label')")
+    page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
+    page.wait_for_timeout(100);print_routes.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes());page.wait_for_function('window.printCalls===1')
+    assert 'Courier' in page.frame_locator('#bhr-print-frame').locator('tbody td').first.evaluate('el=>getComputedStyle(el).fontFamily')
+    assert 'FY2026' not in page.frame_locator('#bhr-print-frame').locator('body').inner_text()
+    page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");page.unroute('**/icons/abbey-letterhead.png');page.wait_for_function("!document.querySelector('#history-print').disabled")
+    disabled_api[0]=True;page.locator('#history-print').click();page.wait_for_function("document.querySelector('#history-status').textContent.startsWith('Could not print:')");assert page.locator('#bhr-print-frame').count()==0;disabled_api[0]=False
     card=page.locator('.history-entry').filter(has_text='Synthetic short label');card.get_by_role('button',name='Edit…',exact=True).click();form.locator('[name=onset]').fill('2020-02-30');page.locator('#history-form-save').click();assert 'Onset must' in page.locator('#history-form-error').inner_text()
     form.locator('[name=onset]').fill('2020-02');entry_rows(sid)[0][5]='Externally changed synthetic note';page.locator('#history-form-save').click();page.wait_for_function("document.querySelector('#history-form-error').textContent.includes('changed')")
     assert form.locator('[name=onset]').input_value()=='2020-02'
