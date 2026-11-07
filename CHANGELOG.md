@@ -2,6 +2,7 @@
 
 ## 0.8.2
 
+- Integrate main branch edits, preserving the minimized main-window label “Brother Health Records - Main.”
 - Give each folder its own movable, resizable window and independent contents; opening an existing folder restores/focuses its window.
 - Show live folder names and small folder icons in the dock, preserve geometry on restore, and refresh/clear all folder windows together.
 - Allow dropping files into another folder window while retaining author checks and sticky-note foreground placement.

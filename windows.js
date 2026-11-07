@@ -48,7 +48,7 @@ function minimize(win,title,icon){
   restore.onclick=()=>{if(win instanceof HTMLDialogElement)win[win.dataset.nonmodal==='true'?'show':'showModal']();else win.hidden=false;restore.remove();bringToFront(win);constrain(win);win.querySelector('.titlebar,.dialog-title')?.focus();};dock.append(restore);restore.focus();
 }
 main.id='records-window';movable(main,main.querySelector('.titlebar'));main.addEventListener('pointerdown',()=>bringToFront(main));
-document.querySelector('#minimize-main').onclick=()=>minimize(main,'Brother Health Records');
+document.querySelector('#minimize-main').onclick=()=>minimize(main,'Brother Health Records - Main');
 maximize.onclick=()=>{
   const isMaximized=main.classList.contains('maximized');
   if(isMaximized){main.classList.remove('maximized');main.style.cssText=beforeMaximize||'';constrain(main);}
