@@ -1,5 +1,11 @@
 # Version history
 
+## 0.10.1
+
+- Constrain printed tables to page width with explicit columns and a practical print-frame viewport; tighten letterhead, margins and row spacing.
+- Use side-by-side demographics/pharmacy sections, hanging address alignment, optional square Drive photos and no duplicate identity row in authorized contacts. Clear photo object URLs after printing/logout.
+- Add optional pharmacy address, phone and fax; remove the redundant Face Sheet link.
+
 ## 0.10.0
 
 - Add browser printing for medications and demographics with transparent, print-only abbey letterhead, patient identity, allergies, timestamps and repeated table headings. Refresh medications before printing; block stale or pending course updates.

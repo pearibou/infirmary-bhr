@@ -186,3 +186,5 @@
 .dem-field-grid,.dem-repeat-row{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.dem-repeat-row{margin:12px 0;padding:10px}.dem-repeat-row label,.dem-field-grid label{min-width:0}.dem-repeat-row button{justify-self:start;margin:6px 0}
 #demographics-dialog{width:min(720px,calc(100vw - 24px))}#demographics-content{max-height:60dvh;overflow:auto;overflow-wrap:anywhere}#demographics-content p{white-space:pre-wrap;font-size:13px}#demographics-content h3{border-bottom:1px solid #777;padding-bottom:5px;margin-top:22px}.med-print-option{font-size:11px;margin:10px 0}
 @media(max-width:700px){.dem-field-grid,.dem-repeat-row{grid-template-columns:1fr}.person-tabs button{font-size:12px}}
+
+.dem-keyvalues{display:grid;grid-template-columns:fit-content(42%) minmax(0,1fr);gap:7px 12px;font-size:13px}.dem-keyvalues dt,.dem-keyvalues dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
