@@ -1,5 +1,15 @@
 # Version history
 
+## 0.12.0
+
+- Add private Sheets-backed Medical History with on-demand workbook/person tabs, add/edit, optional partial onset, uncoded conditions and confirmed deletion; omit status.
+- Bundle 74,706 public ICD-10-CM leaf codes for local condition/code search. Clearly label the historical FY2026 April edition and preserve official title/code/edition separately from custom display names.
+- Retain failed forms, detect conflicting/shifted rows using stable metadata, make retries idempotent, log metadata-only changes and clear history forms/lists on logout.
+
+## 0.11.1
+
+- Reorder demographics details as requested and shorten the displayed e-mail label to E-mail address.
+
 ## 0.11.0
 
 - Simplify pharmacy display; add optional primary care provider/e-mail fields, printer icons, top-right upload action and bottom-of-chart Drive folders.

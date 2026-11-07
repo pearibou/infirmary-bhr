@@ -37,6 +37,7 @@ with sync_playwright() as p:
     page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
     page.wait_for_timeout(100);assert pending;pending.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes())
     page.wait_for_function('window.printCalls===1');frame=page.frame_locator('#bhr-print-frame');assert frame.locator('h1').inner_text()=='Mepkin Abbey Infirmary';assert 'Synthetic policy number' in frame.locator('body').inner_text()
+    assert frame.locator('.fields').first.locator('dt').all_text_contents()==['Primary language:','Originally from:','Religion:','Patient address:','Home phone number:','Cell phone number:','E-mail address:','Primary care provider:']
     assert frame.locator('thead tr').count()==1 and frame.locator('.fields dd').filter(has_text='Synthetic private address').count()==1
     assert page.locator('body > img[src*="abbey-letterhead"]').count()==0
     assert frame.locator('.profile-photo').count()==1

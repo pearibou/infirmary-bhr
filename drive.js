@@ -1,6 +1,6 @@
-import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.11.0';
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.11.0';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.11.0';
+import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.12.0';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.12.0';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.12.0';
 let token,expires=0,loading,authorizedClient,currentUser,workspaceFolder,workspaceName,legacyRootId,storageEpoch=0;
 const activeRequests=new Set();
 export function disconnect(){storageEpoch++;workspaceFolder=undefined;workspaceName=undefined;legacyRootId=undefined;for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
@@ -276,7 +276,18 @@ export async function findMedicationWorkbook(knownId){
 export async function medicationSheetsRequest(path,options={}){
   requireFilesAccess();const epoch=storageEpoch;
   const response=await driveFetch('https://sheets.googleapis.com/v4/spreadsheets/'+path,{...options,headers:{Authorization:`Bearer ${token}`,...(options.body?{'Content-Type':'application/json'}:{}),...options.headers}});
-  if(epoch!==storageEpoch)throw new Error('Google Drive connection changed. Reconnect before opening medications.');
-  if(!response.ok){if(response.status===401)disconnect();let message;try{message=(await response.json()).error?.message;}catch{}const error=new Error(message||`Medication spreadsheet request failed (${response.status}).`);error.status=response.status;if(/has not been used|is disabled|accessNotConfigured|SERVICE_DISABLED/i.test(error.message))error.message='Enable Google Sheets API in the Google Cloud project for this app, then Retry. '+error.message;throw error;}
+  if(epoch!==storageEpoch)throw new Error('Google Drive connection changed. Reconnect before opening spreadsheet data.');
+  if(!response.ok){if(response.status===401)disconnect();let message;try{message=(await response.json()).error?.message;}catch{}const error=new Error(message||`Spreadsheet request failed (${response.status}).`);error.status=response.status;if(/has not been used|is disabled|accessNotConfigured|SERVICE_DISABLED/i.test(error.message))error.message='Enable Google Sheets API in the Google Cloud project for this app, then Retry. '+error.message;throw error;}
   return response.json();
+}
+
+// Medical History has its own private master workbook; never confuse it with medications.
+export async function findHistoryWorkbook(knownId,create=false){
+ requireFilesAccess();if(!workspaceFolder)throw new Error('Sync Infirmary-BHR first.');
+ const epoch=storageEpoch,name='Medical History (BHR)';
+ if(knownId){const file=await(await api(`files/${safeDriveId(knownId)}?fields=id,name,mimeType,parents,trashed`)).json();if(file.trashed||file.mimeType!=='application/vnd.google-apps.spreadsheet'||!file.parents?.includes(workspaceFolder))throw new Error('The linked Medical History workbook is missing from Infirmary-BHR. Restore it before retrying.');return file;}
+ const matches=(await storageListing(`'${workspaceFolder}' in parents and name = '${name}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`)).filter(file=>file.name===name&&file.mimeType==='application/vnd.google-apps.spreadsheet');
+ if(matches.length>1)throw new Error('Multiple Medical History (BHR) spreadsheets found. Keep one master workbook.');if(matches.length)return matches[0];
+ if(!create){const error=new Error('No Medical History (BHR) workbook exists yet.');error.code='HISTORY_WORKBOOK_MISSING';throw error;}
+ const file=await(await api('files?fields=id,name,mimeType,parents',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.spreadsheet',parents:[workspaceFolder],appProperties:{bhrHistory:'1'}})})).json();if(epoch!==storageEpoch)throw new Error('Connection changed.');return file;
 }
