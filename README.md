@@ -203,3 +203,6 @@ The desktop defaults to a light French Blue with the original 4px texture. Right
 
 
 Medication lists group PRN entries at the bottom, identified case-insensitively as a frequency token (including Q6H PRN and P.R.N.). These cards have a subtle pastel green background and an **As needed** divider. Active entries are alphabetical within routine/PRN groups; discontinued entries retain newest-first history within each group. Reports use the same ordering. Editing a frequency automatically updates grouping. This is a presentation order: row IDs and saved medication details remain unchanged.
+
+
+Medication startup checks match each batch response to its permanent Google sheet ID, rather than its position in the returned array. Missing or ambiguous matches stop that person's check without writes. Genuine row/metadata problems identify the affected person; opening their Medications gives the detailed error and refresh action. Row IDs are not guessed or recreated automatically.

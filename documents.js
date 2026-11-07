@@ -1,9 +1,9 @@
-import {smallIcon} from './icons-ui.js?v=0.12.2';
-import {printDocument} from './printing.js?v=0.12.2';
-import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.12.2';
-import {clearTrashSelection} from './trash.js?v=0.12.2';
-import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.12.2';
-import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.12.2';
+import {smallIcon} from './icons-ui.js?v=0.12.3';
+import {printDocument} from './printing.js?v=0.12.3';
+import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.12.3';
+import {clearTrashSelection} from './trash.js?v=0.12.3';
+import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.12.3';
+import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.12.3';
 const $=selector=>document.querySelector(selector),noteDialog=$('#rich-note-dialog'),folderTemplate=$('#file-browser-template'),context=$('#file-context-menu');
 let hooks,active=false,generation=0,refreshNumber=0,busy=false,editor=null,contextFile,contextView,actionFile,actionKind,dragged,dirty=false,renaming=false,refreshPending=false,editorRequest=0;
 let desktopFiles=[],tooltipTimer,tooltipTarget,windowNumber=0;

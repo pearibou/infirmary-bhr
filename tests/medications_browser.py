@@ -64,7 +64,8 @@ with sync_playwright() as p:
             assert body=={'dataFilters':[{'developerMetadataLookup':{'metadataKey':'bhr.medicationId','visibility':'DOCUMENT'}}]}
             route.fulfill(json={'matchedDeveloperMetadata':[{'developerMetadata':m} for tab in book['sheets'] for m in tab['developerMetadata'] if m['metadataKey']=='bhr.medicationId']});return
         if path.endswith('/values:batchGetByDataFilter'):
-            route.fulfill(json={'valueRanges':[{'dataFilters':[f],'valueRange':{'values':filter_rows(f)}} for f in body['dataFilters']]});return
+            ranges=[{'dataFilters':[f],'valueRange':{'values':filter_rows(f)}} for f in body['dataFilters']]
+            route.fulfill(json={'valueRanges':list(reversed(ranges))});return
         if path.endswith('/values:batchUpdateByDataFilter'):
             if fail_updates[0]:route.fulfill(status=503,json={'error':{'message':'Synthetic update failed'}});return
             for change in body['data']:
@@ -188,6 +189,18 @@ with sync_playwright() as p:
     page.reload();page.wait_for_function("window.google?.accounts?.oauth2 && !document.querySelector('#drive-status').textContent.startsWith('Preparing')");page.locator('#google-connect').click()
     page.wait_for_function("!document.body.classList.contains('drive-locked') && !document.querySelector('#logout-power').disabled")
     assert next(row for row in entry_rows(sid) if row[0]==startup_id)[9]=='Discontinued'
+    assert 'Medication startup check' not in page.locator('#toast').inner_text()
+    # Genuine missing metadata still stops that person's check and identifies them.
+    damaged=next(m for m in sheet(sid)['developerMetadata'] if m.get('metadataValue')==startup_id)
+    snapshot=copy.deepcopy(grids[sid]);sheet(sid)['developerMetadata'].remove(damaged)
+    page.reload();page.wait_for_function("window.google?.accounts?.oauth2 && !document.querySelector('#drive-status').textContent.startsWith('Preparing')");page.locator('#google-connect').click()
+    page.wait_for_function("!document.body.classList.contains('drive-locked') && !document.querySelector('#logout-power').disabled")
+    assert 'Synthetic John' in page.locator('#toast').inner_text() and 'Open this person' in page.locator('#toast').inner_text()
+    assert grids[sid]==snapshot
+    sheet(sid)['developerMetadata'].append(damaged)
+    page.reload();page.wait_for_function("window.google?.accounts?.oauth2 && !document.querySelector('#drive-status').textContent.startsWith('Preparing')");page.locator('#google-connect').click()
+    page.wait_for_function("!document.body.classList.contains('drive-locked') && !document.querySelector('#logout-power').disabled")
+
     page.locator('#drive-dialog [data-close]').click();page.get_by_role('button',name='Medications',exact=True).click();page.wait_for_function("!document.querySelector('#med-add').disabled")
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     page.locator('#med-add').click();form.get_by_label('Medication and strength',exact=True).fill('Synthetic unsaved private medication');page.locator('#medication-form-dialog .window-control').click();page.locator('#medications-dialog [data-close]').click()
