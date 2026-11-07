@@ -61,13 +61,13 @@ with sync_playwright() as p:
     page.keyboard.press('Escape');assert dialog.is_visible()
     page.wait_for_timeout(100)
     assert len(pending)==1
-    pending[0].fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
+    pending[0].fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
     for _ in range(100):
         page.wait_for_timeout(50)
         if len(pending)>1:break
     assert len(pending)==2
     assert not page.locator('body').evaluate("el=>el.classList.contains('drive-locked')")
-    pending[1].fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
+    pending[1].fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
     page.wait_for_function("document.body.classList.contains('drive-locked')")
     assert len(writes)==2
     assert any(note['text']=='Synthetic latest saved note' for note in writes[-1]['people'][0]['notes'])

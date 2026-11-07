@@ -17,7 +17,7 @@ with sync_playwright() as p:
         elif route.request.method=='PATCH':uploads.append(json.loads(route.request.post_data));route.fulfill(json={'id':'directory'})
         elif 'alt=media' in url:route.fulfill(json=data) # deliberately stale copy
         elif 'files?q=' in url:route.fulfill(json={'files':[{'id':'directory'}]})
-        else:route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
+        else:route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
     page.route('https://www.googleapis.com/**',drive)
     prepare_test_page(page)
     page.goto('http://127.0.0.1:8000')

@@ -24,7 +24,7 @@ with sync_playwright() as p:
         elif 'files/photo-file-' in url:route.fulfill(content_type='image/png',body=png)
         elif 'files?q=' in url:route.fulfill(json={'files':[]})
         elif req.method=='POST':route.fulfill(json={'id':'directory-file'})
-        else:route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
+        else:route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
     page.route('https://www.googleapis.com/**',drive)
     page.add_init_script("localStorage.setItem('infirmary.drive',JSON.stringify({folder:'directory-only',folderName:'Backend directory folder'}))")
     prepare_test_page(page)

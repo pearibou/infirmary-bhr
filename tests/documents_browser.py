@@ -25,7 +25,7 @@ with sync_playwright() as p:
             found=[file for file in files.values() if not file.get('trashed') and (file.get('appProperties',{}).get('personId')==person[1] if person else parent and parent[1] in file.get('parents',[]))]
             route.fulfill(json={'files':found});return
         id=url.path.rsplit('/',1)[-1]
-        if id=='root':route.fulfill(json={'id':'root','mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}});return
+        if id=='root':route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}});return
         if id=='directory':
             if method=='PATCH':directory[0]=req.post_data_json
             route.fulfill(json=directory[0] if method=='GET' else {'id':'directory'});return
@@ -174,4 +174,4 @@ with sync_playwright() as p:
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     assert not errors,errors
     browser.close()
-print('PASS: independent folder windows; named/icon dock entries; minimized rename refresh; geometry restoration; formatted note save/failure/retry; Drive-root storage; inline folder naming; drag/nesting; chart attachment; HTML sanitization; second-user read-only; nonempty-folder delete guard; creator trash; empty-folder trash; mobile')
+print('PASS: independent folder windows; named/icon dock entries; minimized rename refresh; geometry restoration; formatted note save/failure/retry; workspace storage; inline folder naming; drag/nesting; chart attachment; HTML sanitization; second-user read-only; nonempty-folder delete guard; creator trash; empty-folder trash; mobile')
