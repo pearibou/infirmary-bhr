@@ -1,5 +1,9 @@
 # Version history
 
+## 0.8.5
+
+- Lift the note formatting toolbar 3px and add a small gap above the editor focus outline.
+
 ## 0.8.4
 
 - Reflect the current selection/caret formatting with depressed toolbar buttons, including keyboard changes and mixed selections.
