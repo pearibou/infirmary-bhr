@@ -1,5 +1,11 @@
 # Version history
 
+## 0.8.3
+
+- Create/reuse Infirmary-BHR for directory, Event Log, desktop notes/folders and fallback photos; the BHR desktop now represents that folder.
+- Move recognized legacy BHR files without changing Drive IDs, keep assigned destinations intact, and stop safely on duplicate/conflicting storage copies.
+- Make partial upgrades retryable and preserve migrated photo references through directory merges.
+
 ## 0.8.2
 
 - Integrate main branch edits, preserving the minimized main-window label “Brother Health Records - Main.”

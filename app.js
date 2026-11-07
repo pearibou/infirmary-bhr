@@ -1,13 +1,13 @@
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.8.2';
-import {updateSessionPresence} from './presence.js?v=0.8.2';
-import {closeAppMenu} from './app-menu.js?v=0.8.2';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.8.2';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.8.2';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.8.2';
-import {validatePhoto} from './photos.js?v=0.8.2';
-import './windows.js?v=0.8.2';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.8.2';
-import {prepareGoogle,authorize,syncDirectory,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.8.2';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.8.3';
+import {updateSessionPresence} from './presence.js?v=0.8.3';
+import {closeAppMenu} from './app-menu.js?v=0.8.3';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.8.3';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.8.3';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.8.3';
+import {validatePhoto} from './photos.js?v=0.8.3';
+import './windows.js?v=0.8.3';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.8.3';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.8.3';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
@@ -105,7 +105,7 @@ $('#person-form').onsubmit=async event=>{
     let person=data.people.find(p=>p.id===id);
     if(editPersonId&&!person)throw new Error('This record was deleted while you were editing.');
     if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed while you were editing. Reopen it to review the latest details.');
-    let photo=person?.photo;const folder=person?.driveFolders?.[0]?.id||'root';
+    let photo=person?.photo;const folder=person?.driveFolders?.[0]?.id||getWorkspaceFolder();
     if(file){if(!hasDriveAccess())throw new Error('Connect Google Drive before saving a photo. Your form has been kept.');await validatePhoto(file);$('#person-error').textContent='Uploading photo directly to Drive…';const photoActor=getCurrentUser(),uploaded=await uploadPersonFile(folder,file);if(saveEpoch!==sessionEpoch)return;if(uploaded.id)appendActivity('photo.uploaded','file',uploaded.id,'Profile photo uploaded to Drive folder '+folder,id,photoActor);if(!uploaded.id)throw new Error('Google did not return a photo file ID.');photo={fileId:uploaded.id,folderId:folder};}
     const next=structuredClone(data);person=next.people.find(p=>p.id===id);
     if(editPersonId&&!person)throw new Error('This record was deleted during the upload. The photo remains in Drive.');
@@ -176,7 +176,7 @@ $('#google-connect').onclick=async()=>{
   // A ready SDK lets OAuth open directly from this click, avoiding popup blockers.
   if(!googleReady){await readyGoogle();return;}
   const authEpoch=sessionEpoch;connecting=true;fillSettings();$('#drive-status').textContent='Complete sign-in in the Google window. Close it to cancel.';
-  try{await authorize(driveConfig.clientId);if(authEpoch!==sessionEpoch){disconnect();return;}connected=true;sessionCleared=false;clearPhotos();try{const user=await loadCurrentUser();$('#current-user').textContent='Signed in as '+user.name;}catch(error){$('#current-user').textContent='Author identity unavailable; new notes will be unattributed.';}if(authEpoch!==sessionEpoch){$('#current-user').textContent='';return;}appendActivity('drive.connected','directory',driveConfig.folder||'unselected','Google Drive connection established');renderKeepingDraft();$('#drive-status').textContent=pickerReady?'Connected. Choose a directory folder, then sync.':'Connected. Use My Drive (root), or configure Google folder browsing.';if(driveConfig.folder&&!workspaceReady)await runSync();}
+  try{await authorize(driveConfig.clientId);if(authEpoch!==sessionEpoch){disconnect();return;}connected=true;sessionCleared=false;clearPhotos();try{const user=await loadCurrentUser();$('#current-user').textContent='Signed in as '+user.name;}catch(error){$('#current-user').textContent='Author identity unavailable; new notes will be unattributed.';}if(authEpoch!==sessionEpoch){$('#current-user').textContent='';return;}appendActivity('drive.connected','directory',driveConfig.folder||'unselected','Google Drive connection established');renderKeepingDraft();$('#drive-status').textContent=pickerReady?'Connected. Use Infirmary-BHR, or choose its storage location.':'Connected. Use Infirmary-BHR, or choose its storage location.';if(driveConfig.folder&&!workspaceReady)await runSync();}
   catch(error){if(authEpoch!==sessionEpoch)return;connected=false;$('#drive-status').textContent=error.message;}
   finally{connecting=false;fillSettings();}
 };
@@ -185,7 +185,7 @@ async function chooseFolder(dialog){
   const pickerEpoch=sessionEpoch;choosingFolder=true;dialog.close();try{const folder=await pickFolder(driveConfig);return pickerEpoch===sessionEpoch?folder:null;}finally{choosingFolder=false;if(pickerEpoch===sessionEpoch&&!dialog.open)dialog.showModal();}
 }
 $('#choose-sync-folder').onclick=async()=>{try{await authorize(driveConfig.clientId);const folder=await chooseFolder($('#drive-dialog'));if(folder){driveConfig.folder=folder.id;driveConfig.folderName=folder.name;rememberSettings();appendActivity('directory.selected','directory',folder.id,'Directory storage folder selected');fillSettings();$('#drive-status').textContent='Directory folder selected. Choose Sync directory to merge your records.';if(!workspaceReady)await runSync();}}catch(error){$('#drive-status').textContent=error.message;}};
-$('#use-drive-root').onclick=()=>{driveConfig.folder='root';driveConfig.folderName='My Drive (root)';rememberSettings();appendActivity('directory.selected','directory','root','My Drive root selected for directory storage');fillSettings();$('#drive-status').textContent='My Drive selected. Sync directory will save people_directory.json at the top level of My Drive.';if(!workspaceReady)runSync();};
+$('#use-drive-root').onclick=()=>{driveConfig.folder='root';driveConfig.folderName='Infirmary-BHR';rememberSettings();appendActivity('directory.selected','directory','root','Infirmary-BHR storage selected');fillSettings();$('#drive-status').textContent='Sync will create or reuse Infirmary-BHR and organize existing BHR files there.';if(!workspaceReady)runSync();};
 function clearProtectedWorkspace(removeStorage=true){
   if(removeStorage){
     // Remove only BHR data, preserving unrelated origin storage/preferences.
@@ -261,7 +261,9 @@ async function performSync(automatic=false){
   }
   const epoch=sessionEpoch;syncing=true;fillSettings();$('#drive-status').textContent='Syncing with Google Drive…';
   try{
-    const snapshot=structuredClone(data),merged=await syncDirectory(driveConfig.folder,snapshot);
+    const storage=await ensureWorkspaceFolder(driveConfig.folder);if(epoch!==sessionEpoch)return;
+    if(driveConfig.folder!==storage.id||driveConfig.folderName!==storage.name){driveConfig.folder=storage.id;driveConfig.folderName=storage.name;rememberSettings();appendActivity('directory.selected','directory',storage.id,'Infirmary-BHR storage folder ready');}
+    const snapshot=structuredClone(data),merged=await syncDirectory(storage.id,snapshot);
     if(epoch!==sessionEpoch)return;
     // Preserve notes added during the request; the next cycle uploads them.
     const next=mergeDirectories(data,merged),changed=JSON.stringify(next)!==JSON.stringify(data);

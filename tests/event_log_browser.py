@@ -28,7 +28,7 @@ with sync_playwright() as p:
                 route.fulfill(json={'files':([{'id':'event-text'}] if backend['text'] is not None else []) if log else [{'id':'directory'}]})
             elif '/files/event-text?' in url:route.fulfill(content_type='text/plain',body=backend['text'])
             elif 'alt=media' in url:route.fulfill(json=backend['directory'])
-            else:route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
+            else:route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
         page.route('https://www.googleapis.com/**',drive);page.goto('http://127.0.0.1:8000');return context,page
     def connect(page):
         page.locator('#google-connect').click();page.locator('#use-drive-root').click();page.wait_for_function("!document.body.classList.contains('drive-locked')");page.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()

@@ -23,12 +23,14 @@ def open_drive(page):
     if not page.locator('#drive-dialog').is_visible():
         if not page.locator('#app-menu').is_visible():page.locator('#app-menu-toggle').click()
         page.locator('#drive-open').click()
+# General UI fixtures use "root" as the ID of an already-prepared workspace.
+# storage_browser.py and storage.test.js exercise actual My Drive/container IDs.
 def unlock_test_drive(page,profile=True):
     if not page.locator('body').evaluate("el=>el.classList.contains('drive-locked')"):return
     snapshot=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')||'{\"version\":1,\"people\":[]}')")
     routes=[]
     def add(pattern,handler):routes.append((pattern,handler));page.route(pattern,handler)
-    add('https://www.googleapis.com/drive/v3/files/*?fields=*',lambda route:route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}}))
+    add('https://www.googleapis.com/drive/v3/files/*?fields=*',lambda route:route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}}))
     add('https://www.googleapis.com/drive/v3/files?*',lambda route:route.fulfill(json={'files':[] if 'BHR_event_log.txt' in route.request.url else [{'id':'__test-bootstrap'}]}))
     add('https://www.googleapis.com/drive/v3/files/__test-bootstrap?*',lambda route:route.fulfill(json=snapshot))
     add('https://www.googleapis.com/upload/drive/v3/files/__test-bootstrap?*',lambda route:route.fulfill(json={'id':'__test-bootstrap'}))

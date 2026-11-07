@@ -19,7 +19,7 @@ with sync_playwright() as p:
             uploads.append(json.loads(route.request.post_data))
             route.fulfill(json={'id':'file'})
         elif 'files/root?' in url:
-            route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
+            route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
         elif 'alt=media' in url:
             if hold_first[0]:
                 hold_first[0]=False

@@ -1,7 +1,7 @@
-import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.8.2';
-import {clearTrashSelection} from './trash.js?v=0.8.2';
-import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.8.2';
-import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.8.2';
+import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.8.3';
+import {clearTrashSelection} from './trash.js?v=0.8.3';
+import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.8.3';
+import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.8.3';
 const $=selector=>document.querySelector(selector),noteDialog=$('#rich-note-dialog'),folderTemplate=$('#file-browser-template'),context=$('#file-context-menu');
 let hooks,active=false,generation=0,refreshNumber=0,busy=false,editor=null,contextFile,contextView,actionFile,actionKind,dragged,dirty=false,renaming=false,refreshPending=false,editorRequest=0;
 let desktopFiles=[],tooltipTimer,tooltipTarget,windowNumber=0;
@@ -91,7 +91,7 @@ async function openFolder(file,ancestors=[]){
     view.get('file-up').onclick=async()=>{
       if(view.parent==='root')return;
       const parentId=view.file.parents?.[0];
-      if(!parentId||parentId==='root'||desktopFiles.some(item=>item.id===view.parent)){openFolder({id:'root',name:'My Drive · BHR notes',appProperties:{kind:'folder'}});return;}
+      if(!parentId||parentId==='root'||desktopFiles.some(item=>item.id===view.parent)){openFolder({id:'root',name:'Infirmary-BHR',appProperties:{kind:'folder'}});return;}
       const epoch=generation;
       try{const ancestor=await desktopFileMetadata(parentId);if(epoch===generation)openFolder(ancestor,view.stack.slice(0,-2));}catch(error){if(epoch===generation)status(error.message);}
     };
@@ -127,7 +127,7 @@ export async function refreshFiles(){
 function renderFolder(view){
   view.get('folder-files').replaceChildren(...sort(view.files).map(file=>fileIcon(file,view)));
   view.get('file-folder-title').textContent=view.file.name;view.element.setAttribute('aria-label',view.file.name);
-  view.get('file-path').textContent=['My Drive',...view.stack.map(item=>item.id===view.parent?view.file.name:item.name)].join(' / ');
+  view.get('file-path').textContent=['Infirmary-BHR',...view.stack.map(item=>item.id===view.parent?view.file.name:item.name)].join(' / ');
   view.get('folder-empty').textContent=view.error||(view.files.length?'':'This folder is empty.');
   view.get('file-up').disabled=view.parent==='root';updateWindowTitle(view.element);
 }

@@ -1,9 +1,9 @@
-import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.8.2';
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.8.2';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.8.2';
-let token,expires=0,loading,authorizedClient,currentUser;
+import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.8.3';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.8.3';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.8.3';
+let token,expires=0,loading,authorizedClient,currentUser,workspaceFolder,workspaceName,legacyRootId,storageEpoch=0;
 const activeRequests=new Set();
-export function disconnect(){for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
+export function disconnect(){storageEpoch++;workspaceFolder=undefined;workspaceName=undefined;legacyRootId=undefined;for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
 function loadGoogle(){
   if(globalThis.google?.accounts?.oauth2)return Promise.resolve();
   if(loading)return loading;
@@ -25,7 +25,7 @@ async function driveFetch(url,options={},timeout=30000){
 }
 async function api(path,options={}){
   const response=await driveFetch('https://www.googleapis.com/drive/v3/'+path,{...options,headers:{Authorization:`Bearer ${token}`,...options.headers}});
-  if(!response.ok){if(response.status===401)disconnect();let message;try{message=(await response.json()).error?.message;}catch{}throw new Error(message||`Google Drive request failed (${response.status}).`);}return response;
+  if(!response.ok){if(response.status===401)disconnect();let message;try{message=(await response.json()).error?.message;}catch{}const error=new Error(message||`Google Drive request failed (${response.status}).`);error.status=response.status;throw error;}return response;
 }
 export async function syncDirectory(folder,local){
   if(!/^[\w-]+$/.test(folder))throw new Error('Enter the folder ID from its Google Drive URL.');
@@ -39,10 +39,10 @@ export async function syncDirectory(folder,local){
   if(file){const response=await api(`files/${file.id}?alt=media&supportsAllDrives=true`);merged=mergeDirectories(local,validateDirectory(await response.json()));
     // A second read reduces the race window; Drive media updates are not transactional.
     const latest=await(await api(`files/${file.id}?alt=media&supportsAllDrives=true`)).json();merged=mergeDirectories(merged,validateDirectory(latest));
-    await prepareLog();
+    await prepareLog();await migrateRootPhotos(merged,folder);
     const responseWrite=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${file.id}?uploadType=media&supportsAllDrives=true`,{method:'PATCH',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(merged)});if(!responseWrite.ok)throw new Error(`Drive upload failed (${responseWrite.status}). Local notes remain saved.`);
   }else{
-    await prepareLog();
+    await prepareLog();await migrateRootPhotos(merged,folder);
     const boundary='infirmary_'+crypto.randomUUID();const body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name:'people_directory.json',parents:[folder],mimeType:'application/json'})}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(merged)}\r\n--${boundary}--`;
     const response=await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`},body});if(!response.ok)throw new Error(`Drive file creation failed (${response.status}). Local notes remain saved.`);
   }
@@ -129,13 +129,82 @@ async function writeEventLog(folder,file,text){
   const response=await driveFetch(url,options);if(!response.ok)throw new Error('Event log upload failed.');
 }
 
+// One container for BHR data. Existing files move by ID; unrelated files are
+// untouched. Preparation is retryable if a move fails partway through.
+export function getWorkspaceFolder(){return workspaceFolder;}
+function desktopParent(parent){if(parent!=='root')return parent;if(!workspaceFolder)throw new Error('Sync the Infirmary-BHR storage folder first.');return workspaceFolder;}
+async function storageListing(q){
+  const files=[];let pageToken;
+  do{const result=await(await api('files?'+new URLSearchParams({q,fields:'files(id,name,mimeType,parents,appProperties),nextPageToken',pageSize:'100',...(pageToken?{pageToken}:{})}))).json();files.push(...result.files);pageToken=result.nextPageToken;}while(pageToken);
+  return files;
+}
+export async function ensureWorkspaceFolder(base='root'){
+  if(!hasDriveAccess())throw new Error('Connect Google Drive before preparing BHR storage.');safeDriveId(base);
+  if(workspaceFolder&&(base===workspaceFolder))return {id:workspaceFolder,name:workspaceName};
+  const epoch=storageEpoch,check=()=>{if(epoch!==storageEpoch||!hasDriveAccess())throw new Error('Google Drive connection changed. Reconnect to prepare storage.');};
+  const source=await(await api(`files/${safeDriveId(base)}?fields=id,name,mimeType,parents,appProperties,capabilities(canAddChildren)`)).json();check();
+  if(source.mimeType!=='application/vnd.google-apps.folder'||!source.capabilities?.canAddChildren)throw new Error('Choose a writable storage location.');
+  let target=source;
+  if(source.appProperties?.bhrWorkspace!=='1'&&source.name!=='Infirmary-BHR'){
+    const matches=await storageListing(`'${base}' in parents and name = 'Infirmary-BHR' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);check();
+    if(matches.length>1)throw new Error('Multiple Infirmary-BHR folders found. Choose the intended folder with the folder picker.');
+    if(matches.length)target=matches[0];
+    else target=await(await api('files?fields=id,name,appProperties',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Infirmary-BHR',mimeType:'application/vnd.google-apps.folder',parents:[base],appProperties:{bhrWorkspace:'1'}})})).json();
+  }
+  check();if(!target.id)throw new Error('Google did not return the Infirmary-BHR folder ID.');
+  if(target.id!==source.id){
+    const matches=await storageListing(`'${base}' in parents and name = 'Infirmary-BHR' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);check();
+    if(matches.length>1||matches.length===1&&matches[0].id!==target.id)throw new Error('Multiple Infirmary-BHR folders were created. Choose the intended folder before retrying.');
+    target=await(await api(`files/${safeDriveId(target.id)}?fields=id,name,appProperties,mimeType,capabilities(canAddChildren)`)).json();check();
+    if(target.mimeType!=='application/vnd.google-apps.folder'||!target.capabilities?.canAddChildren)throw new Error('The Infirmary-BHR folder is not writable.');
+  }
+  if(target.appProperties?.bhrWorkspace!=='1'){
+    await api(`files/${safeDriveId(target.id)}?fields=id`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({appProperties:{...target.appProperties,bhrWorkspace:'1'}})});check();
+  }
+  const pending=[],directorySource=target.id===source.id?'root':base;
+  if(directorySource!==target.id){
+    for(const name of ['people_directory.json','BHR_event_log.txt']){
+      const query=parent=>`'${parent}' in parents and name = '${name}' and trashed = false`;
+      const [old,existing]=await Promise.all([storageListing(query(directorySource)),storageListing(query(target.id))]);check();
+      if(old.length>1||existing.length>1||old.length&&existing.length&&old[0].id!==existing[0].id)throw new Error(`Both storage locations contain ${name}, or duplicate copies exist. Resolve the copies in Drive before retrying; nothing will be overwritten.`);
+      if(old.length){const response=await api(`files/${safeDriveId(old[0].id)}?alt=media`);if(name==='people_directory.json')validateDirectory(await response.json());else parseEventLogText(await response.text());pending.push(old[0]);}
+    }
+  }
+  // Old desktop items always lived in My Drive. Only BHR-tagged items move;
+  // native folders carry their existing children with their IDs intact.
+  if(target.id!=='root'){
+    const root=base==='root'?source:await(await api('files/root?fields=id')).json();legacyRootId=root.id;
+    pending.push(...await storageListing("'root' in parents and appProperties has { key='bhrDesktop' and value='1' } and trashed = false"));check();
+  }
+  for(const file of pending){
+    check();if(file.id===target.id)continue;
+    await api(`files/${safeDriveId(file.id)}?`+new URLSearchParams({addParents:target.id,removeParents:(file.parents||[base]).join(','),fields:'id'}),{method:'PATCH',headers:{'Content-Type':'application/json'},body:'{}'});
+  }
+  check();workspaceFolder=target.id;workspaceName=target.name||'Infirmary-BHR';return {id:workspaceFolder,name:workspaceName};
+}
+async function migrateRootPhotos(directory,folder){
+  if(folder!==workspaceFolder)return directory;
+  for(const person of directory.people){
+    const photo=person.photo;if(!photo||photo.folderId!=='root'||photo.folderId===folder||person.driveFolders?.some(item=>item.id===photo.folderId))continue;
+    let file;try{file=await(await api(`files/${safeDriveId(photo.fileId)}?fields=id,mimeType,parents`)).json();}catch(error){if([403,404].includes(error.status))continue;throw error;}
+    if(!file.mimeType?.startsWith('image/'))continue; // Keep the existing initials fallback for unavailable/invalid photos.
+    if(!file.parents?.includes(folder)){
+      if(!legacyRootId){legacyRootId=(await(await api('files/root?fields=id')).json()).id;}
+      if(!file.parents?.some(parent=>parent==='root'||parent===legacyRootId))continue;
+      await api(`files/${safeDriveId(file.id)}?`+new URLSearchParams({addParents:folder,removeParents:file.parents.join(','),fields:'id'}),{method:'PATCH',headers:{'Content-Type':'application/json'},body:'{}'});
+    }
+    person.photo={...photo,folderId:folder};person.updatedAt=new Date(Math.max(Date.now(),Date.parse(person.updatedAt)+1)).toISOString();
+  }
+  return directory;
+}
+
 // Managed desktop documents and native folders live directly in Drive, not in
 // directory JSON or browser storage. appProperties keeps unrelated files hidden.
 const documentFields='id,name,mimeType,parents,appProperties,modifiedTime,trashed';
 const safeDriveId=id=>{if(typeof id!=='string'||!/^[\w-]+$/.test(id))throw new Error('Invalid Drive file ID.');return encodeURIComponent(id);};
 function requireFilesAccess(){if(!hasDriveAccess()||!getCurrentUser())throw new Error('Connect an identified Google account before using desktop notes.');}
 export async function listDesktopFiles(parent='root',personId=null,allChildren=false){
-  requireFilesAccess();safeDriveId(parent);
+  requireFilesAccess();parent=desktopParent(parent);safeDriveId(parent);
   if(personId)safeDriveId(personId);
   const match=personId?`appProperties has { key='personId' and value='${personId}' }`:`'${parent}' in parents`;
   const q=`trashed = false and ${match}${allChildren?'':" and appProperties has { key='bhrDesktop' and value='1' }"}`;
@@ -160,7 +229,7 @@ async function checkDesktopChange(id,baseline,requireOwner=true){
   return file;
 }
 export async function saveDesktopDocument(parent,name,content,baseline=null){
-  requireFilesAccess();safeDriveId(parent);validateDocument(content);
+  requireFilesAccess();parent=desktopParent(parent);safeDriveId(parent);validateDocument(content);
   if(content.authorId!==getCurrentUser().id)throw new Error('The clinical note author cannot be changed.');
   let previous;
   if(baseline){previous=await checkDesktopChange(baseline.id,baseline);const original=validateDocument((await readDesktopDocument(baseline.id)).content);if(original.authorId!==content.authorId||original.createdAt!==content.createdAt)throw new Error('The clinical note author and creation time cannot be changed.');}
@@ -171,7 +240,7 @@ export async function saveDesktopDocument(parent,name,content,baseline=null){
   return response.json();
 }
 export async function createDesktopFolder(parent,name='New Folder'){
-  requireFilesAccess();safeDriveId(parent);
+  requireFilesAccess();parent=desktopParent(parent);safeDriveId(parent);
   return (await api(`files?fields=${documentFields}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[parent],appProperties:{bhrDesktop:'1',kind:'folder'}})})).json();
 }
 export async function changeDesktopFile(baseline,change){
@@ -180,10 +249,10 @@ export async function changeDesktopFile(baseline,change){
   if(change.name!==undefined){if(!change.name.trim())throw new Error('Enter a name.');body.name=change.name.trim();}
   if(change.personId!==undefined){if(folder)throw new Error('Only notes can be attached to a chart.');safeDriveId(change.personId);body.appProperties={...file.appProperties,personId:change.personId};}
   if(change.parent!==undefined){
-    safeDriveId(change.parent);
-    if(change.parent!=='root'){
+    change={...change,parent:desktopParent(change.parent)};safeDriveId(change.parent);
+    if(change.parent!=='root'&&change.parent!==workspaceFolder){
       let ancestor=change.parent;const seen=new Set();
-      while(ancestor!=='root'){
+      while(ancestor!=='root'&&ancestor!==workspaceFolder){
         if(ancestor===file.id||seen.has(ancestor))throw new Error('A folder cannot be moved inside itself or its descendants.');seen.add(ancestor);
         const target=await desktopFileMetadata(ancestor);if(target.appProperties?.kind!=='folder')throw new Error('Choose a folder.');ancestor=target.parents?.[0]||'root';
         // My Drive's actual root ID is not a managed folder.

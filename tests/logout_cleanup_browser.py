@@ -14,7 +14,7 @@ with sync_playwright() as p:
     page.add_init_script("localStorage.setItem('infirmary.directory.v1',"+json.dumps(json.dumps(seed))+");window.revoked=[];const revoke=URL.revokeObjectURL;URL.revokeObjectURL=url=>{revoked.push(url);revoke(url)}")
     page.goto('http://127.0.0.1:8000');unlock_test_drive(page)
     store=[seed]
-    page.route('https://www.googleapis.com/drive/v3/files/*?fields=*',lambda route:route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}}))
+    page.route('https://www.googleapis.com/drive/v3/files/*?fields=*',lambda route:route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}}))
     page.route('https://www.googleapis.com/drive/v3/files?*',lambda route:route.fulfill(json={'files':[] if 'BHR_event_log.txt' in route.request.url else [{'id':'cleanup-directory'}]}))
     page.route('https://www.googleapis.com/drive/v3/files/cleanup-directory?*',lambda route:route.fulfill(json=store[0]))
     def save(route):store[0]=route.request.post_data_json;route.fulfill(json={'id':'cleanup-directory'})

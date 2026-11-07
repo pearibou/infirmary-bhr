@@ -16,7 +16,7 @@ with sync_playwright() as p:
             elif route.request.method=='PATCH':backend['data']=copy.deepcopy(route.request.post_data_json);route.fulfill(json={'id':'directory'})
             elif 'alt=media' in url:route.fulfill(json=backend['data'])
             elif 'files?q=' in url:route.fulfill(json={'files':[{'id':'directory'}]})
-            else:route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
+            else:route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
         page.route('https://www.googleapis.com/**',api);ignore_event_log_projection(page);page.goto('http://127.0.0.1:8000');return context,page
     context,a=setup('Synthetic Staff A')
     assert a.locator('#drive-dialog').is_visible() and a.locator('.desktop').evaluate('el=>el.inert')

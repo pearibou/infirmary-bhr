@@ -18,7 +18,7 @@ with sync_playwright() as p:
             uploads.append(request.post_data_buffer)
             route.fulfill(json={'id':'test-upload'})
         else:
-            route.fulfill(json={'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
+            route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
     page.route('https://www.googleapis.com/**',drive)
     page.route('https://www.googleapis.com/oauth2/v3/userinfo',lambda route:route.fulfill(json={'sub':'synthetic-staff','name':'Synthetic Staff'}))
     prepare_test_page(page)

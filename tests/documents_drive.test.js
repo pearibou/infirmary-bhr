@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {authorize,disconnect,loadCurrentUser,listDesktopFiles,saveDesktopDocument,changeDesktopFile} from '../drive.js';
+import {authorize,disconnect,loadCurrentUser,ensureWorkspaceFolder,listDesktopFiles,saveDesktopDocument,changeDesktopFile} from '../drive.js';
 import {validateDocument,canManageDocument} from '../documents-model.js';
 const now='2026-01-01T00:00:00Z';
 const metadata=(extra={})=>({id:'note',name:'Synthetic note',modifiedTime:now,parents:['root'],appProperties:{bhrDesktop:'1',kind:'note',authorId:'owner'},...extra});
 const document=()=>({kind:'bhr-rich-note',version:1,html:'<b>Synthetic</b>',noteAt:now,createdAt:now,updatedAt:now,authorId:'owner',authorName:'Synthetic Owner'});
-async function signIn(){globalThis.google={accounts:{oauth2:{initTokenClient:options=>({requestAccessToken:()=>options.callback({access_token:'synthetic',expires_in:3600})})}}};await authorize('test.apps.googleusercontent.com');globalThis.fetch=async()=>Response.json({sub:'owner',name:'Synthetic Owner'});await loadCurrentUser();}
-test('new rich notes go to Drive root as JSON with author metadata and no-store',async()=>{
+async function signIn(){globalThis.google={accounts:{oauth2:{initTokenClient:options=>({requestAccessToken:()=>options.callback({access_token:'synthetic',expires_in:3600})})}}};await authorize('test.apps.googleusercontent.com');globalThis.fetch=async()=>Response.json({sub:'owner',name:'Synthetic Owner'});await loadCurrentUser();globalThis.fetch=async()=>Response.json({id:'root',name:'Infirmary-BHR',appProperties:{bhrWorkspace:'1'},mimeType:'application/vnd.google-apps.folder',capabilities:{canAddChildren:true}});await ensureWorkspaceFolder('root');}
+test('new rich notes go to the prepared workspace as JSON with author metadata and no-store',async()=>{
  await signIn();let request;globalThis.fetch=async(url,options)=>{request={url,options};return Response.json(metadata());};
  await saveDesktopDocument('root','Synthetic note',document());
  assert.match(request.url,/www.googleapis.com\/upload\/drive\/v3\/files/);assert.equal(request.options.cache,'no-store');assert.match(request.options.body,/"parents":\["root"\]/);assert.match(request.options.body,/"authorId":"owner"/);assert.match(request.options.body,/"kind":"bhr-rich-note"/);disconnect();
