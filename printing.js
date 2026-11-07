@@ -1,7 +1,7 @@
 // Print documents live only in an ephemeral same-origin frame, never in storage.
-import {readPersonPhoto} from './drive.js?v=0.12.0';
-import {cleanNoteHtml} from './documents-model.js?v=0.12.0';
-import {personName} from './model.js?v=0.12.0';
+import {readPersonPhoto} from './drive.js?v=0.12.1';
+import {cleanNoteHtml} from './documents-model.js?v=0.12.1';
+import {personName} from './model.js?v=0.12.1';
 let frame=null,generation=0,photoUrl=null;
 export function clearPrint(){generation++;frame?.remove();frame=null;if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=null;}
 export const fullPersonName=person=>[person.firstName,person.middleName,person.lastName].filter(Boolean).join(' ')||personName(person);
@@ -46,7 +46,7 @@ export async function printDocument({title,person,sections,retrievedAt,subtitle=
    for(const [i,column] of section.columns.entries()){const col=el(doc,'col');col.style.width=(section.widths?.[i]||100/section.columns.length)+'%';columns.append(col);const th=el(doc,'th',column);th.scope='col';row.append(th);}
    table.append(columns);
    if(person&&section.repeatIdentity!==false){const patientRow=el(doc,'tr'),patientCell=el(doc,'th',fullPersonName(person)+' · DOB: '+personBirthDate(person));patientCell.colSpan=section.columns.length;patientRow.append(patientCell);head.append(patientRow);}
-   head.append(row);table.append(head);const body=el(doc,'tbody');for(const values of section.rows){const tr=el(doc,'tr');for(const value of values)tr.append(el(doc,'td',String(value??'')));body.append(tr);}table.append(body);wrap.append(table);
+   head.append(row);table.append(head);const body=el(doc,'tbody');for(const values of section.rows){const tr=el(doc,'tr');for(const [index,value] of values.entries()){const cell=el(doc,'td',String(value??''));if(section.monospaceColumns?.includes(index))cell.style.fontFamily='Courier New, Courier, monospace';tr.append(cell);}body.append(tr);}table.append(body);wrap.append(table);
   }else if(section.html!==undefined){const rich=el(doc,'div');rich.className='clinical-print-text';rich.innerHTML=cleanNoteHtml(section.html);wrap.append(rich);}
   else if(section.fields){const fields=el(doc,'dl');fields.className='fields';for(const [label,value] of section.fields)fields.append(el(doc,'dt',label+':'),el(doc,'dd',value||'Not recorded'));wrap.append(fields);}
   else for(const line of section.lines||[])wrap.append(el(doc,'p',line));bodySections.append(wrap);
