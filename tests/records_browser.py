@@ -2,6 +2,7 @@ from browser_helpers import prepare_test_page,unlock_test_drive,open_drive,fill_
 """Only synthetic records and generated image bytes; no real health information."""
 from playwright.sync_api import sync_playwright
 import json, struct, zlib
+from pathlib import Path
 # A valid 2x2 opaque image, generated only in memory.
 def chunk(kind,body):
     return struct.pack('!I',len(body))+kind+body+struct.pack('!I',zlib.crc32(kind+body)&0xffffffff)
@@ -55,15 +56,33 @@ with sync_playwright() as p:
     authored=page.locator('.note').filter(has_text='Author observation')
     assert authored.locator('.note-author').inner_text()=='Entered by Staff Alpha'
     authored.locator('.note-pencil').click()
+    page.locator('#note-edit-time').fill('2026-01-02T10:30')
     page.locator('#note-edit-text').fill('Corrected observation')
     page.locator('#note-edit-form').get_by_role('button',name='Save note edit',exact=True).click()
     entry=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')).people[0].notes[1]")
     assert entry['text']=='Author observation' and entry['edits'][0]['text']=='Corrected observation'
-    assert entry['authorId']=='staff-a'
+    assert entry['authorId']=='staff-a' and '2026-01-02' in entry['edits'][0]['noteAt']
+    assert page.locator('.note details').count()==0 and 'Edited' in page.locator('.note').filter(has_text='Corrected observation').inner_text()
+    assert page.locator('.person-folders').evaluate('el=>el===el.parentElement.lastElementChild')
+    assert page.locator('.record-actions button').all_text_contents()==['✎','Upload file…']
     assert page.locator('.note-pencil').count()==1
     assert page.locator('.note').filter(has_text='Corrected observation').get_attribute('draggable')=='true'
     page.locator('.note-pencil').click()
+    assert page.locator('#note-print svg').count()==1 and page.locator('#note-trash svg').count()==1
+    print_routes=[];page.route('**/icons/abbey-letterhead.png',lambda route:print_routes.append(route));page.locator('#note-print').click()
+    page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Corrected observation')")
+    page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
+    page.wait_for_timeout(100);print_routes.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes());page.wait_for_function('window.printCalls===1')
+    assert 'Clinical quick note' in page.frame_locator('#bhr-print-frame').locator('body').inner_text()
+    page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");page.unroute('**/icons/abbey-letterhead.png')
+
+    page.locator('#note-trash').click();assert page.locator('#trash-dialog').is_visible();page.locator('#trash-dialog [data-close]').click()
     page.locator('#note-dialog').get_by_role('button',name='Cancel',exact=True).click()
+    page.get_by_label('New note',exact=True).fill('Synthetic trash test');page.get_by_label('New note',exact=True).press('Enter')
+    assert 'Synthetic trash test' in page.locator('.notes .note').first.inner_text()
+    page.locator('.note').filter(has_text='Synthetic trash test').locator('.note-pencil').click();page.locator('#note-trash').click();page.locator('#trash-form button[type=submit]').click()
+    assert page.locator('.note').filter(has_text='Synthetic trash test').count()==0 and not page.locator('#note-dialog').is_visible()
+
     open_drive(page);page.locator('#disconnect').click()
     account.update(sub='staff-b',name='Staff Beta')
     page.locator('#google-connect').click()
@@ -76,6 +95,7 @@ with sync_playwright() as p:
     assert 'Only the Google account' in page.locator('#toast').inner_text()
     # Even a stale editor submitted after an account switch must reject editing.
     page.locator('#note-dialog').evaluate('(el)=>el.showModal()')
+    page.locator('#note-edit-time').fill('2026-01-02T10:30')
     page.locator('#note-edit-text').fill('Attempt by another account')
     page.locator('#note-edit-form').get_by_role('button',name='Save note edit').click()
     assert 'Only the Google account' in page.locator('#note-edit-error').inner_text()

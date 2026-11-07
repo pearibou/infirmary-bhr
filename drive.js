@@ -1,6 +1,6 @@
-import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.10.1';
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.10.1';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.10.1';
+import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.11.0';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.11.0';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.11.0';
 let token,expires=0,loading,authorizedClient,currentUser,workspaceFolder,workspaceName,legacyRootId,storageEpoch=0;
 const activeRequests=new Set();
 export function disconnect(){storageEpoch++;workspaceFolder=undefined;workspaceName=undefined;legacyRootId=undefined;for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
@@ -200,7 +200,7 @@ async function migrateRootPhotos(directory,folder){
 
 // Managed desktop documents and native folders live directly in Drive, not in
 // directory JSON or browser storage. appProperties keeps unrelated files hidden.
-const documentFields='id,name,mimeType,parents,appProperties,modifiedTime,trashed';
+const documentFields='id,name,mimeType,parents,appProperties,createdTime,modifiedTime,trashed';
 const safeDriveId=id=>{if(typeof id!=='string'||!/^[\w-]+$/.test(id))throw new Error('Invalid Drive file ID.');return encodeURIComponent(id);};
 function requireFilesAccess(){if(!hasDriveAccess()||!getCurrentUser())throw new Error('Connect an identified Google account before using desktop notes.');}
 export async function listDesktopFiles(parent='root',personId=null,allChildren=false){
@@ -233,7 +233,7 @@ export async function saveDesktopDocument(parent,name,content,baseline=null){
   if(content.authorId!==getCurrentUser().id)throw new Error('The clinical note author cannot be changed.');
   let previous;
   if(baseline){previous=await checkDesktopChange(baseline.id,baseline);const original=validateDocument((await readDesktopDocument(baseline.id)).content);if(original.authorId!==content.authorId||original.createdAt!==content.createdAt)throw new Error('The clinical note author and creation time cannot be changed.');}
-  const metadata={name:name.trim()||'Untitled note',mimeType:'application/json',appProperties:{bhrDesktop:'1',kind:'note',authorId:content.authorId,...(previous?.appProperties?.personId?{personId:previous.appProperties.personId}:{})},...(!baseline?{parents:[parent]}:{})};
+  const metadata={name:name.trim()||'Untitled note',mimeType:'application/json',appProperties:{bhrDesktop:'1',kind:'note',authorId:content.authorId,createdAt:content.createdAt,noteAt:content.noteAt,...(previous?.appProperties?.personId?{personId:previous.appProperties.personId}:{})},...(!baseline?{parents:[parent]}:{})};
   const boundary='bhrnote_'+crypto.randomUUID(),body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(content)}\r\n--${boundary}--`;
   const response=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files${baseline?'/'+safeDriveId(baseline.id):''}?uploadType=multipart&fields=${documentFields}`,{method:baseline?'PATCH':'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`,...(previous?.etag?{'If-Match':previous.etag}:{})},body});
   if(!response.ok)throw new Error(response.status===412?'This note changed in Drive. Reopen it before editing.':'Note save failed. Your draft has been kept.');

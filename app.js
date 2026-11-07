@@ -1,15 +1,17 @@
-import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.10.1';
-import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.10.1';
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.10.1';
-import {updateSessionPresence} from './presence.js?v=0.10.1';
-import {closeAppMenu} from './app-menu.js?v=0.10.1';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.10.1';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.10.1';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.10.1';
-import {validatePhoto} from './photos.js?v=0.10.1';
-import './windows.js?v=0.10.1';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.10.1';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.10.1';
+import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.11.0';
+import {printDocument} from './printing.js?v=0.11.0';
+import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.11.0';
+import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.11.0';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.11.0';
+import {updateSessionPresence} from './presence.js?v=0.11.0';
+import {closeAppMenu} from './app-menu.js?v=0.11.0';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.11.0';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.11.0';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.11.0';
+import {validatePhoto} from './photos.js?v=0.11.0';
+import './windows.js?v=0.11.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.11.0';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.11.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
@@ -40,7 +42,7 @@ function render(){
   title.append(element('div','PERSON RECORD','eyebrow'),element('h2',personName(person)));
   const editRecord=element('button','✎','record-pencil');editRecord.type='button';editRecord.title='Edit record';editRecord.setAttribute('aria-label','Edit this record');editRecord.onclick=()=>openPerson(person.id);
   const avatarGroup=element('div',undefined,'avatar-group');avatarGroup.append(avatar);if(person.deceased)avatarGroup.append(makeCrucifix());
-  header.append(avatarGroup,title,editRecord);panel.append(header);
+  const recordActions=element('div',undefined,'record-actions'),upload=element('button','Upload file…');upload.type='button';upload.onclick=()=>openUpload(person.id);recordActions.append(editRecord,upload);header.append(avatarGroup,title,recordActions);panel.append(header);
   const navigation=element('nav',undefined,'chart-navigation');navigation.setAttribute('aria-label','Chart sections');
   for(const section of ['Demographics','Medications','Medical History']){const item=element('button',section);item.type='button';item.setAttribute('aria-haspopup','dialog');item.onclick=()=>{if(section==='Demographics'){openDemographics(person.id);return;}if(section==='Medications'){openMedications(person.id);return;}$('#chart-section-title').textContent=section;$('#chart-section-message').textContent=section+' is not available yet.';$('#chart-section-dialog').showModal();};navigation.append(item);}panel.append(navigation);
   const legalName=[person.firstName,person.middleName,person.lastName].filter(Boolean).join(' ');
@@ -50,24 +52,24 @@ function render(){
   if(person.noKnownAllergies)panel.append(element('p','No known allergies','allergies'));
   else if(person.allergies?.trim())panel.append(element('p','Allergies: '+person.allergies.trim(),'allergies'));
   if(person.deceased)panel.append(element('p',`Date of death: ${formatDeathDate(person.deathDate)}`,'death-status'));
-  const folderSection=element('section',undefined,'person-folders'),folderHeading=element('div',undefined,'notes-heading'),attach=element('button','Attach folder…');attach.type='button';attach.onclick=()=>openPersonFolder(person.id);const upload=element('button','Upload file…');upload.type='button';upload.onclick=()=>openUpload(person.id);folderHeading.append(element('h3','Drive folders'),attach,upload);folderSection.append(folderHeading);
+  const folderSection=element('section',undefined,'person-folders'),folderHeading=element('div',undefined,'notes-heading'),attach=element('button','Attach folder…');attach.type='button';attach.onclick=()=>openPersonFolder(person.id);folderHeading.append(element('h3','Drive folders'),attach);folderSection.append(folderHeading);
   for(const folder of person.driveFolders||[]){const link=element('a',folder.name||'Drive folder','folder-link');link.href=`https://drive.google.com/drive/folders/${encodeURIComponent(folder.id)}`;link.target='_blank';link.rel='noopener noreferrer';folderSection.append(link);}
-  if(!person.driveFolders?.length)folderSection.append(element('p','No folders attached.','muted'));panel.append(folderSection);
+  if(!person.driveFolders?.length)folderSection.append(element('p','No folders attached.','muted'));
   const documents=element('section',undefined,'clinical-documents');panel.append(documents);chartDocuments(documents,person.id);
   if(person.info)panel.append(element('p',person.info,'info'));
-  const heading=element('div',undefined,'notes-heading');heading.append(element('h3','Chronological notes'),element('span',`${person.notes.length} entries`,'muted'));panel.append(heading);
-  const form=element('form',undefined,'note-form'),input=element('input');input.required=true;input.maxLength=10000;input.placeholder='Type a note and press Enter…';input.setAttribute('aria-label','New note');input.autocomplete='off';const submit=element('button','Add');submit.type='submit';form.append(input,submit);panel.append(form,element('p',getCurrentUser()?'Each note records your Google account. Oldest entries appear first.':'Connect Google Drive to attribute notes to your account and enable author-only editing. Signed-out notes remain unattributed.','hint'));
+  const heading=element('div',undefined,'notes-heading');heading.append(element('h3','Clinical quick notes'),element('span',`${person.notes.length} entries`,'muted'));panel.append(heading);
+  const form=element('form',undefined,'note-form'),input=element('input');input.required=true;input.maxLength=10000;input.placeholder='Type a note and press Enter…';input.setAttribute('aria-label','New note');input.autocomplete='off';const submit=element('button','Add');submit.type='submit';form.append(input,submit);panel.append(form,element('p',getCurrentUser()?'Each note records your Google account. Newest entries appear first.':'Connect Google Drive to attribute notes to your account and enable author-only editing. Signed-out notes remain unattributed.','hint'));
   const notes=element('ol',undefined,'notes');
-  for(const note of [...person.notes].sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)||a.id.localeCompare(b.id))){
-    const li=element('li',undefined,'note');li.tabIndex=0;if(canEditNote(note,getCurrentUser()))makeTrashable(li,{personId:person.id,noteId:note.id},()=>canEditNote(note,getCurrentUser()));else{li.draggable=false;li.title='Only the original author can delete this note';li.addEventListener('dragstart',event=>event.preventDefault());}const meta=element('div',undefined,'note-meta'),time=element('time',formatTime(note.createdAt));time.dateTime=note.createdAt;
+  for(const note of [...person.notes].sort((a,b)=>Date.parse(currentNoteTime(b))-Date.parse(currentNoteTime(a))||a.id.localeCompare(b.id))){
+    const li=element('li',undefined,'note');li.tabIndex=0;if(canEditNote(note,getCurrentUser()))makeTrashable(li,{personId:person.id,noteId:note.id},()=>canEditNote(note,getCurrentUser()));else{li.draggable=false;li.title='Only the original author can delete this note';li.addEventListener('dragstart',event=>event.preventDefault());}const meta=element('div',undefined,'note-meta'),time=element('time',formatTime(currentNoteTime(note)));time.dateTime=currentNoteTime(note);
     meta.append(time,element('span','Entered by '+(note.authorName||'Unattributed (legacy or signed out)'),'note-author'));
-    if(canEditNote(note,getCurrentUser())){const edit=element('button','✎','note-pencil');edit.type='button';edit.setAttribute('aria-label','Edit your note from '+formatTime(note.createdAt));edit.onclick=()=>openNoteEditor(person.id,note.id);meta.append(edit);}
+    if(canEditNote(note,getCurrentUser())){const edit=element('button','✎','note-pencil');edit.type='button';edit.setAttribute('aria-label','Edit your note from '+formatTime(currentNoteTime(note)));edit.onclick=()=>openNoteEditor(person.id,note.id);meta.append(edit);}
     li.append(meta,element('p',currentNoteText(note)));
-    if(note.edits?.length){li.append(element('small','Edited '+formatTime(note.edits.at(-1).editedAt),'muted'));const history=element('details'),summary=element('summary','View edit history');history.append(summary,element('p','Original · '+note.text));for(const edit of note.edits)history.append(element('p',`${formatTime(edit.editedAt)} · ${edit.editorName}: ${edit.text}`));li.append(history);}
+    if(note.edits?.length)li.append(element('small','Edited '+formatTime(note.edits.at(-1).editedAt),'muted'));
     notes.append(li);
   }
-  if(!person.notes.length)notes.append(element('li','No notes yet. Add the first entry above.','empty'));panel.append(notes);
-  form.onsubmit=event=>{event.preventDefault();const text=input.value.trim();if(!text)return;const next=structuredClone(data),p=next.people.find(p=>p.id===selected),now=new Date().toISOString(),user=getCurrentUser();p.notes.push({id:crypto.randomUUID(),text,createdAt:now,...(user?{authorId:user.id,authorName:user.name}:{})});p.updatedAt=now;if(save(next)){render();$('.note-form input').focus();$('.notes').scrollTop=$('.notes').scrollHeight;}};
+  if(!person.notes.length)notes.append(element('li','No notes yet. Add the first entry above.','empty'));panel.append(notes,folderSection);
+  form.onsubmit=event=>{event.preventDefault();const text=input.value.trim();if(!text)return;const next=structuredClone(data),p=next.people.find(p=>p.id===selected),now=new Date().toISOString(),user=getCurrentUser();p.notes.push({id:crypto.randomUUID(),text,createdAt:now,...(user?{authorId:user.id,authorName:user.name}:{})});p.updatedAt=now;if(save(next)){render();$('.note-form input').focus();$('.notes').scrollTop=0;}};
 
 }
 selected=[...data.people].sort(compareDirectoryPeople)[0]?.id;render();
@@ -138,8 +140,11 @@ async function displayPhoto(avatar,person){
 }
 function clearPhotos(){photoGeneration++;for(const pending of photoUrls.values())pending.then(url=>URL.revokeObjectURL(url)).catch(()=>{});photoUrls.clear();}
 function renderKeepingDraft(){const input=$('.note-form input'),draft=input?.value,focused=document.activeElement===input;render();if($('.note-form input')&&draft)$('.note-form input').value=draft;if(focused)$('.note-form input')?.focus();}
-function openNoteEditor(personId,noteId){const note=data.people.find(p=>p.id===personId)?.notes.find(n=>n.id===noteId);if(!note||!canEditNote(note,getCurrentUser())){toast('Connect the original author’s Google account to edit this note.');return;}noteEditTarget={personId,noteId,baseline:JSON.stringify(note)};$('#note-edit-text').value=currentNoteText(note);$('#note-edit-error').textContent='';$('#note-dialog').showModal();$('#note-edit-text').focus();}
-$('#note-edit-form').onsubmit=event=>{event.preventDefault();try{const {personId,noteId,baseline}=noteEditTarget,next=structuredClone(data),person=next.people.find(p=>p.id===personId),index=person.notes.findIndex(n=>n.id===noteId),note=person.notes[index];if(JSON.stringify(note)!==baseline)throw new Error('This note changed. Reopen it before editing.');person.notes[index]=editNote(note,getCurrentUser(),$('#note-edit-text').value);person.updatedAt=new Date().toISOString();if(save(next)){$('#note-dialog').close();renderKeepingDraft();}}catch(error){$('#note-edit-error').textContent=error.message;}};
+function openNoteEditor(personId,noteId){const note=data.people.find(p=>p.id===personId)?.notes.find(n=>n.id===noteId);if(!note||!canEditNote(note,getCurrentUser())){toast('Connect the original author’s Google account to edit this note.');return;}noteEditTarget={personId,noteId,baseline:JSON.stringify(note)};$('#note-edit-text').value=currentNoteText(note);$('#note-edit-time').value=localNoteDate(currentNoteTime(note));$('#note-edit-error').textContent='';$('#note-dialog').showModal();$('#note-edit-text').focus();}
+$('#note-edit-form').onsubmit=event=>{event.preventDefault();try{if(!noteEditTarget)throw new Error('Only the Google account that entered this note can edit it. Reopen the note first.');const {personId,noteId,baseline}=noteEditTarget,next=structuredClone(data),person=next.people.find(p=>p.id===personId),index=person.notes.findIndex(n=>n.id===noteId),note=person.notes[index];if(JSON.stringify(note)!==baseline)throw new Error('This note changed. Reopen it before editing.');person.notes[index]=editNote(note,getCurrentUser(),$('#note-edit-text').value,new Date().toISOString(),new Date($('#note-edit-time').value).toISOString());person.updatedAt=new Date().toISOString();if(save(next)){$('#note-dialog').close();renderKeepingDraft();}}catch(error){$('#note-edit-error').textContent=error.message;}};
+function localNoteDate(iso){const date=new Date(iso);return new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,19);}
+$('#note-trash').onclick=()=>{if(noteEditTarget)document.dispatchEvent(new CustomEvent('trash-request',{detail:{personId:noteEditTarget.personId,noteId:noteEditTarget.noteId}}));};
+$('#note-print').onclick=async()=>{if(!noteEditTarget||!workspaceReady)return;const person=data.people.find(p=>p.id===noteEditTarget.personId),note=person?.notes.find(n=>n.id===noteEditTarget.noteId);if(!note||!canEditNote(note,getCurrentUser()))return;const stamp=sessionEpoch;$('#note-print').disabled=true;try{const date=new Date($('#note-edit-time').value);if(!Number.isFinite(date.getTime()))throw new Error('Enter a valid note date and time.');const text=$('#note-edit-text').value;await printDocument({title:'Clinical quick note',person:structuredClone(person),sections:[{lines:[text]}],subtitle:'Note date: '+date.toLocaleString()+' · Entered by '+note.authorName+(text!==currentNoteText(note)||date.getTime()!==Date.parse(currentNoteTime(note))?' · Unsaved changes':'')});if(stamp===sessionEpoch)appendActivity('note.print_requested','note',note.id,'Quick note print dialog requested',person.id);}catch(error){if(stamp===sessionEpoch)$('#note-edit-error').textContent=error.message;}finally{$('#note-print').disabled=false;}};
 for(const button of document.querySelectorAll('[data-close]'))button.onclick=()=>document.getElementById(button.dataset.close).close();
 $('#export').onclick=()=>{if(!workspaceReady||!hasDriveAccess()){lockWorkspace();return;}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=element('a');link.href=url;link.download='people_directory.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 let driveConfig={...window.INFIRMARY_CONFIG},googleReady=false,googleLoading=false,connecting=false,connected=false,pickerReady=false,folderTarget,syncing=false,syncAgain=false,loggingOut=false,syncPromise=null,uploading=false,uploadPersonId,fileBusy=false;
@@ -336,7 +341,7 @@ document.addEventListener('trash-request',event=>{
   const target=event.detail,sticky=target.desktopNoteId?data.desktopNotes?.find(note=>note.id===target.desktopNoteId):null,person=data.people.find(p=>p.id===target.personId),note=target.noteId?person?.notes.find(n=>n.id===target.noteId):null;
   if(target.desktopNoteId?!sticky:!person||(target.noteId&&!note)){toast('This entry is no longer in the directory.');return;}
   if(note&&!canEditNote(note,getCurrentUser())){toast('Only the Google account that entered this note can delete it.');return;}
-  trashTarget={...target};$('#trash-error').textContent='';$('#trash-entry-label').textContent=sticky?'Shared desktop note · '+new Date(sticky.createdAt).toLocaleString():note?`Note for ${personName(person)} · ${formatTime(note.createdAt)}`:`Person: ${personName(person)} (including ${person.notes.length} notes)`;
+  trashTarget={...target};$('#trash-error').textContent='';$('#trash-entry-label').textContent=sticky?'Shared desktop note · '+new Date(sticky.createdAt).toLocaleString():note?`Note for ${personName(person)} · ${formatTime(currentNoteTime(note))}`:`Person: ${personName(person)} (including ${person.notes.length} notes)`;
   $('#trash-dialog').showModal();$('#trash-dialog [data-close]').focus();
 });
 $('#trash-form').onsubmit=event=>{
@@ -372,7 +377,8 @@ $('#sticky-form').onsubmit=event=>{
   next.desktopNotes.push({id:crypto.randomUUID(),text,createdAt:now,updatedAt:now,authorName:user?.name||'Connected staff',...(user?{authorId:user.id}:{}),x:stickyOrigin.x,y:stickyOrigin.y});
   if(save(next)){$('#sticky-dialog').close();renderDesktopNotes(data.desktopNotes);runSync();}
 };
-initDocuments({closeDesktopMenu,people:()=>[...data.people].sort(compareDirectoryPeople).map(person=>({id:person.id,name:personName(person),deceased:Boolean(person.deceased)})),activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('documents',value),chartChanged:()=>renderKeepingDraft()});
+decoratePrintButtons();
+initDocuments({closeDesktopMenu,person:id=>data.people.find(person=>person.id===id),people:()=>[...data.people].sort(compareDirectoryPeople).map(person=>({id:person.id,name:personName(person),deceased:Boolean(person.deceased)})),activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('documents',value),chartChanged:()=>renderKeepingDraft()});
 initDemographics({person:id=>workspaceReady?data.people.find(person=>person.id===id):null,personName,activity:(...args)=>{appendActivity(...args);runSync();}});
 initMedications({people:()=>data.people,personName,activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('medications',value),notice:toast,link:(id,link)=>{const next=structuredClone(data),person=next.people.find(person=>person.id===id);if(!person)throw new Error('This person was removed.');person.medicationSheet=link;person.updatedAt=new Date(Math.max(Date.now(),Date.parse(person.updatedAt)+1)).toISOString();if(!save(next))throw new Error('The medication sheet exists, but its directory link could not be saved. Retry after resolving storage.');renderKeepingDraft();runSync();}});
 lockWorkspace();readyGoogle();

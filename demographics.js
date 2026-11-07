@@ -1,6 +1,6 @@
-import {DEMOGRAPHIC_FIELDS,CONTACT_FIELDS,POLICY_FIELDS,validateDemographics} from './demographics-model.js?v=0.10.1';
-import {printDocument,clearPrint,fullPersonName,personBirthDate,allergiesText} from './printing.js?v=0.10.1';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.10.1';
+import {DEMOGRAPHIC_FIELDS,CONTACT_FIELDS,POLICY_FIELDS,validateDemographics} from './demographics-model.js?v=0.11.0';
+import {printDocument,clearPrint,fullPersonName,personBirthDate,allergiesText} from './printing.js?v=0.11.0';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.11.0';
 const $=s=>document.querySelector(s),make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 let hooks,currentId=null,printing=false;
 function inputField(name,label,value='',multi=false){const wrap=make('label',label),input=make(multi?'textarea':'input');input.name=name;input.maxLength=2000;input.value=value;if(multi)input.rows=2;if(/(phone|fax)/i.test(name))input.type='tel';wrap.append(input);return wrap;}
@@ -11,7 +11,7 @@ export function fillAdditional(person){selectPersonTab(false);for(const key of O
 export function readAdditional(){const out={};for(const key of Object.keys(DEMOGRAPHIC_FIELDS)){const value=$('#person-form').elements['dem-'+key].value.trim();if(value)out[key]=value;}for(const kind of ['contacts','policies']){out[kind]=[...$('#dem-'+kind).children].map(row=>Object.fromEntries([...row.querySelectorAll('input,textarea')].map(input=>[input.name,input.type==='checkbox'?input.checked:input.value.trim()]))).filter(item=>Object.values(item).some(Boolean));}return validateDemographics(out);}
 function sections(person){
  const d=person.demographics||{},fields=keys=>keys.map(key=>[DEMOGRAPHIC_FIELDS[key],d[key]||'Not recorded']);
- const out=[{title:'Additional information',fields:fields(['language','religion','origin','address','homePhone','cellPhone'])},{title:'Preferred pharmacy',fields:fields(['pharmacy','pharmacyAddress','pharmacyPhone','pharmacyFax'])}];
+ const out=[{title:'Additional information',fields:fields(['language','primaryCareProvider','email','religion','origin','address','homePhone','cellPhone'])},{title:'Preferred pharmacy',lines:[d.pharmacy,d.pharmacyAddress,d.pharmacyPhone&&'Phone: '+d.pharmacyPhone,d.pharmacyFax&&'Fax: '+d.pharmacyFax].filter(Boolean).length?[d.pharmacy,d.pharmacyAddress,d.pharmacyPhone&&'Phone: '+d.pharmacyPhone,d.pharmacyFax&&'Fax: '+d.pharmacyFax].filter(Boolean):['None recorded']}];
  out.push({title:'Authorized individuals',fullWidth:true,repeatIdentity:false,columns:['Name','Relationship','Phone','Emergency contact'],widths:[30,25,25,20],rows:d.contacts?.length?d.contacts.map(c=>[c.name,c.relationship,c.phone,c.emergency?'Yes':'No']):[['None recorded','','','']]});
  for(const [i,policy] of (d.policies||[]).entries())out.push({title:'Insurance policy '+(i+1),fields:Object.entries(POLICY_FIELDS).filter(([key])=>policy[key]).map(([key,label])=>[label,policy[key]])});
  if(!d.policies?.length)out.push({title:'Insurance policies',lines:['None recorded']});if(person.info)out.push({title:'Other information',fullWidth:true,lines:[person.info]});return out;
