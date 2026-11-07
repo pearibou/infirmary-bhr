@@ -1,5 +1,5 @@
-import {validateDemographics} from './demographics-model.js?v=0.12.2';
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.12.2';
+import {validateDemographics} from './demographics-model.js?v=0.12.4';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.12.4';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');

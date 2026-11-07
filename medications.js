@@ -1,8 +1,8 @@
-import {printDocument,clearPrint} from './printing.js?v=0.12.2';
-import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.12.2';
-import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.12.2';
-import {isPrnMedication,compareMedications,EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.12.2';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.12.2';
+import {printDocument,clearPrint} from './printing.js?v=0.12.4';
+import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.12.4';
+import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.12.4';
+import {isPrnMedication,compareMedications,EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.12.4';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.12.4';
 const $=selector=>document.querySelector(selector),dialog=$('#medications-dialog'),formDialog=$('#medication-form-dialog'),actionDialog=$('#medication-action-dialog');
 let hooks,active=false,epoch=0,queue=Promise.resolve(),pending=0,currentPerson=null,context=null,tab='Active',formState=null,actionState=null,formDirty=false;
 const node=(tag,text,cls)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;};
@@ -50,7 +50,7 @@ export function medicationsSession(ready){
 }
 function startupCheck(){
  run(async stamp=>{const lists=await readAllMedicationLists(people(),knownIds());alive(stamp);
-  for(const ctx of lists){if(ctx.error){hooks.notice('Medication startup check: '+ctx.error);continue;}await rememberLink(ctx,stamp);const result=await completeScheduledCourses(ctx,getCurrentUser());alive(stamp);for(const id of result.completed)audit('scheduled_course_completed',id,ctx.personId,true);if(result.pending.length)hooks.notice('Scheduled medication updates are pending. Open Medications and Retry.');}
+  for(const ctx of lists){if(ctx.error){const name=personById(ctx.personId);hooks.notice('Medication startup check could not finish for '+(name?hooks.personName(name):'a removed person')+': '+ctx.error+' Open this person’s Medications and refresh.');continue;}await rememberLink(ctx,stamp);const result=await completeScheduledCourses(ctx,getCurrentUser());alive(stamp);for(const id of result.completed)audit('scheduled_course_completed',id,ctx.personId,true);if(result.pending.length)hooks.notice('Scheduled medication updates are pending. Open Medications and Retry.');}
  }).catch(error=>{if(active)hooks.notice('Medication check: '+error.message);});
 }
 export function openMedications(personId,preserveTab=false){
@@ -122,6 +122,6 @@ function printMedications(){
   const columns=['Medication','Dose / Route','Frequency / Instructions','Indication / Prescriber','Dates'];
   const rows=entries=>entries.map(row=>[row.medication,[row.dose,row.route].filter(Boolean).join('\n'),[row.frequency,row.instructions].filter(Boolean).join('\n'),[row.indication&&'Indication: '+row.indication,row.prescriber&&'Prescriber: '+row.prescriber].filter(Boolean).join('\n'),[row.startDate&&'Start: '+row.startDate,row.scheduledEnd&&'Scheduled end: '+row.scheduledEnd.replace('T',' ')+(row.scheduledEnd.length===10?' (through this date)':''),row.status==='Discontinued'&&'Discontinued: '+(row.discontinuedAt||'Not recorded'),row.discontinuationReason].filter(Boolean).join('\n')]);
   const sections=[];for(const state of history?['Active','Discontinued']:['Active']){const entries=snapshot.rows.filter(row=>row.status===state).sort(compareMedications);sections.push(entries.length?{title:state+' medications',repeatIdentity:false,columns,rows:rows(entries)}:{title:state+' medications',lines:['No '+state.toLowerCase()+' medications.']});}
-  status('Opening print dialog…');await printDocument({title:'Medication List',person:structuredClone(person),sections,retrievedAt:snapshot.retrievedAt,subtitle:'Scheduled ends use '+snapshot.timezone+'. A date without time stays active through that date.'});alive(stamp);audit('print_requested',String(snapshot.sheetId),personId);status('Print dialog requested.');
+  status('Opening print dialog…');await printDocument({title:'Medication List',person:structuredClone(person),sections,retrievedAt:snapshot.retrievedAt});alive(stamp);audit('print_requested',String(snapshot.sheetId),personId);status('Print dialog requested.');
  }).catch(error=>{if(active)status('Could not print: '+error.message);});
 }

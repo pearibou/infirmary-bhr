@@ -1,5 +1,5 @@
-import {findMedicationWorkbook,medicationSheetsRequest,getDriveSessionEpoch,getCurrentUser} from './drive.js?v=0.12.2';
-import {MED_FIELDS,MED_HEADERS,EDITABLE_MED_FIELDS,parseMedicationRows,medicationToRow,medicationSheetTitle,medicationSheetId,medicationDue,reviseMedication} from './medications-model.js?v=0.12.2';
+import {findMedicationWorkbook,medicationSheetsRequest,getDriveSessionEpoch,getCurrentUser} from './drive.js?v=0.12.4';
+import {MED_FIELDS,MED_HEADERS,EDITABLE_MED_FIELDS,parseMedicationRows,medicationToRow,medicationSheetTitle,medicationSheetId,medicationDue,reviseMedication} from './medications-model.js?v=0.12.4';
 const PERSON_KEY='bhr.personId',ROW_KEY='bhr.medicationId',SCHEMA_KEY='bhr.medications.schema';
 let source,sourceEpoch=-1;
 export function resetMedicationSource(){source=null;sourceEpoch=-1;}
@@ -36,11 +36,18 @@ export async function readMedicationList(person,knownIds=[]){
  const book=await medicationWorkbook(knownIds),sheet=findSheet(book,person);if(!sheet)return {personId:person.id,spreadsheetId:book.spreadsheetId,timezone:book.properties.timeZone,rows:[],missing:true};
  const response=await getValues(book.spreadsheetId,[grid(sheet.properties.sheetId)]);return context(book,person,sheet,response.valueRanges?.[0]?.valueRange?.values||[]);
 }
+// MatchedValueRange responses identify their sheet in dataFilters. Their array
+// position must never decide which patient's rows/metadata are paired together.
+function sheetValues(response,sheetId){
+ const matches=(response.valueRanges||[]).filter(range=>range.dataFilters?.some(filter=>filter.gridRange?.sheetId===sheetId));
+ if(matches.length!==1)throw new Error('Google did not return one unambiguous medication sheet. Refresh to retry.');
+ return matches[0].valueRange?.values||[];
+}
 export async function readAllMedicationLists(people,knownIds=[]){
  const book=await medicationWorkbook(knownIds),linked=people.map(person=>({person,sheet:findSheet(book,person)})).filter(item=>item.sheet);
  if(!linked.length)return [];
  const response=await getValues(book.spreadsheetId,linked.map(item=>grid(item.sheet.properties.sheetId)));
- return linked.map((item,i)=>{try{return context(book,item.person,item.sheet,response.valueRanges?.[i]?.valueRange?.values||[]);}catch(error){return {personId:item.person.id,error:error.message};}});
+ return linked.map(item=>{try{return context(book,item.person,item.sheet,sheetValues(response,item.sheet.properties.sheetId));}catch(error){return {personId:item.person.id,error:error.message};}});
 }
 const cell=value=>({userEnteredValue:{stringValue:String(value)}});
 const cells=values=>({values:values.map(cell)});

@@ -1,5 +1,14 @@
 # Version history
 
+## 0.12.4
+
+- Remove the scheduling/timezone explanation from the medication print report.
+
+## 0.12.3
+
+- Match medication startup batch results to permanent sheet IDs rather than response positions, preventing rows from being checked against another patient’s metadata. Reject missing/ambiguous matches without writes.
+- Identify the affected person when a genuine startup check fails; keep clinical cells and row markers unchanged.
+
 ## 0.12.2
 
 - Omit duplicate name/DOB table rows from Medical History and medication reports while retaining the patient header and repeated column headings.
