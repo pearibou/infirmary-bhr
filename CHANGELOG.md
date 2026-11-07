@@ -1,5 +1,11 @@
 # Version history
 
+## 0.11.0
+
+- Simplify pharmacy display; add optional primary care provider/e-mail fields, printer icons, top-right upload action and bottom-of-chart Drive folders.
+- Rename Clinical quick notes and Clinical notes, show newest entries first, hide quick-note history while retaining edit timestamps and internal revisions, and support corrected quick-note event dates without changing original provenance.
+- Add creator-only editor Trash buttons, confirmation for unsaved-note discard, and letterhead printing of plain/formatted note drafts. Show clinical document icons and compact creation timestamps.
+
 ## 0.10.1
 
 - Constrain printed tables to page width with explicit columns and a practical print-frame viewport; tighten letterhead, margins and row spacing.

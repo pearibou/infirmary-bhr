@@ -1,7 +1,9 @@
-import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.10.1';
-import {clearTrashSelection} from './trash.js?v=0.10.1';
-import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.10.1';
-import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.10.1';
+import {smallIcon} from './icons-ui.js?v=0.11.0';
+import {printDocument} from './printing.js?v=0.11.0';
+import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.11.0';
+import {clearTrashSelection} from './trash.js?v=0.11.0';
+import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.11.0';
+import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.11.0';
 const $=selector=>document.querySelector(selector),noteDialog=$('#rich-note-dialog'),folderTemplate=$('#file-browser-template'),context=$('#file-context-menu');
 let hooks,active=false,generation=0,refreshNumber=0,busy=false,editor=null,contextFile,contextView,actionFile,actionKind,dragged,dirty=false,renaming=false,refreshPending=false,editorRequest=0;
 let desktopFiles=[],tooltipTimer,tooltipTarget,windowNumber=0;
@@ -49,6 +51,9 @@ export function initDocuments(options){
   $('#resume-note-drafts').onclick=openDrafts;
   $('#new-rich-note').onclick=()=>{options.closeDesktopMenu();openEditor(null,'root');};
   $('#new-drive-folder').onclick=()=>{options.closeDesktopMenu();newFolder('root');};
+  $('#rich-note-trash').onclick=()=>{if(!editor||busy||openingEditor)return;if(editor.file)handleAction(editor.file,'trash');else $('#discard-note-dialog').showModal();};
+  $('#discard-rich-note').onclick=()=>{if(!editor||editor.file||busy)return;noteDrafts.delete(editor.key);dirty=false;editor=null;$('#rich-note-body').replaceChildren();$('#rich-note-name').value='';$('#rich-note-time').value='';noteDialog.close();$('#discard-note-dialog').close();refreshDraftControls();};
+  $('#rich-note-print').onclick=printEditor;
   $('#rich-note-form').onsubmit=event=>{event.preventDefault();saveEditor();};
   for(const button of document.querySelectorAll('[data-format]')){
     button.addEventListener('mousedown',event=>event.preventDefault());
@@ -84,7 +89,7 @@ export function documentsSession(ready){
   hideFilename();noteDrafts.clear();openingEditor=false;noteDialog.setAttribute('aria-busy','false');active=false;renaming=false;refreshPending=false;generation++;refreshNumber++;dirty=false;editor=null;desktopFiles=[];contextFile=null;contextView=null;actionFile=null;for(const view of [...folderViews.values()])closeFolder(view);endDrag();closeContext();status('');
   document.querySelectorAll('.drive-file').forEach(item=>item.remove());
   $('#rich-note-form').reset();$('#rich-note-body').replaceChildren();$('#rich-note-author').textContent='';$('#rich-note-error').textContent='';$('#file-action-form').reset();$('#file-patient').replaceChildren();$('#file-action-description').textContent='';$('#file-action-error').textContent='';$('#note-drafts-list').replaceChildren();refreshDraftControls();
-  for(const dialog of [noteDialog,$('#file-action-dialog'),$('#note-drafts-dialog')]){if(dialog.open)dialog.close();document.querySelector(`#window-dock [data-window="${dialog.id}"]`)?.remove();}
+  for(const dialog of [noteDialog,$('#file-action-dialog'),$('#note-drafts-dialog'),$('#discard-note-dialog')]){if(dialog.open)dialog.close();document.querySelector(`#window-dock [data-window="${dialog.id}"]`)?.remove();}
 }
 function closeFolder(view){
   folderViews.delete(view.parent);view.request++;document.querySelector(`#window-dock [data-window="${view.element.id}"]`)?.remove();
@@ -201,7 +206,7 @@ async function performAction(){
   if(!file||busy)return;
   $('#file-action-dialog').querySelectorAll('button').forEach(button=>button.disabled=true);
   try{
-    await operation(async epoch=>{const changed=await changeDesktopFile(file,action==='attach'?{personId}:{trash:true});if(epoch!==generation)return;if(action==='trash'&&folder(file)){const open=folderViews.get(file.id);if(open)closeFolder(open);}record(action==='attach'?'attached':'trashed',changed,action==='attach'?personId:undefined);$('#file-action-dialog').close();});
+    await operation(async epoch=>{const changed=await changeDesktopFile(file,action==='attach'?{personId}:{trash:true});if(epoch!==generation)return;if(action==='trash'){noteDrafts.delete('file:'+file.id);if(editor?.file?.id===file.id){dirty=false;editor=null;$('#rich-note-body').replaceChildren();$('#rich-note-name').value='';$('#rich-note-time').value='';noteDialog.close();}refreshDraftControls();}if(action==='trash'&&folder(file)){const open=folderViews.get(file.id);if(open)closeFolder(open);}record(action==='attach'?'attached':'trashed',changed,action==='attach'?personId:undefined);$('#file-action-dialog').close();});
     await refreshFiles();hooks.chartChanged();
   }catch(error){if(active)$('#file-action-error').textContent=error.message;}
   finally{$('#file-action-dialog').querySelectorAll('button').forEach(button=>button.disabled=false);}
@@ -261,7 +266,7 @@ async function openEditor(file=null,target='root'){
   $('#rich-note-body').replaceChildren();$('#rich-note-body').contentEditable='false';
   $('#rich-note-name').value=file?.name||'';$('#rich-note-name').disabled=true;$('#rich-note-time').value='';$('#rich-note-time').disabled=true;
   $('#rich-note-author').textContent='';$('#rich-note-error').textContent=file?'Opening note from Google Drive…':'';
-  documentButtons(true);$('#rich-note-save').disabled=true;$('#rich-note-save').hidden=false;noteDialog.querySelector('.window-control').disabled=true;
+  $('#rich-note-print').disabled=true;$('#rich-note-trash').disabled=true;documentButtons(true);$('#rich-note-save').disabled=true;$('#rich-note-save').hidden=false;noteDialog.querySelector('.window-control').disabled=true;
   document.querySelector('#window-dock [data-window="rich-note-dialog"]')?.remove();if(!noteDialog.open)noteDialog.showModal();
   try{
     let content,fileMetadata=file;
@@ -272,7 +277,7 @@ async function openEditor(file=null,target='root'){
     openingEditor=false;noteDialog.setAttribute('aria-busy','false');noteDrafts.delete(key);editor={file:fileMetadata,document:content,target,key};dirty=Boolean(draft);const editable=!fileMetadata||canManageDocument(fileMetadata,getCurrentUser());
     $('#rich-note-name').value=draft?draft.name:fileMetadata?.name||genericName(content.noteAt);$('#rich-note-time').value=draft?draft.time:localDate(content.noteAt);$('#rich-note-body').innerHTML=cleanNoteHtml(draft?draft.html:content.html);$('#rich-note-author').textContent='Entered by '+content.authorName+(editable?'':' · Read-only: only the creator can edit or delete');
     noteDialog.querySelectorAll('button').forEach(button=>button.disabled=false);
-    $('#rich-note-name').disabled=!editable;$('#rich-note-time').disabled=!editable;$('#rich-note-body').contentEditable=String(editable);$('#rich-note-save').hidden=!editable;documentButtons(!editable);$('#rich-note-error').textContent=draft?'Unsaved draft restored. Save note to store these changes in Drive.':'';
+    $('#rich-note-name').disabled=!editable;$('#rich-note-time').disabled=!editable;$('#rich-note-body').contentEditable=String(editable);$('#rich-note-save').hidden=!editable;$('#rich-note-trash').hidden=!editable;documentButtons(!editable);$('#rich-note-error').textContent=draft?'Unsaved draft restored. Save note to store these changes in Drive.':'';
     refreshDraftControls();focusNoteEditor();
   }catch(error){if(epoch===generation&&request===editorRequest){openingEditor=false;noteDialog.setAttribute('aria-busy','false');$('#rich-note-error').textContent=error.message;noteDialog.querySelector('.window-control').disabled=false;}}
 }
@@ -293,14 +298,20 @@ async function saveEditor(){
 function setEditorBusy(value){
   const editable=Boolean(editor&&(!editor.file||canManageDocument(editor.file,getCurrentUser())));
   noteDialog.querySelectorAll('button').forEach(button=>button.disabled=value);
-  $('#rich-note-name').disabled=value||!editable;$('#rich-note-time').disabled=value||!editable;$('#rich-note-body').contentEditable=String(!value&&editable);documentButtons(value||!editable);
+  $('#rich-note-name').disabled=value||!editable;$('#rich-note-time').disabled=value||!editable;$('#rich-note-body').contentEditable=String(!value&&editable);documentButtons(value||!editable);$('#rich-note-trash').hidden=!editable;$('#rich-note-print').disabled=value||!editor;
+}
+async function printEditor(){
+ if(!active||!editor||busy||openingEditor)return;const entry=editor,stamp=generation,time=new Date($('#rich-note-time').value);if(!Number.isFinite(time.getTime())){$('#rich-note-error').textContent='Enter a valid date and time.';return;}
+ const name=$('#rich-note-name').value.trim()||'Clinical note',html=cleanNoteHtml($('#rich-note-body').innerHTML),personId=entry.file?.appProperties?.personId,person=personId?hooks.person?.(personId):null;
+ setEditorBusy(true);try{await operation(async epoch=>{await printDocument({title:name,person:person?structuredClone(person):null,sections:[{html}],subtitle:'Note date: '+time.toLocaleString()+' · Entered by '+entry.document.authorName+' · Created: '+new Date(entry.document.createdAt).toLocaleString()+(!entry.file||dirty?' · Unsaved draft':'')});if(epoch===generation)hooks.activity('document.print_requested','document',entry.file?.id||'unsaved','Clinical note print dialog requested',personId);});}catch(error){if(stamp===generation)$('#rich-note-error').textContent=error.message;}finally{if(stamp===generation)setEditorBusy(false);}
 }
 export function chartDocuments(container,personId){
-  const heading=node('div',undefined,'notes-heading'),title=node('h3','Clinical documents'),refresh=node('button','↻ Refresh');refresh.type='button';heading.append(title,refresh);container.append(heading);
-  const items=node('div',undefined,'chart-documents');container.append(items);
-  const load=async()=>{if(!active)return;const epoch=generation;items.textContent='Loading clinical documents…';
-    try{const files=await listDesktopFiles('root',personId);if(epoch!==generation||!items.isConnected)return;items.replaceChildren();if(!files.length)items.textContent='No clinical documents attached.';
-      for(const file of sort(files)){if(folder(file))continue;const open=node('button',file.name);open.type='button';open.onclick=()=>openEditor(file);items.append(open);}
-    }catch(error){if(epoch===generation&&items.isConnected)items.textContent='Could not load clinical documents. '+error.message;}
-  };refresh.onclick=load;load();
+ const heading=node('div',undefined,'notes-heading'),title=node('h3','Clinical notes'),refresh=node('button','↻ Refresh');refresh.type='button';heading.append(title,refresh);container.append(heading);
+ const items=node('div',undefined,'chart-documents');container.append(items);
+ const load=async()=>{if(!active)return;const epoch=generation;items.textContent='Loading clinical notes…';
+  try{const files=await listDesktopFiles('root',personId);if(epoch!==generation||!items.isConnected)return;items.replaceChildren();if(!files.length)items.textContent='No clinical notes attached.';
+   const created=file=>file.appProperties?.createdAt||file.createdTime;
+   for(const file of files.filter(file=>!folder(file)).sort((a,b)=>(Date.parse(created(b))||0)-(Date.parse(created(a))||0)||a.id.localeCompare(b.id))){const item=node('div',undefined,'chart-document-entry'),open=node('button');open.type='button';open.append(smallIcon('document'),node('span',file.name));open.onclick=()=>openEditor(file);const time=node('time',created(file)&&Number.isFinite(Date.parse(created(file)))?new Date(created(file)).toLocaleString():'Creation time unavailable','chart-document-time');if(created(file))time.dateTime=created(file);item.append(open,time);items.append(item);}
+  }catch(error){if(epoch===generation&&items.isConnected)items.textContent='Could not load clinical notes. '+error.message;}
+ };refresh.onclick=load;load();
 }

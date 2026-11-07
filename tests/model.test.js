@@ -144,3 +144,14 @@ test('medication linkage survives directory sync and rejects malformed destinati
  assert.deepEqual(merged.people[0].medicationSheet,linked.medicationSheet);
  for(const medicationSheet of [null,{spreadsheetId:'bad/url',sheetId:1},{spreadsheetId:'synthetic',sheetId:-1},{spreadsheetId:'synthetic',sheetId:'42'}])assert.throws(()=>validateDirectory({version:1,people:[{...linked,medicationSheet}]}),/medication sheet/);
 });
+
+
+import {currentNoteTime} from '../model.js';
+test('quick-note date corrections preserve immutable original time and merge with stale copies',()=>{
+ const original={id:'dated',text:'Synthetic note',createdAt:date,authorId:'synthetic',authorName:'Synthetic author'};
+ const corrected=editNote(original,{id:'synthetic',name:'Synthetic author'},'Synthetic correction','2026-11-07T14:00:00Z','2026-11-01T09:30:00Z');
+ assert.equal(corrected.createdAt,date);assert.equal(currentNoteTime(corrected),'2026-11-01T09:30:00.000Z');assert.equal(corrected.edits[0].editedAt,'2026-11-07T14:00:00Z');
+ const directory={version:1,people:[person([corrected])]},old={version:1,people:[person([original])]};assert.equal(currentNoteTime(mergeDirectories(directory,old).people[0].notes[0]),currentNoteTime(corrected));
+ const tampered=structuredClone(corrected);delete tampered.edits[0].noteAt;assert.throws(()=>mergeDirectories(directory,{version:1,people:[person([tampered])]}),/revision/);
+ assert.throws(()=>editNote(original,{id:'other',name:'Other'},'No','2026-11-07T14:00:00Z','2026-11-01T09:30:00Z'),/Only/);assert.throws(()=>editNote(original,{id:'synthetic',name:'Synthetic'},'No',date,'bad'),/date/);
+});

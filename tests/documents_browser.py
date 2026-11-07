@@ -1,5 +1,6 @@
 """Synthetic Drive backend; no real users, notes, folders or network writes."""
 import json,re,urllib.parse
+from pathlib import Path
 from playwright.sync_api import sync_playwright
 from browser_helpers import prepare_test_page,unlock_test_drive,ignore_event_log_projection,open_drive
 with sync_playwright() as p:
@@ -175,9 +176,21 @@ with sync_playwright() as p:
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert files[noteid]['appProperties']['personId']=='person'
     page.locator('.folder-window[open]').evaluate_all("windows=>windows.forEach(el=>el.querySelector('[data-field=close]').click())")
+    files['newest-chart-note']=json.loads(json.dumps(files[noteid]));files['newest-chart-note'].update(id='newest-chart-note',name='Synthetic newest chart entry',createdTime='2099-01-01T00:00:00Z');files['newest-chart-note']['appProperties']['createdAt']='2099-01-01T00:00:00Z';contents['newest-chart-note']={**contents[noteid],'createdAt':'2099-01-01T00:00:00Z'}
+    page.locator('.clinical-documents .notes-heading button').click();page.wait_for_function("document.querySelector('.chart-documents button')?.textContent.includes('Synthetic newest chart entry')")
+    assert page.locator('.chart-documents button').first.locator('svg').count()==1 and page.locator('.chart-document-time').first.get_attribute('datetime')=='2099-01-01T00:00:00Z'
+    files.pop('newest-chart-note');contents.pop('newest-chart-note');page.locator('.clinical-documents .notes-heading button').click();page.wait_for_function("document.querySelectorAll('.chart-documents button').length===1")
     page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
     page.wait_for_function("document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
     assert body.inner_text().strip()=='Synthetic clinical text'
+    assert page.locator('#rich-note-print svg').count()==1 and page.locator('#rich-note-trash').is_visible()
+    print_routes=[];page.route('**/icons/abbey-letterhead.png',lambda route:print_routes.append(route));page.locator('#rich-note-print').click()
+    page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Synthetic clinical text')")
+    page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
+    page.wait_for_timeout(100);print_routes.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes());page.wait_for_function('window.printCalls===1')
+    assert page.frame_locator('#bhr-print-frame').locator('ol').count()==1
+    page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");page.unroute('**/icons/abbey-letterhead.png')
+
     # Drive content is treated as untrusted on read; scripts and attributes disappear.
     page.locator('#rich-note-dialog [data-close]').click();contents[noteid]['html']='<p onclick="alert(1)"><b>Safe</b><script>window.bad=true</script><img src=x onerror="window.bad=true"></p>'
     page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
@@ -194,7 +207,7 @@ with sync_playwright() as p:
     page.locator('#drive-dialog [data-close]').click();page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
     page.wait_for_function("document.querySelector('#rich-note-dialog').open&&document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
     assert 'Synthetic unsaved private draft' not in body.inner_text()
-    assert body.get_attribute('contenteditable')=='false' and page.locator('#rich-note-save').is_hidden()
+    assert body.get_attribute('contenteditable')=='false' and page.locator('#rich-note-save').is_hidden() and page.locator('#rich-note-trash').is_hidden()
     assert page.locator('#rich-note-name').is_disabled()
     page.locator('#rich-note-dialog [data-close]').click()
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic Folder').click(button='right');page.get_by_role('menuitem',name='Send to Trash (delete)…').click();page.locator('#file-action-confirm').click()
@@ -216,8 +229,8 @@ with sync_playwright() as p:
     page.locator('#google-connect').click();page.wait_for_function("!document.body.classList.contains('drive-locked')");page.locator('#drive-dialog [data-close]').click()
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic Folder').dblclick()
     topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').dblclick()
-    own=nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note');own.wait_for();own.click(button='right')
-    page.get_by_role('menuitem',name='Send to Trash (delete)…').click();page.locator('#file-action-confirm').click()
+    own=nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note');own.wait_for();own.dblclick()
+    page.wait_for_function("document.querySelector('#rich-note-body').contentEditable==='true'");page.locator('#rich-note-trash').click();page.locator('#file-action-confirm').click()
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert files[noteid]['trashed'] is True
     page.wait_for_function("!document.querySelector('.chart-documents').textContent.includes('Synthetic clinical note')")
@@ -227,6 +240,7 @@ with sync_playwright() as p:
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert any(file.get('trashed') for file in files.values() if file['name']=='Nested')
     page.locator('.folder-window[open]').evaluate_all("windows=>windows.forEach(el=>el.querySelector('[data-field=close]').click())")
+    page.locator('.desktop').click(button='right',position={'x':20,'y':210});page.locator('#new-rich-note').click();body.fill('Synthetic discard draft');page.locator('#rich-note-trash').click();page.locator('#discard-rich-note').click();assert not page.locator('#rich-note-dialog').is_visible()
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     assert not errors,errors
     browser.close()

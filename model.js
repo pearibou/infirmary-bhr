@@ -1,5 +1,5 @@
-import {validateDemographics} from './demographics-model.js?v=0.10.1';
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.10.1';
+import {validateDemographics} from './demographics-model.js?v=0.11.0';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.11.0';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
@@ -37,7 +37,8 @@ export function validateDirectory(data) {
       if(n.edits!==undefined){
         if(!n.authorId||!Array.isArray(n.edits))throw new Error('Invalid note history.');
         let parent=null;const revisions=new Set();
-        for(const edit of n.edits){if(!edit||typeof edit.id!=='string'||!edit.id||revisions.has(edit.id)||edit.parentId!==parent||typeof edit.text!=='string'||!edit.text.trim()||!validDate(edit.editedAt)||edit.editorId!==n.authorId||typeof edit.editorName!=='string'||!edit.editorName.trim())throw new Error('Invalid note revision.');revisions.add(edit.id);parent=edit.id;}
+        for(const edit of n.edits){if(edit?.noteAt!==undefined&&!validDate(edit.noteAt))throw new Error('Invalid note date revision.');
+          if(!edit||typeof edit.id!=='string'||!edit.id||revisions.has(edit.id)||edit.parentId!==parent||typeof edit.text!=='string'||!edit.text.trim()||!validDate(edit.editedAt)||edit.editorId!==n.authorId||typeof edit.editorName!=='string'||!edit.editorName.trim())throw new Error('Invalid note revision.');revisions.add(edit.id);parent=edit.id;}
       }
     }
   }
@@ -103,18 +104,20 @@ export function calculateAge(birth,today=new Date()){
 }
 
 export function currentNoteText(note){return note.edits?.at(-1)?.text??note.text;}
+export function currentNoteTime(note){return [...(note.edits||[])].reverse().find(edit=>edit.noteAt)?.noteAt||note.createdAt;}
 export function canEditNote(note,user){return Boolean(user?.id && note.authorId===user.id);}
-export function editNote(note,user,text,now=new Date().toISOString()){
+export function editNote(note,user,text,now=new Date().toISOString(),noteAt=currentNoteTime(note)){
+  if(!validDate(noteAt))throw new Error('Enter a valid note date and time.');
   if(!canEditNote(note,user))throw new Error('Only the Google account that entered this note can edit it.');
   if(!text.trim())throw new Error('A note cannot be empty.');
   const next=structuredClone(note);next.edits??=[];
-  next.edits.push({id:crypto.randomUUID(),parentId:next.edits.at(-1)?.id??null,text:text.trim(),editedAt:now,editorId:user.id,editorName:user.name});return next;
+  next.edits.push({id:crypto.randomUUID(),parentId:next.edits.at(-1)?.id??null,text:text.trim(),noteAt:new Date(noteAt).toISOString(),editedAt:now,editorId:user.id,editorName:user.name});return next;
 }
 function mergeNote(a,b){
   for(const key of ['id','text','createdAt','authorId','authorName'])if(a[key]!==b[key])throw new Error('Conflicting note IDs or authors. Sync stopped to protect both copies.');
   const revisions=new Map();
   for(const edit of [...(a.edits||[]),...(b.edits||[])]){
-    const old=revisions.get(edit.id);if(old&&Object.keys(edit).some(key=>old[key]!==edit[key]))throw new Error('Conflicting note revision. Sync stopped.');revisions.set(edit.id,edit);
+    const old=revisions.get(edit.id);if(old&&[...new Set([...Object.keys(old),...Object.keys(edit)])].some(key=>old[key]!==edit[key]))throw new Error('Conflicting note revision. Sync stopped.');revisions.set(edit.id,edit);
   }
   const edits=[];let parent=null;
   while(revisions.size){const children=[...revisions.values()].filter(edit=>edit.parentId===parent);if(children.length!==1)throw new Error('Concurrent note edits conflict. Both copies are retained; resolve before syncing.');const edit=children[0];edits.push(edit);revisions.delete(edit.id);parent=edit.id;}

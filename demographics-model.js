@@ -1,4 +1,4 @@
-export const DEMOGRAPHIC_FIELDS={language:'Primary language',religion:'Religion',origin:'Originally from',address:'Patient address',homePhone:'Home phone number',cellPhone:'Cell phone number',pharmacy:'Preferred pharmacy',pharmacyAddress:'Pharmacy address',pharmacyPhone:'Pharmacy phone number',pharmacyFax:'Pharmacy fax number'};
+export const DEMOGRAPHIC_FIELDS={language:'Primary language',primaryCareProvider:'Primary care provider',email:'Patient e-mail address',religion:'Religion',origin:'Originally from',address:'Patient address',homePhone:'Home phone number',cellPhone:'Cell phone number',pharmacy:'Preferred pharmacy',pharmacyAddress:'Pharmacy address',pharmacyPhone:'Pharmacy phone number',pharmacyFax:'Pharmacy fax number'};
 export const CONTACT_FIELDS={name:'Name',relationship:'Relationship to patient',phone:'Phone number'};
 export const POLICY_FIELDS={insurer:'Insurance company',plan:'Plan / policy name',policyNumber:'Policy / member number',groupNumber:'Group number',policyholder:'Policyholder',phone:'Insurance phone number',notes:'Policy notes'};
 export function validateDemographics(value){

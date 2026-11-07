@@ -1,6 +1,7 @@
 // Print documents live only in an ephemeral same-origin frame, never in storage.
-import {readPersonPhoto} from './drive.js?v=0.10.1';
-import {personName} from './model.js?v=0.10.1';
+import {readPersonPhoto} from './drive.js?v=0.11.0';
+import {cleanNoteHtml} from './documents-model.js?v=0.11.0';
+import {personName} from './model.js?v=0.11.0';
 let frame=null,generation=0,photoUrl=null;
 export function clearPrint(){generation++;frame?.remove();frame=null;if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=null;}
 export const fullPersonName=person=>[person.firstName,person.middleName,person.lastName].filter(Boolean).join(' ')||personName(person);
@@ -17,7 +18,7 @@ export async function printDocument({title,person,sections,retrievedAt,subtitle=
  header{display:flex;align-items:center;gap:14pt;border-bottom:1pt solid #111;padding-bottom:7pt;margin-bottom:9pt;break-inside:avoid}
  header img{width:63pt;height:63pt;object-fit:contain;flex:none}header p{margin:3pt 0}
  h1{font:bold 16pt Georgia,serif;margin:3pt 0}h2{font-size:11pt;margin:8pt 0 5pt}h3{font-size:10pt;margin:6pt 0}
- p{margin:4pt 0;white-space:pre-wrap;overflow-wrap:anywhere}
+ .clinical-print-text{overflow-wrap:anywhere}.clinical-print-text li{margin:3pt 0}p{margin:4pt 0;white-space:pre-wrap;overflow-wrap:anywhere}
  .identity{display:flex;justify-content:space-between;align-items:center;gap:12pt;border-bottom:1px solid #aaa;padding-bottom:6pt;margin-bottom:7pt;break-inside:avoid}
  .identity h2{margin:0 0 5pt}.identity p{margin:3pt 0}.profile-photo{width:66pt;height:66pt;object-fit:cover;flex:none;border:1px solid #aaa}
  .sections{width:100%;max-width:100%}section{margin-bottom:7pt}
@@ -30,9 +31,12 @@ export async function printDocument({title,person,sections,retrievedAt,subtitle=
  th{background:#eee}tr{break-inside:avoid}.stamp{font-size:7.5pt;color:#444;margin-top:8pt}
  `;doc.head.append(style);
  const header=el(doc,'header'),logo=el(doc,'img');logo.src=new URL('./icons/abbey-letterhead.png',location.href).href;logo.alt='Mepkin Abbey';const heading=el(doc,'div');heading.append(el(doc,'h1','Mepkin Abbey Infirmary'),el(doc,'p',title));header.append(logo,heading);doc.body.append(header);
- const identity=el(doc,'div');identity.className='identity';const identityText=el(doc,'div');identityText.append(el(doc,'h2',fullPersonName(person)));identity.append(identityText);
+ let identity;
+ if(person){
+ identity=el(doc,'div');identity.className='identity';const identityText=el(doc,'div');identityText.append(el(doc,'h2',fullPersonName(person)));identity.append(identityText);
  if(personName(person)!==fullPersonName(person))identityText.append(el(doc,'p',personName(person)));
  identityText.append(el(doc,'p','Date of birth: '+personBirthDate(person)),el(doc,'p','Allergies: '+allergiesText(person)));if(person.deceased)identityText.append(el(doc,'p','Deceased'));doc.body.append(identity);
+ }
  if(subtitle)doc.body.append(el(doc,'p',subtitle));
  const bodySections=el(doc,'div');bodySections.className='sections'+(layout==='demographics'?' demographics':'');doc.body.append(bodySections);
  for(const section of sections){
@@ -41,13 +45,14 @@ export async function printDocument({title,person,sections,retrievedAt,subtitle=
    const table=el(doc,'table'),columns=el(doc,'colgroup'),head=el(doc,'thead'),row=el(doc,'tr');
    for(const [i,column] of section.columns.entries()){const col=el(doc,'col');col.style.width=(section.widths?.[i]||100/section.columns.length)+'%';columns.append(col);const th=el(doc,'th',column);th.scope='col';row.append(th);}
    table.append(columns);
-   if(section.repeatIdentity!==false){const patientRow=el(doc,'tr'),patientCell=el(doc,'th',fullPersonName(person)+' · DOB: '+personBirthDate(person));patientCell.colSpan=section.columns.length;patientRow.append(patientCell);head.append(patientRow);}
+   if(person&&section.repeatIdentity!==false){const patientRow=el(doc,'tr'),patientCell=el(doc,'th',fullPersonName(person)+' · DOB: '+personBirthDate(person));patientCell.colSpan=section.columns.length;patientRow.append(patientCell);head.append(patientRow);}
    head.append(row);table.append(head);const body=el(doc,'tbody');for(const values of section.rows){const tr=el(doc,'tr');for(const value of values)tr.append(el(doc,'td',String(value??'')));body.append(tr);}table.append(body);wrap.append(table);
-  }else if(section.fields){const fields=el(doc,'dl');fields.className='fields';for(const [label,value] of section.fields)fields.append(el(doc,'dt',label+':'),el(doc,'dd',value||'Not recorded'));wrap.append(fields);}
+  }else if(section.html!==undefined){const rich=el(doc,'div');rich.className='clinical-print-text';rich.innerHTML=cleanNoteHtml(section.html);wrap.append(rich);}
+  else if(section.fields){const fields=el(doc,'dl');fields.className='fields';for(const [label,value] of section.fields)fields.append(el(doc,'dt',label+':'),el(doc,'dd',value||'Not recorded'));wrap.append(fields);}
   else for(const line of section.lines||[])wrap.append(el(doc,'p',line));bodySections.append(wrap);
  }
  const photoReady=(async()=>{
-  if(!person.photo?.fileId)return;
+  if(!person?.photo?.fileId)return;
   try{const blob=await readPersonPhoto(person.photo.fileId);if(stamp!==generation)return;photoUrl=URL.createObjectURL(blob);const image=el(doc,'img');image.className='profile-photo';image.alt='Profile photo';image.src=photoUrl;await image.decode();if(stamp===generation)identity.append(image);}catch{/* An unavailable optional photo must not prevent printing. */}
  })();
  doc.body.append(el(doc,'p','Printed: '+new Date().toLocaleString()+(retrievedAt?' · Last retrieved: '+new Date(retrievedAt).toLocaleString():'')));doc.body.lastChild.className='stamp';
