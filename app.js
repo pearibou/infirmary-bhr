@@ -1,13 +1,13 @@
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.8.4';
-import {updateSessionPresence} from './presence.js?v=0.8.4';
-import {closeAppMenu} from './app-menu.js?v=0.8.4';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.8.4';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.8.4';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.8.4';
-import {validatePhoto} from './photos.js?v=0.8.4';
-import './windows.js?v=0.8.4';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.8.4';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.8.4';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.8.5';
+import {updateSessionPresence} from './presence.js?v=0.8.5';
+import {closeAppMenu} from './app-menu.js?v=0.8.5';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.8.5';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.8.5';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.8.5';
+import {validatePhoto} from './photos.js?v=0.8.5';
+import './windows.js?v=0.8.5';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.8.5';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.8.5';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
