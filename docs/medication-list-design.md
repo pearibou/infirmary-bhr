@@ -63,7 +63,7 @@ Use dropdown validation for status and muted formatting for discontinued rows. F
 
 ## Setup and operational limits
 
-Enable **Google Sheets API** in the existing OAuth application project. The existing full Drive OAuth scope already permits these Sheets requests; no new client secret is needed. Open Medications and choose **+ Add medication list** to initialize the blank master and create that person’s tab. An unrelated nonblank workbook is never overwritten. Medical History is a placeholder for later work; Demographics serves as the face sheet.
+Enable **Google Sheets API** in the existing OAuth application project. The existing full Drive OAuth scope already permits these Sheets requests; no new client secret is needed. Open Medications and choose **+ Add medication list** to initialize the blank master and create that person’s tab. An unrelated nonblank workbook is never overwritten. Medical History has a separate spreadsheet implementation; Demographics serves as the face sheet.
 
 Entry IDs and Google row developer metadata protect targeting when rows shift. Deleting an erroneous entry clears its cells and leaves the empty row/marker; it does not delete rows by position. Extra hidden columns retain creation/update identities, timestamps, processing time and revision. Do not change headers or technical markers manually.
 

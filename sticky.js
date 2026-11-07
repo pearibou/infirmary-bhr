@@ -1,4 +1,4 @@
-import {makeTrashable,draggedEntry,finishEntryDrag} from './trash.js?v=0.11.1';
+import {makeTrashable,draggedEntry,finishEntryDrag} from './trash.js?v=0.12.0';
 const desktop=document.querySelector('.desktop'),layer=document.querySelector('#sticky-notes'),menu=document.querySelector('#desktop-context-menu');
 let createNote,moveNote,dropOffset={x:0,y:0},menuOrigin={x:24,y:24};
 const top=()=>document.querySelector('.menubar').getBoundingClientRect().bottom;

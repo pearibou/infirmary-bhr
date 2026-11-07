@@ -1,5 +1,5 @@
-import {validateDemographics} from './demographics-model.js?v=0.11.1';
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.11.1';
+import {validateDemographics} from './demographics-model.js?v=0.12.0';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.12.0';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
@@ -23,6 +23,8 @@ export function validateDirectory(data) {
     if(p.noKnownAllergies!==undefined&&typeof p.noKnownAllergies!=='boolean')throw new Error('Invalid no-known-allergies field.');
     if(p.demographics!==undefined)validateDemographics(p.demographics);
     if(p.medicationSheet!==undefined&&(!p.medicationSheet||typeof p.medicationSheet.spreadsheetId!=='string'||!(/^[\w-]+$/).test(p.medicationSheet.spreadsheetId)||!Number.isInteger(p.medicationSheet.sheetId)||p.medicationSheet.sheetId<0))throw new Error('Invalid medication sheet link.');
+    if(p.historySheet!==undefined&&(!p.historySheet||typeof p.historySheet.spreadsheetId!=='string'||!(/^[\w-]+$/).test(p.historySheet.spreadsheetId)||!Number.isInteger(p.historySheet.sheetId)||p.historySheet.sheetId<0))throw new Error('Invalid history sheet link.');
+
     if(p.birthDate!==undefined && (!p.birthDate || typeof p.birthDate!=='object' || birthDateError(p.birthDate)))throw new Error('Invalid birth date.');
     if(p.driveFolders!==undefined){
       if(!Array.isArray(p.driveFolders))throw new Error('Invalid Drive folders.');

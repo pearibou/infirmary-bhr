@@ -163,7 +163,7 @@ Writes check the current Drive modification time and send If-Match when an ETag 
 
 ## Medication lists
 
-The person header now offers Demographics, Medications and Medical History. Demographics opens its information window; Medical History remains a placeholder. Medications opens a dedicated window backed by the private **Medication Lists (BHR)** Google spreadsheet directly inside **Infirmary-BHR**.
+The person header now offers Demographics, Medications and Medical History. Demographics opens its information window; Medical History opens its spreadsheet-backed list. Medications opens a dedicated window backed by the private **Medication Lists (BHR)** Google spreadsheet directly inside **Infirmary-BHR**.
 
 Enable [Google Sheets API](https://console.cloud.google.com/apis/library/sheets.googleapis.com) in the existing Google OAuth project. The current Drive scope also permits Sheets access. Open a person’s Medications and click **+ Add medication list** to initialize the blank spreadsheet and create a surname/first-initial tab. Tabs are created only when requested and remain linked by stable IDs after renaming. Existing unexpected cells are not overwritten.
 
@@ -184,3 +184,14 @@ Only the public letterhead image is added to the frontend shell cache. Print con
 Clinical note chart buttons show document icons and creation timestamps, newest first (Drive creation time is the fallback for older files). New/updated note files also carry creation/event timestamps in private Drive metadata. Drive folders is the last patient section; Upload file sits directly beneath the record pencil. Demographics includes optional primary care provider and patient e-mail; the pharmacy display shows its name/address directly, with Phone/Fax only when recorded.
 
 Quick-note and clinical-note editors offer a top Print button and a bottom-left Trash button. Deletion still requires the original author and confirmation; unsaved clinical notes are discarded only after a separate confirmation. Other authors can view/print clinical documents but cannot edit or trash them. Printing uses the current editor contents; unsaved changes are explicitly marked and are not saved as a side effect. Unattached notes print with letterhead and author/date information without inventing patient details.
+
+
+## Medical History
+
+Open **Medical History** on a person’s chart. **+ Add medical history** creates/reuses the private **Medical History (BHR)** workbook in Infirmary-BHR and initializes a surname/initial tab only when requested. A pre-existing blank Google spreadsheet with that name also works; unrecognized nonblank cells are left unchanged. Sheets API and the existing full Drive OAuth connection are required. Stable spreadsheet/sheet/entry IDs survive tab renaming and row shifts.
+
+**Add diagnosis…** searches the bundled public ICD-10-CM catalog by condition text, common abbreviations (HTN, DM, CHF, COPD, GERD, CAD) or dotted/undotted code. Choose a result explicitly. A custom display name is optional and never changes the stored official title/code/edition. An uncoded condition can be entered with a name alone. Onset is optional and accepts YYYY, YYYY-MM or YYYY-MM-DD. Notes are optional. There is no status column or status control in this version. Entries can be edited and deleted with confirmation. These shared history entries follow the medication-list editing model; creator-only restrictions on clinical/quick notes remain separate.
+
+The bundled edition is **FY2026, April 1 update**, effective April–September 2026, and is labeled as such in the UI. It is not a current FY2027 catalog. See [source, release limitations and update instructions](data/ICD10-NOTICE.md). Code/description search uses 74,706 leaf codes; it does not provide complete tabular instructional notes or automatically assign a diagnosis. The public JSON/module files may be cached with the frontend; search text stays in memory and is never sent to a lookup service. Patient entries go directly to Google Sheets, never to GitHub or persistent browser storage. Protected directory JSON stores only the workbook/tab link.
+
+Writes use literal values and stable Google row metadata; forms survive failures, added-row retries use the same entry ID, and changed baselines stop edits/deletions. Deleting clears the row’s cells while retaining its marker, preventing positional deletion of the wrong row. As with medications, client checks are not atomic across simultaneous writers; a future backend must enforce stronger concurrency, audit and staff authorization. Medical History records the current Google identity and logs metadata-only actions. Logout/disconnect clears its views, search results, drafts and pending selection.
