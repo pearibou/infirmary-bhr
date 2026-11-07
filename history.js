@@ -1,8 +1,8 @@
-import {printDocument,clearPrint} from './printing.js?v=0.12.1';
-import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.12.1';
-import {readHistoryList,createHistoryList,addHistory,updateHistory,deleteHistory,resetHistorySource} from './history-api.js?v=0.12.1';
-import {loadCatalog,searchCatalog,newHistory,reviseHistory,historyName} from './history-model.js?v=0.12.1';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.12.1';
+import {printDocument,clearPrint} from './printing.js?v=0.12.2';
+import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.12.2';
+import {readHistoryList,createHistoryList,addHistory,updateHistory,deleteHistory,resetHistorySource} from './history-api.js?v=0.12.2';
+import {loadCatalog,searchCatalog,newHistory,reviseHistory,historyName} from './history-model.js?v=0.12.2';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.12.2';
 const $=s=>document.querySelector(s),node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 let hooks,active=false,epoch=0,busy=false,personId=null,context=null,formState=null,dirty=false,catalog=null,selection=null,searchTimer=null,searchRequest=0,deleteTarget=null;
 const person=id=>hooks.people().find(p=>p.id===id),known=()=>hooks.people().map(p=>p.historySheet?.spreadsheetId).filter(Boolean);
@@ -28,7 +28,7 @@ function printHistory(){
  if(busy||!context||context.missing)return;const id=personId,stamp=epoch;
  run(async request=>{
   await load(id,request);alive(request);if(personId!==id||!context||context.missing)throw new Error('Reopen this history before printing.');const p=person(id);if(!p)throw new Error('This person was removed.');
-  const entries=[...context.rows].sort((a,b)=>historyName(a).localeCompare(historyName(b))),sections=entries.length?[{title:'Medical history',columns:['ICD-10-CM','Condition','Onset','Notes'],widths:[17,39,14,30],monospaceColumns:[0],rows:entries.map(entry=>[entry.code||'—',historyName(entry),entry.onset||'—',entry.notes])}]:[{lines:['No medical history entries recorded.']}];
+  const entries=[...context.rows].sort((a,b)=>historyName(a).localeCompare(historyName(b))),sections=entries.length?[{title:'Medical history',repeatIdentity:false,columns:['ICD-10-CM','Condition','Onset','Notes'],widths:[17,39,14,30],monospaceColumns:[0],rows:entries.map(entry=>[entry.code||'—',historyName(entry),entry.onset||'—',entry.notes])}]:[{lines:['No medical history entries recorded.']}];
   $('#history-status').textContent='Opening print dialog…';await printDocument({title:'Medical History',person:structuredClone(p),sections,retrievedAt:context.retrievedAt});alive(request);audit('print_requested',String(context.sheetId),id);$('#history-status').textContent='Print dialog requested.';
  }).catch(error=>{if(active&&epoch===stamp)$('#history-status').textContent='Could not print: '+error.message;});
 }

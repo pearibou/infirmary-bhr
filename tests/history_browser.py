@@ -143,6 +143,7 @@ with sync_playwright() as p:
     page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Synthetic short label')")
     page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
     page.wait_for_timeout(100);print_routes.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes());page.wait_for_function('window.printCalls===1')
+    assert page.frame_locator('#bhr-print-frame').locator('thead tr').count()==1
     assert 'Courier' in page.frame_locator('#bhr-print-frame').locator('tbody td').first.evaluate('el=>getComputedStyle(el).fontFamily')
     assert 'FY2026' not in page.frame_locator('#bhr-print-frame').locator('body').inner_text()
     page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");page.unroute('**/icons/abbey-letterhead.png');page.wait_for_function("!document.querySelector('#history-print').disabled")

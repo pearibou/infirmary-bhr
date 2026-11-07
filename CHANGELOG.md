@@ -1,5 +1,10 @@
 # Version history
 
+## 0.12.2
+
+- Omit duplicate name/DOB table rows from Medical History and medication reports while retaining the patient header and repeated column headings.
+- Add a prominent plus to Add medication; group PRN frequencies last, with a pastel green card background and As needed divider. Apply the same ordering to reports and regroup after frequency edits.
+
 ## 0.12.1
 
 - Show Medical History as monospaced code — diagnosis name, omit per-entry catalog labels, and emphasize Add diagnosis with a plus sign.

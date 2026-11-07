@@ -26,3 +26,13 @@ test('revisions preserve entry identity and original authorship',()=>{
 test('tab names handle collisions and stable numeric sheet IDs are deterministic',()=>{
  const person={id:'person-a',firstName:'John',lastName:'Smith'};assert.equal(medicationSheetTitle(person,[]),'Smith J');assert.equal(medicationSheetTitle(person,['Smith J']),'Smith J (2)');assert.equal(medicationSheetId(person.id),medicationSheetId(person.id));assert.notEqual(medicationSheetId(person.id,[medicationSheetId(person.id)]),medicationSheetId(person.id));
 });
+
+
+import {isPrnMedication,compareMedications} from '../medications-model.js';
+test('PRN detection handles frequency tokens and groups them last without changing records',()=>{
+ for(const frequency of ['PRN','prn','Q6H PRN','BID (PRN)','p.r.n.'])assert.equal(isPrnMedication({frequency}),true);
+ for(const frequency of ['','Daily','Q6H','imprn','PRNish'])assert.equal(isPrnMedication({frequency}),false);
+ const rows=[{id:'a',medication:'Alpha PRN',frequency:'PRN',status:'Active'},{id:'z',medication:'Zulu routine',frequency:'Daily',status:'Active'},{id:'b',medication:'Beta PRN',frequency:'Q6H prn',status:'Active'},{id:'c',medication:'Charlie routine',frequency:'BID',status:'Active'}];
+ assert.deepEqual([...rows].sort(compareMedications).map(row=>row.id),['c','z','a','b']);assert.equal(rows[0].id,'a');
+ const historical=rows.slice(0,2).map(row=>({...row,status:'Discontinued',discontinuedAt:'2026-11-07',updatedAt:'2026-11-07T12:00:00Z'}));assert.deepEqual(historical.sort(compareMedications).map(row=>row.id),['z','a']);
+});
