@@ -179,6 +179,15 @@ with sync_playwright() as p:
     page.locator('#vitals-save').click();page.wait_for_function("!document.querySelector('#vitals-form-dialog').open && !document.querySelector('#vitals-add').disabled")
     assert '14/15 · E3 V5 M6' in page.locator('#vitals-content').inner_text()
     assert entry_rows(sid_b)[-1][:22]==old_b and grids[sid_b][0][22:25]==['GCS Eye','GCS Verbal','GCS Motor']
+    # Hidden inputs retain assigned values across form.reset(); new entries must explicitly clear GCS.
+    for target in ['person-b','person-a']:
+        page.locator('#vitals-person').select_option(target);page.wait_for_function("!document.querySelector('#vitals-add').disabled")
+        page.locator('#vitals-add').click()
+        assert page.locator('[data-gcs-field][aria-pressed="true"]').count()==0 and page.locator('#gcs-score').inner_text()=='— / 15'
+        assert form.evaluate("f=>['gcsEye','gcsVerbal','gcsMotor'].every(k=>f.elements[k].value==='' && f.elements[k].defaultValue==='')")
+        page.locator('#vitals-cancel').click()
+    page.locator('#vitals-person').select_option('person-b');page.wait_for_function("!document.querySelector('#vitals-add').disabled")
+
     page.locator('.vitals-entry').filter(has_text='14/15').get_by_role('button',name='Edit…',exact=True).click()
     assert page.locator('#gcs-score').inner_text()=='14 / 15'
     page.locator('#gcs-clear').click();form.get_by_label('Pulse · bpm',exact=True).fill('77');page.locator('#vitals-save').click();page.wait_for_function("!document.querySelector('#vitals-form-dialog').open && !document.querySelector('#vitals-add').disabled")

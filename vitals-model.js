@@ -1,5 +1,5 @@
 // Protected observations live in Google Sheets. Repository data is synthetic only.
-import {validMedDate} from './medications-model.js?v=0.21.0';
+import {validMedDate} from './medications-model.js?v=0.22.0';
 export const VITAL_FIELDS=['id','measuredAt','systolic','diastolic','pulse','respirations','temperature','temperatureUnit','oxygenSaturation','oxygenMethod','height','heightUnit','weight','weightUnit','comment','enteredBy','enteredById','enteredAt','updatedBy','updatedById','updatedAt','revision','gcsEye','gcsVerbal','gcsMotor'];
 export const VITAL_HEADERS=['Observation ID','Measured at (UTC)','Systolic (mmHg)','Diastolic (mmHg)','Pulse (bpm)','Respirations (/min)','Temperature','Temperature unit','Oxygen saturation (%)','Oxygen delivery','Height','Height unit','Weight','Weight unit','Comment','Entered by','Entered by ID','Entered at (UTC)','Updated by','Updated by ID','Updated at (UTC)','Revision','GCS Eye','GCS Verbal','GCS Motor'];
 export const EDITABLE_VITAL_FIELDS=[...VITAL_FIELDS.slice(1,15),'gcsEye','gcsVerbal','gcsMotor'];
