@@ -17,7 +17,7 @@ with sync_playwright() as p:
     # Provider seam accepts future shared presence, deduplicates identities and
     # ignores stale callbacks after replacing a provider.
     page.evaluate("""async()=>{
-        const presence=await import('./presence.js?v=0.27.0');
+        const presence=await import('./presence.js?v=0.27.1');
         window.presenceModule=presence;
         presence.setPresenceProvider({subscribe:cb=>{window.oldPresence=cb;cb([{id:'a',name:'Synthetic One'},{id:'a',name:'Synthetic One'},{id:'b',name:'Synthetic Two',email:'two@example.test'}]);return ()=>window.presenceStopped=true;}});
     }""")
@@ -62,7 +62,7 @@ with sync_playwright() as p:
     about=page.locator('#about-dialog');assert about.is_visible() and menu.is_hidden()
     assert 'Brother Health Records System' in about.inner_text() and '© Mepkin Abbey 2026' in about.inner_text()
     version=json.loads(Path('package.json').read_text())['version'];assert page.locator('#about-version').inner_text()=='Version '+version
-    assert about.locator('img').get_attribute('src')==page.locator('.abbey-mark').get_attribute('src') and about.locator('img').bounding_box()['width']==120
+    assert about.locator('img').get_attribute('src')=='icons/bhr-product.svg' and about.locator('img').bounding_box()['width']==120
     about.locator('img').evaluate('i=>i.decode()');about.screenshot(path='/tmp/bhr-about.png')
     page.pdf(path='/tmp/bhr-about.pdf',format='Letter');printed=subprocess.check_output(['pdftotext','/tmp/bhr-about.pdf','-'],text=True)
     assert 'Brother Health Records System' in ' '.join(printed.split()) and 'Directory' not in printed and 'Google Drive' not in printed

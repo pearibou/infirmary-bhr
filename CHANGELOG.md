@@ -1,5 +1,11 @@
 # Version history
 
+## 0.27.1 — 2026-11-09
+
+- Restore a fixed retro abbey emblem on the BHR About card, with a subtle pixelated arrow cursor as its technology detail.
+- Keep product artwork independent of private organization branding used by menus and printable clinical headers.
+
+
 ## 0.27.0 — 2026-11-09
 
 - Add shared Organization Info in Preferences: name, logo preview/upload and generic-icon fallback.

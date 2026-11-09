@@ -1,6 +1,6 @@
-import {DEMOGRAPHIC_FIELDS,CONTACT_FIELDS,POLICY_FIELDS,validateDemographics} from './demographics-model.js?v=0.27.0';
-import {printDocument,clearPrint,fullPersonName,personBirthDate,allergiesText} from './printing.js?v=0.27.0';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.27.0';
+import {DEMOGRAPHIC_FIELDS,CONTACT_FIELDS,POLICY_FIELDS,validateDemographics} from './demographics-model.js?v=0.27.1';
+import {printDocument,clearPrint,fullPersonName,personBirthDate,allergiesText} from './printing.js?v=0.27.1';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.27.1';
 const $=s=>document.querySelector(s),make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 let hooks,currentId=null,printing=false;
 function inputField(name,label,value='',multi=false){const wrap=make('label',label),input=make(multi?'textarea':'input');input.name=name;input.maxLength=2000;input.value=value;if(multi)input.rows=2;if(/(phone|fax)/i.test(name))input.type='tel';wrap.append(input);return wrap;}

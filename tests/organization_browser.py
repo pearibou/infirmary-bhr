@@ -32,6 +32,7 @@ with sync_playwright() as p:
  assert 'organization' not in page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1'))")
  page.wait_for_function("document.querySelector('.abbey-mark').src.startsWith('blob:')");assert all(value=='Bearer synthetic' for value in logo_reads)
  assert page.locator('#app-menu-toggle').inner_text()=='Synthetic Community Clinic' and page.locator('#workspace-organization').inner_text()=='Synthetic Community Clinic'
+ assert page.locator('#about-dialog .about-brand img').get_attribute('src')=='icons/bhr-product.svg'
  page.locator('#alert-preferences-dialog [data-close]').click()
  # Printed headers use the private original image, never the previously bundled abbey art.
  page.locator('.chart-navigation').get_by_role('button',name='Demographics').click();page.locator('#demographics-print').click()
