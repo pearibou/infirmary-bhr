@@ -232,3 +232,5 @@
 #medications-icon img{width:44px;height:44px;object-fit:contain;flex-shrink:0}.med-person-label{font-size:12px}.med-person-label select{display:block;width:100%;font:inherit;min-height:32px;margin-top:5px}
 
 .chart-navigation .small-icon{margin:0}.chart-navigation .chart-symbol{stroke-width:2.5}
+
+.avatar.photo-button{padding:0;border-radius:0;box-shadow:none;cursor:zoom-in;overflow:hidden}.avatar.photo-button:active{background:#ddd;color:#111}#photo-viewer-dialog{width:min(720px,calc(100vw - 24px));padding:16px}#photo-viewer-image img{display:block;width:auto;height:auto;max-width:100%;max-height:65dvh;object-fit:contain;margin:auto}#photo-viewer-status{font-size:12px;overflow-wrap:anywhere}#photo-viewer-status:empty{display:none}

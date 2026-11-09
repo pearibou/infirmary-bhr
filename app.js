@@ -1,32 +1,32 @@
-import {calendarSymbol} from './calendar-symbols.js?v=0.22.1';
-import {clearDesktopSelection} from './desktop-selection.js?v=0.22.1';
-import {trashDesktopBatch} from './documents.js?v=0.22.1';
-import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.22.1';
-import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.22.1';
-import {changeFolderLink} from './model.js?v=0.22.1';
-import {openMainWindow,closeMainWindow} from './windows.js?v=0.22.1';
-import {initCalendar,calendarSession} from './calendar.js?v=0.22.1';
-import {initBackground} from './background.js?v=0.22.1';
-import {initHistory,historySession,openHistory} from './history.js?v=0.22.1';
-import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.22.1';
-import {printDocument} from './printing.js?v=0.22.1';
-import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.22.1';
-import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.22.1';
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.22.1';
-import {updateSessionPresence} from './presence.js?v=0.22.1';
-import {closeAppMenu} from './app-menu.js?v=0.22.1';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.22.1';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.22.1';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.22.1';
-import {validatePhoto} from './photos.js?v=0.22.1';
-import './windows.js?v=0.22.1';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.22.1';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.22.1';
+import {calendarSymbol} from './calendar-symbols.js?v=0.23.0';
+import {clearDesktopSelection} from './desktop-selection.js?v=0.23.0';
+import {trashDesktopBatch} from './documents.js?v=0.23.0';
+import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.23.0';
+import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.23.0';
+import {changeFolderLink} from './model.js?v=0.23.0';
+import {openMainWindow,closeMainWindow} from './windows.js?v=0.23.0';
+import {initCalendar,calendarSession} from './calendar.js?v=0.23.0';
+import {initBackground} from './background.js?v=0.23.0';
+import {initHistory,historySession,openHistory} from './history.js?v=0.23.0';
+import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.23.0';
+import {printDocument} from './printing.js?v=0.23.0';
+import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.23.0';
+import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.23.0';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.23.0';
+import {updateSessionPresence} from './presence.js?v=0.23.0';
+import {closeAppMenu} from './app-menu.js?v=0.23.0';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.23.0';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.23.0';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.23.0';
+import {validatePhoto} from './photos.js?v=0.23.0';
+import './windows.js?v=0.23.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.23.0';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.23.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let bulkTargets=[],bulkBusy=false;
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
-const photoUrls=new Map();let photoGeneration=0;
+const photoUrls=new Map();let photoGeneration=0,photoViewerRequest=0;
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,6000);}
 try{const stored=localStorage.getItem(KEY);if(stored)data=validateDirectory(JSON.parse(stored));}catch{storageFailed=true;toast('Stored data could not be read. Existing storage has been preserved; reload after resolving the problem.');}
 function save(next,fromSync=false){if(sessionCleared)return false;if(!fromSync&&(!workspaceReady||!hasDriveAccess())){if(workspaceReady)lockWorkspace();toast('Connect Google Drive and sync the directory first.');return false;}if(storageFailed){toast('Storage is unavailable. Existing data is protected.');return false;}try{if(!fromSync)next=recordChanges(data,next,getCurrentUser());localStorage.setItem(KEY,JSON.stringify(next));data=next;refreshEventLog();$('#storage-status').textContent='Saved on this device';return true;}catch{toast('Could not save: device storage is unavailable or full. Export your existing records.');return false;}}
@@ -143,14 +143,22 @@ function makeCrucifix(){
   icon.innerHTML='<path d="M9 1h6v9h8v6h-8v23H9V16H1v-6h8z" fill="currentColor"/><g fill="#eee" stroke="#332332" stroke-width="1"><circle cx="12" cy="10" r="2.3"/><path d="m11 13-6-2-1 2 6 3v9l2 7 2-1-1-7 1-8 6-3-1-2-6 2z"/></g>';
   return icon;
 }
-function makeAvatar(person){const avatar=element('div',initials(person),'avatar');if(person.photo)displayPhoto(avatar,person);return avatar;}
+function makeAvatar(person){const avatar=element(person.photo?'button':'div',initials(person),'avatar');if(person.photo){avatar.type='button';avatar.classList.add('photo-button');avatar.title='View full profile photo';avatar.setAttribute('aria-label','View full profile photo of '+personName(person));avatar.setAttribute('aria-haspopup','dialog');avatar.onclick=()=>openPhotoViewer(person);displayPhoto(avatar,person);}return avatar;}
 async function displayPhoto(avatar,person){
   const fileId=person.photo.fileId,generation=photoGeneration;avatar.dataset.photoFile=fileId;if(!hasDriveAccess()){avatar.title='Connect Google Drive to view profile photo';return;}
-  try{let pending=photoUrls.get(fileId);if(!pending){pending=readPersonPhoto(fileId).then(blob=>URL.createObjectURL(blob));photoUrls.set(fileId,pending);}
-    const url=await pending;if(!avatar.isConnected||!hasDriveAccess()||generation!==photoGeneration||avatar.dataset.photoFile!==fileId)return;const img=element('img');img.alt='Profile photo of '+personName(person);img.src=url;img.onerror=()=>{avatar.textContent=initials(person);avatar.title='Photo unavailable';};avatar.replaceChildren(img);
+  try{const url=await profilePhotoUrl(fileId);if(!avatar.isConnected||!hasDriveAccess()||generation!==photoGeneration||avatar.dataset.photoFile!==fileId)return;const img=element('img');img.alt='Profile photo of '+personName(person);img.src=url;img.onerror=()=>{avatar.textContent=initials(person);avatar.title='Photo unavailable';};avatar.replaceChildren(img);
   }catch{photoUrls.delete(fileId);avatar.title='Photo unavailable; initials shown';}
 }
-function clearPhotos(){photoGeneration++;for(const pending of photoUrls.values())pending.then(url=>URL.revokeObjectURL(url)).catch(()=>{});photoUrls.clear();}
+function profilePhotoUrl(fileId){let pending=photoUrls.get(fileId);if(!pending){pending=readPersonPhoto(fileId).then(blob=>URL.createObjectURL(blob));photoUrls.set(fileId,pending);}return pending;}
+function clearPhotoViewer(){photoViewerRequest++;const dialog=$('#photo-viewer-dialog');if(dialog.open)dialog.close();$('#photo-viewer-image').replaceChildren();$('#photo-viewer-status').textContent='';$('#photo-viewer-title').textContent='Profile photo';}
+async function openPhotoViewer(person){
+ if(!workspaceReady||!hasDriveAccess()||!person.photo)return;const request=++photoViewerRequest,generation=photoGeneration,dialog=$('#photo-viewer-dialog');$('#photo-viewer-title').textContent='Profile photo — '+personName(person);$('#photo-viewer-image').replaceChildren();$('#photo-viewer-status').textContent='Loading photo…';if(!dialog.open)dialog.showModal();
+ try{const url=await profilePhotoUrl(person.photo.fileId);if(request!==photoViewerRequest||generation!==photoGeneration||!dialog.open||!workspaceReady||!hasDriveAccess())return;
+  const image=element('img');image.alt='Full profile photo of '+personName(person);image.onload=()=>{if(request===photoViewerRequest)$('#photo-viewer-status').textContent='';};image.onerror=()=>{if(request===photoViewerRequest){image.remove();$('#photo-viewer-status').textContent='This image could not be displayed.';}};image.src=url;$('#photo-viewer-image').replaceChildren(image);
+ }catch(error){if(request!==photoViewerRequest||!dialog.open)return;photoUrls.delete(person.photo.fileId);$('#photo-viewer-status').textContent=[403,404].includes(error.status)?'Photo unavailable. Your Google account may need access to its Google Drive folder.':'Photo unavailable. '+error.message;}
+}
+$('#photo-viewer-dialog').addEventListener('close',()=>{if(!$('#photo-viewer-dialog').open)clearPhotoViewer();});
+function clearPhotos(){clearPhotoViewer();photoGeneration++;for(const pending of photoUrls.values())pending.then(url=>URL.revokeObjectURL(url)).catch(()=>{});photoUrls.clear();}
 function renderKeepingDraft(){const input=$('.note-form input'),draft=input?.value,focused=document.activeElement===input;render();if($('.note-form input')&&draft)$('.note-form input').value=draft;if(focused)$('.note-form input')?.focus();}
 function openNoteEditor(personId,noteId){const note=data.people.find(p=>p.id===personId)?.notes.find(n=>n.id===noteId);if(!note||!canEditNote(note,getCurrentUser())){toast('Connect the original author’s Google account to edit this note.');return;}noteEditTarget={personId,noteId,baseline:JSON.stringify(note)};$('#note-edit-text').value=currentNoteText(note);$('#note-edit-time').value=localNoteDate(currentNoteTime(note));$('#note-edit-error').textContent='';$('#note-dialog').showModal();$('#note-edit-text').focus();}
 $('#note-edit-form').onsubmit=event=>{event.preventDefault();try{if(!noteEditTarget)throw new Error('Only the Google account that entered this note can edit it. Reopen the note first.');const {personId,noteId,baseline}=noteEditTarget,next=structuredClone(data),person=next.people.find(p=>p.id===personId),index=person.notes.findIndex(n=>n.id===noteId),note=person.notes[index];if(JSON.stringify(note)!==baseline)throw new Error('This note changed. Reopen it before editing.');person.notes[index]=editNote(note,getCurrentUser(),$('#note-edit-text').value,new Date().toISOString(),new Date($('#note-edit-time').value).toISOString());person.updatedAt=new Date().toISOString();if(save(next)){$('#note-dialog').close();renderKeepingDraft();}}catch(error){$('#note-edit-error').textContent=error.message;}};

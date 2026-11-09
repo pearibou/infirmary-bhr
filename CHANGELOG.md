@@ -1,5 +1,11 @@
 # Version history
 
+## 0.23.0 — 2026-11-09
+
+- Click a patient profile photo, or focus it and press Enter, to open a simple full-image viewer with an uncropped, proportional image and Close/Escape support.
+- Reuse authenticated in-memory photo blobs; explain inaccessible Drive photos and clear the viewer on close, disconnect or logout.
+
+
 ## 0.22.1 — 2026-11-09
 
 - Restyle patient chart sections as compact rounded rectangle buttons, with the medical document, stethoscope, pills and double-helix symbols beside their labels.
