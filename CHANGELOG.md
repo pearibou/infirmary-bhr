@@ -1,5 +1,10 @@
 # Version history
 
+## 0.13.6 — 2026-11-09
+
+- Rename the medication editor field to Medication name and align its help/validation wording.
+- Expand refill-tracking discussion notes with compact layout, overdue estimates, unknown-versus-zero values and prescription identifier handling.
+
 ## 0.13.5 — 2026-11-09
 
 - Use the standard arrow over clinical quick notes instead of the platform-dependent grab cursor, preserving author-only drag-to-trash and edit-button pointers.

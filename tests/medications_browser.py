@@ -126,9 +126,9 @@ with sync_playwright() as p:
     assert any('setDataValidation' in req for batch in batches for req in batch)
     assert page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')).people[0].medicationSheet")=={'spreadsheetId':'workbook','sheetId':sid}
     page.locator('#med-add').click();form=page.locator('#medication-form')
-    form.get_by_label('Medication and strength',exact=True).fill('Synthetic tablet 10 mg');form.get_by_label('Dose',exact=True).fill('One synthetic tablet');form.get_by_label('Frequency',exact=True).fill('Daily');form.get_by_label('Indication',exact=True).fill('Synthetic indication');form.get_by_label('Prescriber',exact=True).fill('Synthetic clinician')
+    form.get_by_label('Medication name',exact=True).fill('Synthetic tablet 10 mg');form.get_by_label('Dose',exact=True).fill('One synthetic tablet');form.get_by_label('Frequency',exact=True).fill('Daily');form.get_by_label('Indication',exact=True).fill('Synthetic indication');form.get_by_label('Prescriber',exact=True).fill('Synthetic clinician')
     lost_add[0]=True;page.locator('#med-form-save').click();page.wait_for_function("document.querySelector('#med-form-error').textContent.includes('lost')")
-    assert form.get_by_label('Medication and strength',exact=True).input_value()=='Synthetic tablet 10 mg'
+    assert form.get_by_label('Medication name',exact=True).input_value()=='Synthetic tablet 10 mg'
     assert len(entry_rows(sid))==1
     page.locator('#med-form-save').click();page.wait_for_function("!document.querySelector('#medication-form-dialog').open && !document.querySelector('#med-add').disabled")
     assert len(entry_rows(sid))==1
@@ -148,7 +148,7 @@ with sync_playwright() as p:
         page.unroute('**/icons/abbey-letterhead.png');return result
     assert page.locator('#med-add .diagnosis-plus').inner_text()=='+'
     for name,frequency in [('Zulu scheduled','Daily'),('Alpha as-needed','PRN'),('Beta as-needed','Q6H prn')]:
-        page.locator('#med-add').click();form.get_by_label('Medication and strength',exact=True).fill(name);form.get_by_label('Frequency',exact=True).fill(frequency);page.locator('#med-form-save').click();page.wait_for_function("!document.querySelector('#medication-form-dialog').open && !document.querySelector('#med-add').disabled")
+        page.locator('#med-add').click();form.get_by_label('Medication name',exact=True).fill(name);form.get_by_label('Frequency',exact=True).fill(frequency);page.locator('#med-form-save').click();page.wait_for_function("!document.querySelector('#medication-form-dialog').open && !document.querySelector('#med-add').disabled")
     assert page.locator('.med-entry h3').all_text_contents()==['Synthetic tablet 10 mg','Zulu scheduled','Alpha as-needed','Beta as-needed']
     assert page.locator('.med-prn').count()==2 and page.locator('.med-prn-divider').count()==1
     assert page.locator('.med-prn').first.evaluate('el=>getComputedStyle(el).backgroundColor')=='rgb(231, 240, 224)'
@@ -172,7 +172,7 @@ with sync_playwright() as p:
     page.get_by_role('button',name='Delete entry…',exact=True).click();page.locator('#med-action-confirm').click();page.wait_for_function("!document.querySelector('#medication-action-dialog').open && !document.querySelector('#med-add').disabled")
     assert entry_rows(sid)==[]
     def add_course(name):
-        page.locator('#med-add').click();form.get_by_label('Medication and strength',exact=True).fill(name);page.locator('#med-short-course').check();form.get_by_label('End date',exact=True).fill('2000-01-01');page.locator('#med-form-save').click();page.wait_for_function("!document.querySelector('#medication-form-dialog').open && !document.querySelector('#med-add').disabled")
+        page.locator('#med-add').click();form.get_by_label('Medication name',exact=True).fill(name);page.locator('#med-short-course').check();form.get_by_label('End date',exact=True).fill('2000-01-01');page.locator('#med-form-save').click();page.wait_for_function("!document.querySelector('#medication-form-dialog').open && !document.querySelector('#med-add').disabled")
     add_course('Synthetic completed course');row=next(row for row in entry_rows(sid) if row[1]=='Synthetic completed course');assert row[9]=='Discontinued' and row[12]=='Scheduled course completed' and row[19]
     fail_updates[0]=True;add_course('Synthetic pending course');assert 'Scheduled end passed—update pending' in page.locator('#med-content').inner_text()
     page.locator('#med-print').click();page.wait_for_function("document.querySelector('#med-status').textContent.includes('Printing stopped')");assert page.locator('#bhr-print-frame').count()==0
@@ -203,9 +203,9 @@ with sync_playwright() as p:
 
     page.locator('#drive-dialog [data-close]').click();page.get_by_role('button',name='Medications',exact=True).click();page.wait_for_function("!document.querySelector('#med-add').disabled")
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
-    page.locator('#med-add').click();form.get_by_label('Medication and strength',exact=True).fill('Synthetic unsaved private medication');page.locator('#medication-form-dialog .window-control').click();page.locator('#medications-dialog [data-close]').click()
+    page.locator('#med-add').click();form.get_by_label('Medication name',exact=True).fill('Synthetic unsaved private medication');page.locator('#medication-form-dialog .window-control').click();page.locator('#medications-dialog [data-close]').click()
     page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
-    assert 'Synthetic' not in page.locator('body').text_content();assert form.get_by_label('Medication and strength',exact=True).input_value()==''
+    assert 'Synthetic' not in page.locator('body').text_content();assert form.get_by_label('Medication name',exact=True).input_value()==''
     assert page.evaluate("localStorage.getItem('infirmary.directory.v1')") is None
     assert not errors,errors
     browser.close()

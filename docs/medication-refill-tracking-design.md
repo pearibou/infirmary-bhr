@@ -58,3 +58,15 @@ Recalculate estimates when loading or opening the medication list, consistent wi
 - How manual adjustments are represented, attributed and retained in history.
 - Required versus optional fields, warning thresholds, and refill-entry/edit/delete permissions.
 - Spreadsheet schema, concurrency protection and event logging for refill changes.
+
+## Further ideas from the previous manual sheet
+
+The previous layout uses **Last Filled, Days Supply, Days Left, Rx#, Refills, Expires**. Keep the familiar compact grouping in a dedicated refill view, with the dispensing pharmacy alongside it. This can make checking multiple medications easier than opening each medication separately.
+
+- **Negative days left:** the manual sheet retains negative values. Preserve that useful information, potentially displaying it as “overdue by N days” alongside the signed estimate. This indicates elapsed supply, not proof that the person stopped taking the medicine or has no tablets left. Final display wording remains to be decided.
+- **Unknown versus zero:** a blank refills value means unknown/not recorded; zero means explicitly no refills remain. Likewise, a blank expiration date means not recorded, not expired or indefinitely valid. Missing dates or days supply should produce an unavailable estimate rather than a misleading zero.
+- **Rx numbers are identifiers:** store them as text to preserve leading zeros, letters and punctuation. Never perform arithmetic on them. No actual prescription numbers from the reference image belong in this design document or test fixtures.
+- **Separate warning reasons:** visually distinguish estimated supply overdue, zero refills, and expired prescription; they can occur independently and imply different follow-up actions. Keep text labels so meaning does not depend on color alone.
+- **Date clarity:** use explicit dates and calculate elapsed calendar days in the configured infirmary timezone, avoiding changes caused solely by a viewer's timezone or daylight saving transitions.
+
+These are design suggestions prompted by the reference, not implemented behavior or a decision to add new required fields.
