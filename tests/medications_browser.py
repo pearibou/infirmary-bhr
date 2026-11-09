@@ -151,16 +151,16 @@ with sync_playwright() as p:
     assert 'Synthetic tablet 10 mg' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     def print_current(history=False):
         page.locator('#med-print-history').set_checked(history)
-        print_routes=[];page.route('**/icons/abbey-letterhead.png',lambda route:print_routes.append(route))
+        print_routes=[];page.route('**/icons/icon-512.png',lambda route:print_routes.append(route))
         page.locator('#med-print').click();page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Medication List')")
         page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
-        page.wait_for_timeout(100);assert print_routes;print_routes.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes())
+        page.wait_for_timeout(100);assert print_routes;print_routes.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes())
         page.wait_for_function('window.printCalls===1');page.wait_for_function("!document.querySelector('#med-print').disabled")
         assert all(table.locator('thead tr').count()==1 for table in page.frame_locator('#bhr-print-frame').locator('table').all())
         result=page.frame_locator('#bhr-print-frame').locator('body').inner_text()
         preview=browser.new_page();preview.set_content(page.locator('#bhr-print-frame').evaluate('frame=>frame.contentDocument.documentElement.outerHTML'));preview.locator('img').evaluate('image=>image.decode()');preview.pdf(path='/tmp/bhr-medications-print.pdf',format='Letter');preview.close()
         page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))")
-        page.unroute('**/icons/abbey-letterhead.png');return result
+        page.unroute('**/icons/icon-512.png');return result
     assert page.locator('#med-add .diagnosis-plus').inner_text()=='+'
     for name,frequency in [('Zulu scheduled','Daily'),('Alpha as-needed','PRN'),('Beta as-needed','Q6H prn')]:
         page.locator('#med-add').click();form.get_by_label('Medication name',exact=True).fill(name);form.get_by_label('Frequency',exact=True).fill(frequency);page.locator('#med-form-save').click();page.wait_for_function("!document.querySelector('#medication-form-dialog').open && !document.querySelector('#med-add').disabled")

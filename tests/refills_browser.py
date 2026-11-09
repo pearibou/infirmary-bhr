@@ -205,8 +205,8 @@ with sync_playwright() as p:
     disabled_api[0]=True;page.locator('#refill-refresh').click();page.wait_for_function("document.querySelector('#refill-content').textContent.includes('unavailable')");assert 'No refill information recorded.' not in page.locator('#refill-content').inner_text();disabled_api[0]=False;page.locator('#refill-content').get_by_role('button',name='Retry',exact=True).click();page.wait_for_function("!document.querySelector('#refill-refresh').disabled")
     page.locator('#refills-dialog [data-close]').click()
     # Print only clinical fields, even with refill history present.
-    pending_print=[];page.route('**/icons/abbey-letterhead.png',lambda route:pending_print.append(route));page.locator('#med-print').click();page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.querySelector('table')")
-    page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++");page.wait_for_timeout(100);pending_print.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes());page.wait_for_function('window.printCalls===1')
+    pending_print=[];page.route('**/icons/icon-512.png',lambda route:pending_print.append(route));page.locator('#med-print').click();page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.querySelector('table')")
+    page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++");page.wait_for_timeout(100);pending_print.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes());page.wait_for_function('window.printCalls===1')
     printed=page.frame_locator('#bhr-print-frame').locator('body').inner_text()
     for secret in ['000-SYNTHETIC-RX','SYNTHETIC PRIVATE PHARMACY','SYNTHETIC PRIVATE ADJUSTMENT','Refills left','Days supply']:assert secret not in printed
     assert 'Synthetic tablet 10 mg' in printed;page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))")

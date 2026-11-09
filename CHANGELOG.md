@@ -1,5 +1,13 @@
 # Version history
 
+## 0.27.0 — 2026-11-09
+
+- Add shared Organization Info in Preferences: name, logo preview/upload and generic-icon fallback.
+- Store settings and logo only in the private BHR Drive directory; omit settings from the browser directory cache and clear runtime branding at lock/logout.
+- Apply backend branding to the menu, record toolbar, About image and printable document/calendar headers.
+- Remove bundled abbey logo assets and fixed facility-name defaults. Existing installations need one-time backend setup; recovered high-resolution artwork is supplied separately for re-upload.
+
+
 ## 0.26.0 — 2026-11-09
 
 - Add browser-local automatic directory sync frequency in Preferences, defaulting to 10 seconds with an Off (not recommended) option; keep access-expiry locking independent of polling.

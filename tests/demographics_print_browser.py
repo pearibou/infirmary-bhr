@@ -10,7 +10,7 @@ with sync_playwright() as p:
     def person(id,last,deceased=False):return {'id':id,'name':'Synthetic '+last,'firstName':'Synthetic','middleName':'M','lastName':last,'preferredName':'Synthetic '+last,'info':'','notes':[],'deceased':deceased,'updatedAt':'2026-01-01T00:00:00Z',**({'photo':{'fileId':'synthetic-portrait','folderId':'root'}} if id=='a' else {})}
     seed={'version':1,'people':[person('z','Zulu'),person('dead','Aardvark',True),person('a','Alpha')]}
     page.add_init_script("if(!localStorage.getItem('infirmary.directory.v1'))localStorage.setItem('infirmary.directory.v1',"+json.dumps(json.dumps(seed))+");")
-    page.route('https://www.googleapis.com/drive/v3/files/synthetic-portrait?*',lambda route:route.fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes()))
+    page.route('https://www.googleapis.com/drive/v3/files/synthetic-portrait?*',lambda route:route.fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes()))
     directory=[seed]
     page.route('https://www.googleapis.com/drive/v3/files/root?*',lambda route:route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}}))
     page.route('https://www.googleapis.com/drive/v3/files?*',lambda route:route.fulfill(json={'files':[] if 'Medication Lists' in route.request.url or 'BHR_event_log' in route.request.url or 'bhrDesktop' in route.request.url else [{'id':'__test-bootstrap'}]}))
@@ -34,11 +34,11 @@ with sync_playwright() as p:
     assert saved['pharmacyFax']=='555 0104' and saved['pharmacyAddress']=='Synthetic pharmacy address\nSecond pharmacy line'
     assert saved['contacts'][0]['emergency'] is True and len(saved['contacts'])==2 and saved['policies'][0]['policyNumber']=='Synthetic policy number'
     page.get_by_role('button',name='Demographics',exact=True).click();assert 'Synthetic private address' in page.locator('#demographics-content').inner_text()
-    pending=[];page.route('**/icons/abbey-letterhead.png',lambda route:pending.append(route));page.locator('#demographics-print').click()
+    pending=[];page.route('**/icons/icon-512.png',lambda route:pending.append(route));page.locator('#demographics-print').click()
     page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Synthetic private address')")
     page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
-    page.wait_for_timeout(100);assert pending;pending.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes())
-    page.wait_for_function('window.printCalls===1');frame=page.frame_locator('#bhr-print-frame');assert frame.locator('h1').inner_text()=='Mepkin Abbey Infirmary';assert 'Synthetic policy number' in frame.locator('body').inner_text()
+    page.wait_for_timeout(100);assert pending;pending.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes())
+    page.wait_for_function('window.printCalls===1');frame=page.frame_locator('#bhr-print-frame');assert frame.locator('h1').inner_text()=='Brother Health Records';assert 'Synthetic policy number' in frame.locator('body').inner_text()
     assert frame.locator('.fields').first.locator('dt').all_text_contents()==['Primary language:','Originally from:','Religion:','Race/ethnicity:','Nationality:','Patient address:','Home phone number:','Cell phone number:','E-mail address:','Primary care provider:']
     assert frame.locator('thead tr').count()==1 and frame.locator('.fields dd').filter(has_text='Synthetic private address').count()==1
     assert page.locator('body > img[src*="abbey-letterhead"]').count()==0

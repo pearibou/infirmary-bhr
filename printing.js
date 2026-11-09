@@ -1,7 +1,8 @@
+import {organizationBranding} from './organization.js?v=0.27.0';
 // Print documents live only in an ephemeral same-origin frame, never in storage.
-import {readPersonPhoto} from './drive.js?v=0.26.0';
-import {cleanNoteHtml} from './documents-model.js?v=0.26.0';
-import {personName} from './model.js?v=0.26.0';
+import {readPersonPhoto} from './drive.js?v=0.27.0';
+import {cleanNoteHtml} from './documents-model.js?v=0.27.0';
+import {personName} from './model.js?v=0.27.0';
 let frame=null,generation=0,photoUrl=null;
 export function clearPrint(){generation++;frame?.remove();frame=null;if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=null;}
 export const fullPersonName=person=>[person.firstName,person.middleName,person.lastName].filter(Boolean).join(' ')||personName(person);
@@ -9,14 +10,14 @@ export function personBirthDate(person){const b=person.birthDate;return b&&Objec
 export const allergiesText=person=>person.noKnownAllergies?'No known allergies':person.allergies?.trim()||'Not recorded';
 const el=(doc,tag,text)=>{const node=doc.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
 export async function printDocument({title,person,sections,retrievedAt,subtitle='',layout='standard'}){
- clearPrint();const stamp=generation;frame=document.createElement('iframe');const target=frame;target.id='bhr-print-frame';target.title='Print document';target.setAttribute('aria-hidden','true');target.style.cssText='position:fixed;width:720px;height:960px;left:-10000px;border:0';document.body.append(target);
+ clearPrint();const stamp=generation,branding=await organizationBranding();if(stamp!==generation)throw new Error('Printing cancelled.');frame=document.createElement('iframe');const target=frame;target.id='bhr-print-frame';target.title='Print document';target.setAttribute('aria-hidden','true');target.style.cssText='position:fixed;width:720px;height:960px;left:-10000px;border:0';document.body.append(target);
  const doc=target.contentDocument;doc.open();doc.write('<!doctype html><html><head><meta charset="utf-8"><title>Infirmary document</title></head><body></body></html>');doc.close();
  const style=el(doc,'style');style.textContent=`
  @page{size:auto;margin:13mm}
  *{box-sizing:border-box;min-width:0}html,body{width:auto;max-width:100%;margin:0;padding:0}
  body{font:9.5pt/1.25 Arial,sans-serif;color:#000;background:white}
  header{display:flex;align-items:center;gap:14pt;border-bottom:1pt solid #111;padding-bottom:7pt;margin-bottom:9pt;break-inside:avoid}
- header img{width:63pt;height:63pt;object-fit:contain;flex:none}header p{margin:3pt 0}
+ header img{width:63pt;height:63pt;object-fit:contain;flex:none}header p{margin:3pt 0}header h1{overflow-wrap:anywhere}
  h1{font:bold 16pt Georgia,serif;margin:3pt 0}h2{font-size:11pt;margin:8pt 0 5pt}h3{font-size:10pt;margin:6pt 0}
  .clinical-print-text{overflow-wrap:anywhere}.clinical-print-text li{margin:3pt 0}p{margin:4pt 0;white-space:pre-wrap;overflow-wrap:anywhere}
  .identity{display:flex;justify-content:space-between;align-items:center;gap:12pt;border-bottom:1px solid #aaa;padding-bottom:6pt;margin-bottom:7pt;break-inside:avoid}
@@ -30,7 +31,7 @@ export async function printDocument({title,person,sections,retrievedAt,subtitle=
  thead{display:table-header-group}th,td{text-align:left;vertical-align:top;border:0.6pt solid #888;padding:4pt;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal}
  th{background:#eee}tr{break-inside:avoid}.stamp{font-size:7.5pt;color:#444;margin-top:8pt}
  `;doc.head.append(style);
- const header=el(doc,'header'),logo=el(doc,'img');logo.src=new URL('./icons/abbey-letterhead.png',location.href).href;logo.alt='Mepkin Abbey';const heading=el(doc,'div');heading.append(el(doc,'h1','Mepkin Abbey Infirmary'),el(doc,'p',title));header.append(logo,heading);doc.body.append(header);
+ const header=el(doc,'header'),logo=el(doc,'img');logo.src=branding.logo;logo.alt=branding.name+' logo';const heading=el(doc,'div');heading.append(el(doc,'h1',branding.name),el(doc,'p',title));header.append(logo,heading);doc.body.append(header);
  let identity;
  if(person){
  identity=el(doc,'div');identity.className='identity';const identityText=el(doc,'div');identityText.append(el(doc,'h2',fullPersonName(person)));identity.append(identityText);
