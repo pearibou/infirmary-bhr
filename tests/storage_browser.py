@@ -46,7 +46,7 @@ with sync_playwright() as p:
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic old folder').wait_for()
     page.locator('.desktop').click(button='right',position={'x':20,'y':210});page.locator('#new-rich-note').click()
     page.locator('#rich-note-name').fill('Synthetic contained note');page.locator('#rich-note-body').fill('Synthetic protected body');page.locator('#rich-note-save').click()
-    page.wait_for_function("!document.querySelector('#rich-note-dialog').open")
+    page.wait_for_function("document.querySelector('#rich-note-dialog').classList.contains('note-viewing') && !document.querySelector('#rich-note-edit').disabled");page.locator('#rich-note-dialog [data-close]').click()
     note=next(file for file in files.values() if file['name']=='Synthetic contained note');assert note['parents']==[home]
     assert 'Synthetic protected body' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     page.locator('#logout-power').click();page.locator('#confirm-logout').click()

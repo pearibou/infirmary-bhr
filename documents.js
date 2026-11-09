@@ -1,14 +1,14 @@
-import {smallIcon} from './icons-ui.js?v=0.15.0';
-import {printDocument} from './printing.js?v=0.15.0';
-import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.15.0';
-import {clearTrashSelection} from './trash.js?v=0.15.0';
-import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.15.0';
-import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.15.0';
+import {smallIcon} from './icons-ui.js?v=0.16.0';
+import {printDocument} from './printing.js?v=0.16.0';
+import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.16.0';
+import {clearTrashSelection} from './trash.js?v=0.16.0';
+import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.16.0';
+import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.16.0';
 const $=selector=>document.querySelector(selector),noteDialog=$('#rich-note-dialog'),folderTemplate=$('#file-browser-template'),context=$('#file-context-menu');
 let hooks,active=false,generation=0,refreshNumber=0,busy=false,editor=null,contextFile,contextView,actionFile,actionKind,dragged,dirty=false,renaming=false,refreshPending=false,editorRequest=0;
 let desktopFiles=[],tooltipTimer,tooltipTarget,windowNumber=0;
 const folderViews=new Map(),noteDrafts=new Map();
-let openingEditor=false;
+let openingEditor=false,noteEditing=false;
 function hideFilename(){clearTimeout(tooltipTimer);tooltipTarget?.removeAttribute('aria-describedby');tooltipTarget=null;$('#filename-tooltip').hidden=true;$('#filename-tooltip').textContent='';}
 function filenameHint(button,name){
   const show=()=>{hideFilename();tooltipTimer=setTimeout(()=>{
@@ -53,7 +53,7 @@ export function initDocuments(options){
   $('#new-drive-folder').onclick=()=>{options.closeDesktopMenu();newFolder('root');};
   $('#rich-note-trash').onclick=()=>{if(!editor||busy||openingEditor)return;if(editor.file)handleAction(editor.file,'trash');else $('#discard-note-dialog').showModal();};
   $('#discard-rich-note').onclick=()=>{if(!editor||editor.file||busy)return;noteDrafts.delete(editor.key);dirty=false;editor=null;$('#rich-note-body').replaceChildren();$('#rich-note-name').value='';$('#rich-note-time').value='';noteDialog.close();$('#discard-note-dialog').close();refreshDraftControls();};
-  $('#rich-note-print').onclick=printEditor;
+  $('#rich-note-print').onclick=printEditor;$('#rich-note-edit').prepend(smallIcon('pencil'));$('#rich-note-edit').onclick=()=>{if(active&&editor?.file&&!busy&&!openingEditor&&canManageDocument(editor.file,getCurrentUser())){setNoteMode(true);focusNoteEditor();}};
   $('#rich-note-form').onsubmit=event=>{event.preventDefault();saveEditor();};
   for(const button of document.querySelectorAll('[data-format]')){
     button.addEventListener('mousedown',event=>event.preventDefault());
@@ -64,7 +64,7 @@ export function initDocuments(options){
   for(const event of ['input','keyup','mouseup'])$('#rich-note-body').addEventListener(event,updateFormatButtons);
   $('#rich-note-body').addEventListener('paste',event=>{event.preventDefault();document.execCommand('insertText',false,event.clipboardData.getData('text/plain'));});
   $('#rich-note-body').addEventListener('drop',event=>event.preventDefault());
-  for(const id of ['rich-note-name','rich-note-time','rich-note-body'])$('#'+id).addEventListener('input',()=>{dirty=true;refreshDraftControls();});
+  for(const id of ['rich-note-name','rich-note-time','rich-note-body'])$('#'+id).addEventListener('input',()=>{if(noteEditing){dirty=true;refreshDraftControls();}});
   // Closing/minimizing and switching retain drafts in memory until save or logout.
   noteDialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});
   noteDialog.addEventListener('close',()=>{if(openingEditor){editorRequest++;openingEditor=false;noteDialog.setAttribute('aria-busy','false');}refreshDraftControls();});
@@ -88,7 +88,7 @@ export function documentsSession(ready){
   if(!active&&!editor&&!desktopFiles.length)return;
   hideFilename();noteDrafts.clear();openingEditor=false;noteDialog.setAttribute('aria-busy','false');active=false;renaming=false;refreshPending=false;generation++;refreshNumber++;dirty=false;editor=null;desktopFiles=[];contextFile=null;contextView=null;actionFile=null;for(const view of [...folderViews.values()])closeFolder(view);endDrag();closeContext();status('');
   document.querySelectorAll('.drive-file').forEach(item=>item.remove());
-  $('#rich-note-form').reset();$('#rich-note-body').replaceChildren();$('#rich-note-author').textContent='';$('#rich-note-error').textContent='';$('#file-action-form').reset();$('#file-patient').replaceChildren();$('#file-action-description').textContent='';$('#file-action-error').textContent='';$('#note-drafts-list').replaceChildren();refreshDraftControls();
+  noteEditing=false;$('#rich-note-view-title').textContent='';$('#rich-note-view-time').textContent='';$('#rich-note-edit').hidden=true;$('#rich-note-form').reset();$('#rich-note-body').replaceChildren();$('#rich-note-author').textContent='';$('#rich-note-error').textContent='';$('#file-action-form').reset();$('#file-patient').replaceChildren();$('#file-action-description').textContent='';$('#file-action-error').textContent='';$('#note-drafts-list').replaceChildren();refreshDraftControls();
   for(const dialog of [noteDialog,$('#file-action-dialog'),$('#note-drafts-dialog'),$('#discard-note-dialog')]){if(dialog.open)dialog.close();document.querySelector(`#window-dock [data-window="${dialog.id}"]`)?.remove();}
 }
 function closeFolder(view){
@@ -263,7 +263,7 @@ async function openEditor(file=null,target='root',personId=null){
   if(dirty&&editor)noteDrafts.set(editor.key,draftSnapshot());
   const draft=noteDrafts.get(key),epoch=generation,request=++editorRequest;
   dirty=false;editor=null;refreshDraftControls();openingEditor=true;noteDialog.setAttribute('aria-busy','true');
-  $('#rich-note-body').replaceChildren();$('#rich-note-body').contentEditable='false';
+  noteEditing=false;$('#rich-note-edit').hidden=true;$('#rich-note-view-title').textContent='';$('#rich-note-view-time').textContent='';$('#rich-note-body').replaceChildren();$('#rich-note-body').contentEditable='false';
   $('#rich-note-name').value=file?.name||'';$('#rich-note-name').disabled=true;$('#rich-note-time').value='';$('#rich-note-time').disabled=true;
   $('#rich-note-author').textContent='';$('#rich-note-error').textContent=file?'Opening note from Google Drive…':'';
   $('#rich-note-print').disabled=true;$('#rich-note-trash').disabled=true;documentButtons(true);$('#rich-note-save').disabled=true;$('#rich-note-save').hidden=false;noteDialog.querySelector('.window-control').disabled=true;
@@ -278,27 +278,32 @@ async function openEditor(file=null,target='root',personId=null){
     $('#rich-note-name').value=draft?draft.name:fileMetadata?.name||genericName(content.noteAt);$('#rich-note-time').value=draft?draft.time:localDate(content.noteAt);$('#rich-note-body').innerHTML=cleanNoteHtml(draft?draft.html:content.html);$('#rich-note-author').textContent='Entered by '+content.authorName+(editable?'':' · Read-only: only the creator can edit or delete');
     noteDialog.querySelectorAll('button').forEach(button=>button.disabled=false);
     $('#rich-note-name').disabled=!editable;$('#rich-note-time').disabled=!editable;$('#rich-note-body').contentEditable=String(editable);$('#rich-note-save').hidden=!editable;$('#rich-note-trash').hidden=!editable;documentButtons(!editable);$('#rich-note-error').textContent=draft?'Unsaved draft restored. Save note to store these changes in Drive.':'';
-    refreshDraftControls();focusNoteEditor();
+    setNoteMode(!fileMetadata||Boolean(draft)&&editable);refreshDraftControls();focusNoteEditor();
   }catch(error){if(epoch===generation&&request===editorRequest){openingEditor=false;noteDialog.setAttribute('aria-busy','false');$('#rich-note-error').textContent=error.message;noteDialog.querySelector('.window-control').disabled=false;}}
+}
+function setNoteMode(editing){
+ const allowed=Boolean(editor&&(!editor.file||canManageDocument(editor.file,getCurrentUser())));noteEditing=Boolean(editing&&allowed);noteDialog.classList.toggle('note-viewing',!noteEditing);$('#rich-note-name').closest('label').hidden=!noteEditing;$('#rich-note-time').closest('label').hidden=!noteEditing;noteDialog.querySelector('.rich-toolbar').hidden=!noteEditing;
+ $('#rich-note-view-title').hidden=noteEditing;$('#rich-note-view-time').hidden=noteEditing;$('#rich-note-view-title').textContent=$('#rich-note-name').value||'Clinical note';$('#rich-note-view-time').textContent=editor?'Note date: '+new Date(editor.document.noteAt).toLocaleString()+' · Created: '+new Date(editor.document.createdAt).toLocaleString()+(editor.document.updatedAt!==editor.document.createdAt?' · Last edited: '+new Date(editor.document.updatedAt).toLocaleString():''):'';
+ $('#rich-note-body').setAttribute('role',noteEditing?'textbox':'document');$('#rich-note-body').setAttribute('aria-readonly',String(!noteEditing));$('#rich-note-body').tabIndex=0;setEditorBusy(false);
 }
 function documentButtons(disabled){for(const button of window.document.querySelectorAll('[data-format]'))button.disabled=disabled;updateFormatButtons();}
 async function saveEditor(){
-  if(!editor||busy)return;
+  if(!active||!editor||busy||!noteEditing||editor.file&&!canManageDocument(editor.file,getCurrentUser()))return;
   const time=$('#rich-note-time').value,date=new Date(time);
   if(!time||!Number.isFinite(date.getTime())){$('#rich-note-error').textContent='Enter a valid date and time.';return;}
   const html=cleanNoteHtml($('#rich-note-body').innerHTML);if(html.length>200000){$('#rich-note-error').textContent='This note is too long. Use fewer than 200,000 characters of formatted content.';return;}
   const entry=editor,name=$('#rich-note-name').value.trim()||genericName(date),content={...entry.document,html,noteAt:date.toISOString(),updatedAt:new Date().toISOString()};
   setEditorBusy(true);$('#rich-note-error').textContent='Saving directly to Google Drive…';
   try{
-    await operation(async epoch=>{const saved=await saveDesktopDocument(entry.target,name,content,entry.file,entry.personId);if(epoch!==generation)return;record(entry.file?'updated':'created',saved,entry.personId);dirty=false;noteDrafts.delete(entry.key);editor={file:saved,document:content,target:entry.target,key:'file:'+saved.id};refreshDraftControls();noteDialog.close();});
+    await operation(async epoch=>{const saved=await saveDesktopDocument(entry.target,name,content,entry.file,entry.personId);if(epoch!==generation)return;record(entry.file?'updated':'created',saved,entry.personId);dirty=false;noteDrafts.delete(entry.key);editor={file:saved,document:content,target:entry.target,key:'file:'+saved.id};refreshDraftControls();setNoteMode(false);$('#rich-note-error').textContent='Note saved';focusNoteEditor();});
     await refreshFiles();hooks.chartChanged();
   }catch(error){if(active)$('#rich-note-error').textContent=error.message;}
   finally{setEditorBusy(false);}
 }
 function setEditorBusy(value){
-  const editable=Boolean(editor&&(!editor.file||canManageDocument(editor.file,getCurrentUser())));
+  const allowed=Boolean(editor&&(!editor.file||canManageDocument(editor.file,getCurrentUser()))),editable=allowed&&noteEditing;
   noteDialog.querySelectorAll('button').forEach(button=>button.disabled=value);
-  $('#rich-note-name').disabled=value||!editable;$('#rich-note-time').disabled=value||!editable;$('#rich-note-body').contentEditable=String(!value&&editable);documentButtons(value||!editable);$('#rich-note-trash').hidden=!editable;$('#rich-note-print').disabled=value||!editor;
+  $('#rich-note-name').disabled=value||!editable;$('#rich-note-time').disabled=value||!editable;$('#rich-note-body').contentEditable=String(!value&&editable);documentButtons(value||!editable);$('#rich-note-trash').hidden=!allowed;$('#rich-note-save').hidden=!editable;$('#rich-note-edit').hidden=!editor?.file||!allowed||noteEditing;$('#rich-note-print').disabled=value||!editor;
 }
 async function printEditor(){
  if(!active||!editor||busy||openingEditor)return;const entry=editor,stamp=generation,time=new Date($('#rich-note-time').value);if(!Number.isFinite(time.getTime())){$('#rich-note-error').textContent='Enter a valid date and time.';return;}
