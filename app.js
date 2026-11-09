@@ -1,22 +1,22 @@
-import {changeFolderLink} from './model.js?v=0.18.0';
-import {openMainWindow,closeMainWindow} from './windows.js?v=0.18.0';
-import {initCalendar,calendarSession} from './calendar.js?v=0.18.0';
-import {initBackground} from './background.js?v=0.18.0';
-import {initHistory,historySession,openHistory} from './history.js?v=0.18.0';
-import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.18.0';
-import {printDocument} from './printing.js?v=0.18.0';
-import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.18.0';
-import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.18.0';
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.18.0';
-import {updateSessionPresence} from './presence.js?v=0.18.0';
-import {closeAppMenu} from './app-menu.js?v=0.18.0';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.18.0';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.18.0';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.18.0';
-import {validatePhoto} from './photos.js?v=0.18.0';
-import './windows.js?v=0.18.0';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.18.0';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.18.0';
+import {changeFolderLink} from './model.js?v=0.18.1';
+import {openMainWindow,closeMainWindow} from './windows.js?v=0.18.1';
+import {initCalendar,calendarSession} from './calendar.js?v=0.18.1';
+import {initBackground} from './background.js?v=0.18.1';
+import {initHistory,historySession,openHistory} from './history.js?v=0.18.1';
+import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.18.1';
+import {printDocument} from './printing.js?v=0.18.1';
+import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.18.1';
+import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.18.1';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.18.1';
+import {updateSessionPresence} from './presence.js?v=0.18.1';
+import {closeAppMenu} from './app-menu.js?v=0.18.1';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.18.1';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.18.1';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.18.1';
+import {validatePhoto} from './photos.js?v=0.18.1';
+import './windows.js?v=0.18.1';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.18.1';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.18.1';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
@@ -160,6 +160,7 @@ try{
   driveConfig={...remembered,...Object.fromEntries(Object.entries(driveConfig).filter(([,value])=>value))};
 }catch{}
 function fillSettings(){
+  const driveActive=connected&&hasDriveAccess(),driveReady=driveActive&&workspaceReady;$('#drive-dialog').classList.toggle('drive-connected',driveReady);$('#drive-connection-badge').hidden=!driveActive;const connectionLabel=driveReady?'● Connected to Google Drive':'Google signed in · finish directory sync';if($('#drive-connection-badge').textContent!==connectionLabel)$('#drive-connection-badge').textContent=connectionLabel;
   $('#sync-folder-name').textContent=driveConfig.folder?(driveConfig.folderName||'Directory folder selected'):'No directory folder selected';
   $('#google-connect').disabled=connecting;
   $('#google-connect').setAttribute('aria-busy',String(connecting));

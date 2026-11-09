@@ -8,7 +8,11 @@ From this repository, run `npm start` (Node/npm and Python 3 required), then ope
 
 After connecting, the desktop opens with the main record window closed. Double-click **The BHR** at the top right (or focus its icon and press Enter) to open records. Use **+ New** to create a person, select them in the directory, and enter notes with Enter or Add. Notes appear oldest first, with timestamps displayed in the device's timezone. **Export JSON** downloads a backup. No sample health records are included.
 
+The application's last menu item, **About…**, displays the abbey emblem, Brother Health Records System name, current release version and copyright. Its Close button or Escape returns to the menu. Native browser printing while About is open prints only this branding card.
+
 ## Required connection and desktop handoff notes
+
+The Drive dialog gains a steady green perimeter glow and a Connected label after sign-in and successful directory sync. Signing in without completing directory sync is labeled separately and does not show the ready glow. Disconnecting or expiring access removes the glow.
 
 Every opening shows the Drive connection dialog and hides/disables the workspace until Google sign-in and a successful directory sync finish. Choose **Use Infirmary-BHR** or select a storage location after signing in; a remembered location syncs automatically. Escape, the dialog Close button and minimize cannot dismiss the required connection step. A failed initial sync leaves it blocked with a retryable error. Disconnecting or losing the active access token locks the workspace again. This frontend gate is not backend authorization and does not encrypt or remove existing localStorage records.
 

@@ -1,5 +1,11 @@
 # Version history
 
+## 0.18.1 — 2026-11-09
+
+- Enlarge The BHR desktop artwork within its unchanged grid slot.
+- Highlight the Google Drive dialog with a steady green perimeter glow once connection and directory sync are ready; show connection status explicitly.
+- Add About… as the last application-menu item, with a large abbey emblem, system name, release version and copyright; native printing from this dialog includes only its branding.
+
 ## 0.18.0 — 2026-11-09
 
 - Start with the desktop after connecting; open The BHR from a new retro computer icon, and close its window with X beside maximize. Retain minimize/restore and window geometry.

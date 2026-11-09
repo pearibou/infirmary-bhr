@@ -18,3 +18,6 @@ menu.addEventListener('keydown',event=>{
 for(const item of menu.querySelectorAll('[role="menuitem"]'))item.addEventListener('click',()=>closeAppMenu(item.id==='export'));
 document.addEventListener('pointerdown',event=>{if(!event.target.closest('.application-menu'))closeAppMenu();});
 document.addEventListener('focusin',event=>{if(!event.target.closest('.application-menu'))closeAppMenu();});
+
+document.querySelector('#about-open').addEventListener('click',()=>{const dialog=document.querySelector('#about-dialog');if(!dialog.open)dialog.showModal();});
+document.querySelector('#about-dialog').addEventListener('close',()=>toggle.focus());
