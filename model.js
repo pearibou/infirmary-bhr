@@ -1,6 +1,6 @@
-import {validateStickyDrawing} from './sticky-drawing.js?v=0.16.1';
-import {validateDemographics} from './demographics-model.js?v=0.16.1';
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.16.1';
+import {validateStickyDrawing} from './sticky-drawing.js?v=0.16.2';
+import {validateDemographics} from './demographics-model.js?v=0.16.2';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.16.2';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');

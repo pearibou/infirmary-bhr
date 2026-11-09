@@ -1,5 +1,10 @@
 # Version history
 
+## 0.16.2 — 2026-11-09
+
+- Add a per-calendar print symbol picker with 20 outlined medical symbols plus the existing blue Star of Life default. Preserve selection in Drive and omit captions from print.
+- Center Area over its column in both calendar print formats.
+
 ## 0.16.1 — 2026-11-09
 
 - Match the reference calendar’s print-only palette: pale-yellow week heading, light-gray day headers, white rows, dotted gray rules and black administrator divider.
