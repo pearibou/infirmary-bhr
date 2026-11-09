@@ -1,5 +1,10 @@
 # Version history
 
+## 0.24.1 — 2026-11-09
+
+- Enlarge the visible Vital Signs desktop artwork by 50%, compensating for its transparent image margins while preserving the grid cell and label placement.
+
+
 ## 0.24.0 — 2026-11-09
 
 - Show email addresses parenthetically beside display names in the connected-users pane.
