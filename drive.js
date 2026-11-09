@@ -1,6 +1,7 @@
-import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.12.4';
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.12.4';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.12.4';
+import {validateCalendar,calendarContent} from './calendar-model.js?v=0.13.0';
+import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.13.0';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.13.0';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.13.0';
 let token,expires=0,loading,authorizedClient,currentUser,workspaceFolder,workspaceName,legacyRootId,storageEpoch=0;
 const activeRequests=new Set();
 export function disconnect(){storageEpoch++;workspaceFolder=undefined;workspaceName=undefined;legacyRootId=undefined;for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
@@ -290,4 +291,22 @@ export async function findHistoryWorkbook(knownId,create=false){
  if(matches.length>1)throw new Error('Multiple Medical History (BHR) spreadsheets found. Keep one master workbook.');if(matches.length)return matches[0];
  if(!create){const error=new Error('No Medical History (BHR) workbook exists yet.');error.code='HISTORY_WORKBOOK_MISSING';throw error;}
  const file=await(await api('files?fields=id,name,mimeType,parents',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.spreadsheet',parents:[workspaceFolder],appProperties:{bhrHistory:'1'}})})).json();if(epoch!==storageEpoch)throw new Error('Connection changed.');return file;
+}
+
+const calendarFields='id,name,mimeType,parents,appProperties,createdTime,modifiedTime,trashed';
+function requireCalendarAccess(){if(!hasDriveAccess()||!getCurrentUser())throw new Error('Reconnect Google Drive to identify the calendar editor.');if(!workspaceFolder)throw new Error('Sync Infirmary-BHR first.');}
+export async function listAppointmentCalendars(calendarId=null){
+ requireCalendarAccess();if(calendarId)safeDriveId(calendarId);
+ const files=[];let pageToken;const q=`'${workspaceFolder}' in parents and trashed = false and appProperties has { key='bhrCalendar' and value='1' }`+(calendarId?` and appProperties has { key='calendarId' and value='${calendarId}' }`:'');
+ do{const params=new URLSearchParams({q,fields:`files(${calendarFields}),nextPageToken`,pageSize:'100',...(pageToken?{pageToken}:{})});const result=await(await api('files?'+params)).json();files.push(...result.files.filter(file=>file.appProperties?.bhrCalendar==='1'&&(!calendarId||file.appProperties.calendarId===calendarId)));pageToken=result.nextPageToken;}while(pageToken);return files;
+}
+async function appointmentCalendarMetadata(fileId){requireCalendarAccess();const response=await api(`files/${safeDriveId(fileId)}?fields=${calendarFields}`),file=await response.json();if(file.trashed||file.appProperties?.bhrCalendar!=='1'||!file.parents?.includes(workspaceFolder))throw new Error('This appointment calendar is unavailable in Infirmary-BHR.');return {...file,etag:response.headers.get('etag')};}
+export async function readAppointmentCalendar(fileId){const epoch=storageEpoch,file=await appointmentCalendarMetadata(fileId);if(epoch!==storageEpoch)throw new Error('Connection changed.');const calendar=validateCalendar(await(await api(`files/${safeDriveId(fileId)}?alt=media`)).json());if(epoch!==storageEpoch)throw new Error('Connection changed.');if(file.appProperties.calendarId!==calendar.id)throw new Error('Calendar identity does not match its Drive file.');return {file,calendar};}
+export async function saveAppointmentCalendar(calendar,baseline=null){
+ requireCalendarAccess();validateCalendar(calendar);if(calendar.updatedById!==getCurrentUser().id)throw new Error('Reconnect before saving this calendar.');const epoch=storageEpoch;
+ let file;if(baseline){const loaded=await readAppointmentCalendar(baseline.id);file=loaded.file;if(file.modifiedTime!==baseline.modifiedTime||file.appProperties.calendarId!==calendar.id||loaded.calendar.createdAt!==calendar.createdAt||loaded.calendar.createdById!==calendar.createdById)throw new Error('This calendar changed in Drive. Reopen it to review the latest version. Your draft has been kept.');}
+ else{const matches=await listAppointmentCalendars(calendar.id);if(matches.length>1)throw new Error('Duplicate calendar IDs found in Drive. No file was overwritten.');if(matches.length){const previous=await readAppointmentCalendar(matches[0].id);if(JSON.stringify(calendarContent(previous.calendar))===JSON.stringify(calendarContent(calendar)))return previous.file;throw new Error('This calendar was already saved with different details. Reopen it before changing it. Your draft has been kept.');}}
+ if(epoch!==storageEpoch)throw new Error('Connection changed.');
+ const metadata={name:`Calendar ${calendar.weekStart} — ${calendar.title}.json`,mimeType:'application/json',appProperties:{bhrCalendar:'1',calendarId:calendar.id,weekStart:calendar.weekStart},...(!baseline?{parents:[workspaceFolder]}:{})},boundary='bhrcalendar_'+crypto.randomUUID(),body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(calendar)}\r\n--${boundary}--`;
+ const response=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files${baseline?'/'+safeDriveId(baseline.id):''}?uploadType=multipart&fields=${calendarFields}`,{method:baseline?'PATCH':'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`,...(file?.etag?{'If-Match':file.etag}:{})},body});if(epoch!==storageEpoch)throw new Error('Connection changed.');if(!response.ok)throw new Error(response.status===412?'This calendar changed in Drive. Reopen it before editing.':'Calendar save failed. Your draft has been kept.');return response.json();
 }

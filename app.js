@@ -1,19 +1,20 @@
-import {initBackground} from './background.js?v=0.12.4';
-import {initHistory,historySession,openHistory} from './history.js?v=0.12.4';
-import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.12.4';
-import {printDocument} from './printing.js?v=0.12.4';
-import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.12.4';
-import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.12.4';
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.12.4';
-import {updateSessionPresence} from './presence.js?v=0.12.4';
-import {closeAppMenu} from './app-menu.js?v=0.12.4';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.12.4';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.12.4';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.12.4';
-import {validatePhoto} from './photos.js?v=0.12.4';
-import './windows.js?v=0.12.4';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.12.4';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.12.4';
+import {initCalendar,calendarSession} from './calendar.js?v=0.13.0';
+import {initBackground} from './background.js?v=0.13.0';
+import {initHistory,historySession,openHistory} from './history.js?v=0.13.0';
+import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.13.0';
+import {printDocument} from './printing.js?v=0.13.0';
+import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.13.0';
+import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.13.0';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.13.0';
+import {updateSessionPresence} from './presence.js?v=0.13.0';
+import {closeAppMenu} from './app-menu.js?v=0.13.0';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.13.0';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu} from './sticky.js?v=0.13.0';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.13.0';
+import {validatePhoto} from './photos.js?v=0.13.0';
+import './windows.js?v=0.13.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.13.0';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.13.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
@@ -358,14 +359,14 @@ $('#trash-form').onsubmit=event=>{
 $('#trash-dialog').addEventListener('close',()=>{trashTarget=undefined;$('#trash-entry-label').textContent='';});
 
 function lockWorkspace(){
-  clearDemographics();historySession(false);medicationsSession(false);documentsSession(false);
+  clearDemographics();calendarSession(false);historySession(false);medicationsSession(false);documentsSession(false);
   if(!hasDriveAccess()){connected=false;clearPhotos();$('#current-user').textContent='';}
   workspaceReady=false;document.body.classList.add('drive-locked');$('.desktop').inert=true;closeDesktopMenu();closeAppMenu();
   for(const dialog of document.querySelectorAll('dialog'))if(dialog.id!=='drive-dialog'&&dialog.open)dialog.close();
   $('#connection-required').hidden=false;$('#drive-dialog [data-close]').disabled=true;fillSettings();
   if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();
 }
-function unlockWorkspace(){const opening=!workspaceReady;workspaceReady=true;document.body.classList.remove('drive-locked');$('.desktop').inert=storageFailed;$('#connection-required').hidden=true;$('#drive-dialog [data-close]').disabled=false;fillSettings();documentsSession(true);medicationsSession(true);historySession(true);if(opening)renderKeepingDraft();}
+function unlockWorkspace(){const opening=!workspaceReady;workspaceReady=true;document.body.classList.remove('drive-locked');$('.desktop').inert=storageFailed;$('#connection-required').hidden=true;$('#drive-dialog [data-close]').disabled=false;fillSettings();documentsSession(true);medicationsSession(true);historySession(true);calendarSession(true);if(opening)renderKeepingDraft();}
 $('#drive-dialog').addEventListener('cancel',event=>{if(!workspaceReady)event.preventDefault();});
 $('#drive-dialog').addEventListener('close',()=>{if(!workspaceReady&&!choosingFolder)queueMicrotask(()=>{if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();});});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&workspaceReady&&!hasDriveAccess()){lockWorkspace();readyGoogle();}});
@@ -379,6 +380,7 @@ $('#sticky-form').onsubmit=event=>{
   next.desktopNotes.push({id:crypto.randomUUID(),text,createdAt:now,updatedAt:now,authorName:user?.name||'Connected staff',...(user?{authorId:user.id}:{}),x:stickyOrigin.x,y:stickyOrigin.y});
   if(save(next)){$('#sticky-dialog').close();renderDesktopNotes(data.desktopNotes);runSync();}
 };
+initCalendar({people:()=>data.people.map(person=>({name:personName(person)})),activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('calendar',value)});
 initBackground();decoratePrintButtons();
 initDocuments({closeDesktopMenu,person:id=>data.people.find(person=>person.id===id),people:()=>[...data.people].sort(compareDirectoryPeople).map(person=>({id:person.id,name:personName(person),deceased:Boolean(person.deceased)})),activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('documents',value),chartChanged:()=>renderKeepingDraft()});
 initDemographics({person:id=>workspaceReady?data.people.find(person=>person.id===id):null,personName,activity:(...args)=>{appendActivity(...args);runSync();}});

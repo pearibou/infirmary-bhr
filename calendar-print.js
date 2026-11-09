@@ -1,0 +1,32 @@
+import {printableCalendar,DAY_NAMES,dayDate,dateLabel} from './calendar-model.js?v=0.13.0';
+let frame=null,generation=0;
+export function clearCalendarPrint(){generation++;frame?.remove();frame=null;}
+const node=(doc,tag,text)=>{const e=doc.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
+export async function printCalendar(calendar,mode){
+ // Public projection is made before constructing any print DOM. Private cells,
+ // attributes, source JSON and audit metadata never enter the community copy.
+ const data=printableCalendar(calendar,mode),full=mode==='administrator';clearCalendarPrint();const stamp=generation,target=document.createElement('iframe');frame=target;target.id='calendar-print-frame';target.title=full?'Administrator calendar print':'Public calendar print';target.setAttribute('aria-hidden','true');target.style.cssText='position:fixed;left:-10000px;top:0;width:1100px;height:1100px;border:0';document.body.append(target);
+ const doc=target.contentDocument;doc.open();doc.write('<!doctype html><html><head><meta charset="utf-8"><title>Appointment calendar</title></head><body></body></html>');doc.close();
+ const style=node(doc,'style');style.textContent=`@page{size:letter ${full?'landscape':'portrait'};margin:10mm}*{box-sizing:border-box;min-width:0}html,body{margin:0;padding:0;background:white;color:black;font-family:Arial,sans-serif}.calendar-paper{width:${full?'259.4':'195.9'}mm;height:${full?'195.9':'259.4'}mm;padding:0 1mm 1mm;overflow:visible}.calendar-content{width:100%}header{display:flex;justify-content:space-between;gap:14px;align-items:center;border-bottom:1px solid #555;padding-bottom:.6em;margin-bottom:.6em}h1{font-size:1.65em;margin:0;line-height:1.1}.week{font-size:1.12em;font-weight:bold;text-align:right;white-space:nowrap}.notice{white-space:pre-wrap;margin:.5em 0 1em;font-size:.95em;font-style:italic}table{width:calc(100% - 1px);table-layout:fixed;border-collapse:collapse;font-size:1em;line-height:1.18}thead th{text-align:left;font-size:.82em;font-style:italic;border-bottom:1px solid #777;padding:.4em .35em}td{vertical-align:top;padding:.55em .4em;white-space:pre-wrap;overflow-wrap:anywhere;border-right:1px dotted #999;border-bottom:1px dotted #999}td:last-child,th:last-child{border-right:0}.day-heading th{text-align:left;background:#eee;border-top:1px solid #777;border-bottom:1px solid #aaa;padding:.35em .4em;font-size:1.05em}.day-heading .date{margin-left:1em;font-weight:normal}.empty-row td{height:3.1em}.private-start{border-left:2px solid black!important}td:nth-child(2),td:nth-child(3),td:nth-child(4){text-align:center}.private-cell{font-size:.88em}tr{break-inside:avoid}.calendar-content{font-size:${full?'10':'14'}pt}table .name{font-weight:500}`;doc.head.append(style);
+ const paper=node(doc,'main'),content=node(doc,'div');paper.className='calendar-paper';content.className='calendar-content';paper.append(content);doc.body.append(paper);
+ const header=node(doc,'header'),week=node(doc,'div','Week of: '+dateLabel(data.weekStart));week.className='week';header.append(node(doc,'h1',data.title),week);content.append(header);const notice=node(doc,'p',data.notice);notice.className='notice';content.append(notice);
+ const columns=full?['Name','Leaving by','Returning around','Area','Appt time','Reason','Address / phone']:['Name','Leaving by','Returning around','Area'],widths=full?[29,10,11,15,8,13,14]:[36,18,21,25],keys=['name','leaving','returning','area','appointmentTime','reason','address'];
+ const table=node(doc,'table'),cols=node(doc,'colgroup'),head=node(doc,'thead'),labels=node(doc,'tr');for(const [i,title] of columns.entries()){const col=node(doc,'col');col.style.width=widths[i]+'%';cols.append(col);const th=node(doc,'th',title);if(full&&i===4)th.className='private-start';labels.append(th);}head.append(labels);table.append(cols,head);content.append(table);
+ for(let day=0;day<7;day++){
+  if(day===5&&!data.includeSaturday||day===6&&!data.includeSunday)continue;
+  const group=node(doc,'tbody'),heading=node(doc,'tr');heading.className='day-heading';const date=node(doc,'th');date.colSpan=4;date.append(doc.createTextNode(DAY_NAMES[day].slice(0,3)),node(doc,'span',dateLabel(dayDate(data.weekStart,day))));date.querySelector('span').className='date';heading.append(date);if(full){const privateHead=node(doc,'th');privateHead.colSpan=3;privateHead.className='private-start';heading.append(privateHead);}group.append(heading);
+  const entries=data.appointments.filter(row=>row.day===day);for(const row of entries.length?entries:[null]){const tr=node(doc,'tr');tr.className='appointment-row'+(!row?' empty-row':'');for(const [i,key] of keys.slice(0,columns.length).entries()){const td=node(doc,'td',row?.[key]||'');if(i===0)td.className='name';if(full&&i>=4)td.classList.add('private-cell');if(full&&i===4)td.classList.add('private-start');tr.append(td);}group.append(tr);}table.append(group);
+ }
+ try{
+  await doc.fonts.ready;if(stamp!==generation)throw new Error('Printing cancelled.');
+  const maximum=full?10:14,minimum=full?8:9,available=paper.clientHeight-4;let fit=false;
+  for(let size=maximum;size>=minimum;size-=.25){content.style.fontSize=size+'pt';if(content.scrollHeight<=available&&content.scrollWidth<=content.clientWidth){fit=true;break;}}
+  if(!fit)throw new Error('This calendar has too much information for one readable Letter page. Shorten entries or use a separate calendar; nothing was cut off.');
+  // Use spare vertical space for the week instead of leaving a short table
+  // stranded at the top of the page. Dense calendars retain the fitted spacing.
+  const rows=[...table.querySelectorAll('.appointment-row')],remaining=Math.max(0,available-content.scrollHeight-8);
+  for(const row of rows)row.style.height=(row.getBoundingClientRect().height+remaining/rows.length)+'px';
+  if(content.scrollHeight>available)for(const row of rows)row.style.height='';
+  target.contentWindow.addEventListener('afterprint',()=>{if(frame===target)clearCalendarPrint();},{once:true});target.contentWindow.focus();target.contentWindow.print();
+ }catch(error){if(frame===target)clearCalendarPrint();throw error;}
+}
