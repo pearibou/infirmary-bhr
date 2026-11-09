@@ -69,12 +69,12 @@ with sync_playwright() as p:
     assert page.locator('.note').filter(has_text='Corrected observation').get_attribute('draggable')=='true'
     page.locator('.note-pencil').click()
     assert page.locator('#note-print svg').count()==1 and page.locator('#note-trash svg').count()==1
-    print_routes=[];page.route('**/icons/abbey-letterhead.png',lambda route:print_routes.append(route));page.locator('#note-print').click()
+    print_routes=[];page.route('**/icons/icon-512.png',lambda route:print_routes.append(route));page.locator('#note-print').click()
     page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Corrected observation')")
     page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
-    page.wait_for_timeout(100);print_routes.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes());page.wait_for_function('window.printCalls===1')
+    page.wait_for_timeout(100);print_routes.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes());page.wait_for_function('window.printCalls===1')
     assert 'Clinical quick note' in page.frame_locator('#bhr-print-frame').locator('body').inner_text()
-    page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");page.unroute('**/icons/abbey-letterhead.png')
+    page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");page.unroute('**/icons/icon-512.png')
 
     page.locator('#note-trash').click();assert page.locator('#trash-dialog').is_visible();page.locator('#trash-dialog [data-close]').click()
     page.locator('#note-dialog').get_by_role('button',name='Cancel',exact=True).click()

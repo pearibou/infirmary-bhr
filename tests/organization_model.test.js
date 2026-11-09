@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {validateOrganization,mergeOrganization} from '../organization-model.js';
+import {mergeDirectories,validateDirectory} from '../model.js';
+const org={version:1,name:'Synthetic Clinic',logo:{fileId:'private-logo'},updatedAt:'2026-11-09T17:00:00.000Z',updatedById:'staff',updatedByName:'Synthetic Staff'};
+test('organization remains optional for existing directories and survives merges with cached copies',()=>{const old={version:1,people:[]},backend={...old,organization:org};validateDirectory(old);validateDirectory(backend);assert.deepEqual(mergeDirectories(old,backend).organization,org);assert.deepEqual(mergeDirectories(backend,old).organization,org);const removed={...org,logo:null,updatedAt:'2026-11-09T18:00:00.000Z'};assert.deepEqual(mergeOrganization(org,removed),removed);assert.throws(()=>mergeOrganization(org,{...org,name:'Conflicting'}));});
+test('organization settings accept private Drive references, reject invalid names/embedded data',()=>{validateOrganization(org);validateOrganization({...org,logo:null});for(const change of [{name:''},{name:'a'.repeat(161)},{name:'line\nbreak'},{logo:{fileId:'https://public.invalid/logo'}},{logo:{fileId:'ok',base64:'bytes'}},{logo:0},{updatedAt:'invalid'}])assert.throws(()=>validateOrganization({...org,...change}));});

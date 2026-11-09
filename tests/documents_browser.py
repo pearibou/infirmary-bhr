@@ -200,12 +200,12 @@ with sync_playwright() as p:
     assert page.locator('#rich-note-view-title').inner_text()=='Synthetic clinical note'
     page.locator('#rich-note-dialog').screenshot(path='/tmp/bhr-clinical-note-view.png')
     assert page.locator('#rich-note-print svg').count()==1 and page.locator('#rich-note-trash').is_visible()
-    print_routes=[];page.route('**/icons/abbey-letterhead.png',lambda route:print_routes.append(route));page.locator('#rich-note-print').click()
+    print_routes=[];page.route('**/icons/icon-512.png',lambda route:print_routes.append(route));page.locator('#rich-note-print').click()
     page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Synthetic clinical text')")
     page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
-    page.wait_for_timeout(100);print_routes.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes());page.wait_for_function('window.printCalls===1')
+    page.wait_for_timeout(100);print_routes.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes());page.wait_for_function('window.printCalls===1')
     assert page.frame_locator('#bhr-print-frame').locator('ol').count()==1
-    page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");page.unroute('**/icons/abbey-letterhead.png')
+    page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");page.unroute('**/icons/icon-512.png')
 
     # Drive content is treated as untrusted on read; scripts and attributes disappear.
     page.locator('#rich-note-dialog [data-close]').click();contents[noteid]['html']='<p onclick="alert(1)"><b>Safe</b><script>window.bad=true</script><img src=x onerror="window.bad=true"></p>'
