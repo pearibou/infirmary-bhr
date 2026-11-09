@@ -1,8 +1,8 @@
-import {printDocument,clearPrint} from './printing.js?v=0.13.6';
-import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.13.6';
-import {readHistoryList,createHistoryList,addHistory,updateHistory,deleteHistory,resetHistorySource} from './history-api.js?v=0.13.6';
-import {loadCatalog,searchCatalog,newHistory,reviseHistory,historyName} from './history-model.js?v=0.13.6';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.13.6';
+import {printDocument,clearPrint} from './printing.js?v=0.14.0';
+import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.14.0';
+import {readHistoryList,createHistoryList,addHistory,updateHistory,deleteHistory,resetHistorySource} from './history-api.js?v=0.14.0';
+import {loadCatalog,searchCatalog,newHistory,reviseHistory,historyName} from './history-model.js?v=0.14.0';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.14.0';
 const $=s=>document.querySelector(s),node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 let hooks,active=false,epoch=0,busy=false,personId=null,context=null,formState=null,dirty=false,catalog=null,selection=null,searchTimer=null,searchRequest=0,deleteTarget=null;
 const person=id=>hooks.people().find(p=>p.id===id),known=()=>hooks.people().map(p=>p.historySheet?.spreadsheetId).filter(Boolean);

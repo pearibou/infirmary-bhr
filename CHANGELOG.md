@@ -1,5 +1,11 @@
 # Version history
 
+## 0.14.0 — 2026-11-09
+
+- Open saved appointment calendars in a readable day-by-day view with compact appointment cards and separated administrator details.
+- Add pencil Edit calendar and View calendar controls; saving returns to reading mode and switching protects unsaved drafts.
+- Keep print layouts unchanged; printing a saved reading view does not rewrite the calendar. Clear reading content on logout.
+
 ## 0.13.6 — 2026-11-09
 
 - Rename the medication editor field to Medication name and align its help/validation wording.
