@@ -155,3 +155,12 @@ test('quick-note date corrections preserve immutable original time and merge wit
  const tampered=structuredClone(corrected);delete tampered.edits[0].noteAt;assert.throws(()=>mergeDirectories(directory,{version:1,people:[person([tampered])]}),/revision/);
  assert.throws(()=>editNote(original,{id:'other',name:'Other'},'No','2026-11-07T14:00:00Z','2026-11-01T09:30:00Z'),/Only/);assert.throws(()=>editNote(original,{id:'synthetic',name:'Synthetic'},'No',date,'bad'),/date/);
 });
+
+test('folder detach markers survive stale sync and allow intentional later reattachment',async()=>{
+ const {changeFolderLink}=await import('../model.js');const p={id:'folder-person',name:'Synthetic person',info:'',notes:[],updatedAt:'2026-11-09T12:00:00Z',driveFolders:[{id:'folder-a',name:'Synthetic folder'}]},wrap=p=>({version:1,people:[p]});
+ const detached=changeFolderLink(p,p.driveFolders[0],false,new Date('2026-11-09T12:01:00Z'));validateDirectory(wrap(detached));assert.equal(detached.driveFolders.length,0);
+ for(const [a,b] of [[detached,p],[p,detached]])assert.deepEqual(mergeDirectories(wrap(a),wrap(b)).people[0].driveFolders,[]);
+ const reattached=changeFolderLink(detached,p.driveFolders[0],true,new Date('2026-11-09T12:02:00Z'));
+ for(const [a,b] of [[detached,reattached],[reattached,detached]])assert.equal(mergeDirectories(wrap(a),wrap(b)).people[0].driveFolders[0].id,'folder-a');
+ assert.throws(()=>validateDirectory(wrap({...p,folderLinkStates:[{id:'bad/id',attached:false,updatedAt:p.updatedAt}]})));
+});

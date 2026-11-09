@@ -42,7 +42,7 @@ with sync_playwright() as p:
     try:unlock_test_drive(page)
     except Exception:
         print({'errors':errors,'drive':page.locator('#drive-status').inner_text(),'connection':page.locator('#connection').inner_text()});raise
-    icon=page.locator('#calendar-maker-icon');event=page.locator('#event-log-icon');assert icon.bounding_box()['x']<event.bounding_box()['x'] and abs(icon.bounding_box()['y']-event.bounding_box()['y'])<2
+    icon=page.locator('#calendar-maker-icon');event=page.locator('#bhr-icon');assert icon.bounding_box()['x']<event.bounding_box()['x'] and abs(icon.bounding_box()['y']-event.bounding_box()['y'])<2
     icon.dblclick();page.locator('#calendar-new').click();page.locator('#calendar-week').fill('2026-11-10');page.locator('#calendar-week').press('Tab');assert page.locator('#calendar-week').input_value()=='2026-11-08'
     page.locator('#calendar-name').fill('Synthetic appointments')
     def add(day,name='Synthetic public name',private=True):

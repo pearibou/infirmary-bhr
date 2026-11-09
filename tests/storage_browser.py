@@ -1,7 +1,7 @@
 """Synthetic real-ID workspace upgrade, desktop containment and reconnect."""
 import json,re,urllib.parse
 from playwright.sync_api import sync_playwright
-from browser_helpers import prepare_test_page,ignore_event_log_projection
+from browser_helpers import open_bhr,prepare_test_page,ignore_event_log_projection
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
     page=browser.new_page(viewport={'width':1280,'height':900},service_workers='block');prepare_test_page(page)
@@ -42,7 +42,7 @@ with sync_playwright() as p:
     assert files['unrelated']['parents']==['actual-root']
     assert page.evaluate("JSON.parse(localStorage.getItem('infirmary.drive')).folder")==home
     assert page.locator('#sync-folder-name').text_content()=='Infirmary-BHR'
-    page.locator('#drive-dialog [data-close]').click()
+    page.locator('#drive-dialog [data-close]').click();open_bhr(page)
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic old folder').wait_for()
     page.locator('.desktop').click(button='right',position={'x':20,'y':210});page.locator('#new-rich-note').click()
     page.locator('#rich-note-name').fill('Synthetic contained note');page.locator('#rich-note-body').fill('Synthetic protected body');page.locator('#rich-note-save').click()

@@ -1,5 +1,17 @@
 # Version history
 
+## 0.18.0 — 2026-11-09
+
+- Start with the desktop after connecting; open The BHR from a new retro computer icon, and close its window with X beside maximize. Retain minimize/restore and window geometry.
+- Move Event Log into the application menu with a clipboard icon; remove the desktop caption.
+- Add red folder-detach controls and a chart-link warning; sync per-folder state to prevent stale reattachment while preserving Drive files and allowing intentional reattachment.
+
+## 0.17.0 — 2026-11-09
+
+- Add medication refill overview/history, optional dispensing and prescription fields, pharmacy defaults, signed supply estimates, explained manual adjustments and separate warnings.
+- Store refills in on-demand per-person tabs in the existing private medication workbook, linked by stable medication IDs; retain existing medication rows and print layouts.
+- Add retry-safe creation, stale-update protection, edit/delete attribution, history retention after medication removal, mobile forms and logout cleanup.
+
 ## 0.16.2 — 2026-11-09
 
 - Add a per-calendar print symbol picker with 20 outlined medical symbols plus the existing blue Star of Life default. Preserve selection in Drive and omit captions from print.

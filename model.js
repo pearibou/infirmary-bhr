@@ -1,6 +1,6 @@
-import {validateStickyDrawing} from './sticky-drawing.js?v=0.16.2';
-import {validateDemographics} from './demographics-model.js?v=0.16.2';
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.16.2';
+import {validateStickyDrawing} from './sticky-drawing.js?v=0.18.0';
+import {validateDemographics} from './demographics-model.js?v=0.18.0';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.18.0';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
@@ -27,6 +27,7 @@ export function validateDirectory(data) {
     if(p.historySheet!==undefined&&(!p.historySheet||typeof p.historySheet.spreadsheetId!=='string'||!(/^[\w-]+$/).test(p.historySheet.spreadsheetId)||!Number.isInteger(p.historySheet.sheetId)||p.historySheet.sheetId<0))throw new Error('Invalid history sheet link.');
 
     if(p.birthDate!==undefined && (!p.birthDate || typeof p.birthDate!=='object' || birthDateError(p.birthDate)))throw new Error('Invalid birth date.');
+    if(p.folderLinkStates!==undefined){if(!Array.isArray(p.folderLinkStates)||p.folderLinkStates.length>1000)throw new Error('Invalid folder link states.');const ids=new Set();for(const state of p.folderLinkStates){if(!state||typeof state.id!=='string'||!/^[-\w]+$/.test(state.id)||ids.has(state.id)||typeof state.attached!=='boolean'||!validDate(state.updatedAt))throw new Error('Invalid folder link state.');ids.add(state.id);}}
     if(p.driveFolders!==undefined){
       if(!Array.isArray(p.driveFolders))throw new Error('Invalid Drive folders.');
       const folders=new Set();
@@ -63,8 +64,9 @@ export function mergeDirectories(local,remote){
     const notes=new Map(old.notes.map(n=>[n.id,n]));
     for(const note of incoming.notes){const existing=notes.get(note.id);notes.set(note.id,existing?mergeNote(existing,note):note);}
     const latest=Date.parse(incoming.updatedAt)>Date.parse(old.updatedAt)?incoming:old;
-    const folders=new Map([...(old.driveFolders||[]),...(incoming.driveFolders||[])].map(folder=>[folder.id,folder]));
-    people.set(old.id,{...latest,...(folders.size?{driveFolders:[...folders.values()]}:{}),notes:[...notes.values()].sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)||a.id.localeCompare(b.id))});
+    const folderStates=new Map();for(const state of [...(old.folderLinkStates||[]),...(incoming.folderLinkStates||[])]){const previous=folderStates.get(state.id);if(!previous||Date.parse(state.updatedAt)>Date.parse(previous.updatedAt)||state.updatedAt===previous.updatedAt&&!state.attached)folderStates.set(state.id,structuredClone(state));}
+    const folders=new Map([...(old.driveFolders||[]),...(incoming.driveFolders||[])].map(folder=>[folder.id,folder]));for(const state of folderStates.values())if(!state.attached)folders.delete(state.id);
+    people.set(old.id,{...latest,...((folders.size||old.driveFolders||incoming.driveFolders||folderStates.size)?{driveFolders:[...folders.values()]}:{}),...(folderStates.size?{folderLinkStates:[...folderStates.values()].sort((a,b)=>a.id.localeCompare(b.id))}:{}),notes:[...notes.values()].sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt)||a.id.localeCompare(b.id))});
   }
   const removedDesktop=new Set([...(local.deleted?.desktopNotes||[]),...(remote.deleted?.desktopNotes||[])]),desktop=new Map();
   for(const note of [...(local.desktopNotes||[]),...(remote.desktopNotes||[])]){
@@ -190,4 +192,10 @@ export function compareDirectoryPeople(a,b){
     ||directoryCollator.compare(a.lastName?.trim()||personName(a),b.lastName?.trim()||personName(b))
     ||directoryCollator.compare(a.firstName?.trim()||personName(a),b.firstName?.trim()||personName(b))
     ||a.id.localeCompare(b.id);
+}
+
+export function changeFolderLink(person,folder,attached,now=new Date()){
+ if(!folder||typeof folder.id!=='string'||!/^[-\w]+$/.test(folder.id)||typeof folder.name!=='string')throw new Error('Invalid Drive folder link.');
+ const next=structuredClone(person),states=new Map((person.folderLinkStates||[]).map(s=>[s.id,s]));const stamp=new Date(Math.max(now.getTime(),Date.parse(person.updatedAt)+1,...[...states.values()].map(s=>Date.parse(s.updatedAt)+1))).toISOString();
+ const folders=(next.driveFolders||[]).filter(f=>f.id!==folder.id);if(attached)folders.push({...folder});next.driveFolders=folders;states.set(folder.id,{id:folder.id,attached,updatedAt:stamp});next.folderLinkStates=[...states.values()];next.updatedAt=stamp;return next;
 }

@@ -25,8 +25,16 @@ def open_drive(page):
         page.locator('#drive-open').click()
 # General UI fixtures use "root" as the ID of an already-prepared workspace.
 # storage_browser.py and storage.test.js exercise actual My Drive/container IDs.
-def unlock_test_drive(page,profile=True):
-    if not page.locator('body').evaluate("el=>el.classList.contains('drive-locked')"):return
+def open_bhr(page):
+    if page.locator("#drive-dialog").is_visible() and not page.locator("body").evaluate("e=>e.classList.contains('drive-locked')"):page.locator("#drive-dialog [data-close]").click()
+    if page.locator("#records-window").get_attribute("hidden") is not None:page.locator("#bhr-icon").dblclick()
+def open_event_log(page):
+    if not page.locator("#app-menu").is_visible():page.locator("#app-menu-toggle").click()
+    page.locator("#event-log-icon").click()
+def unlock_test_drive(page,profile=True,open_records=True):
+    if not page.locator('body').evaluate("el=>el.classList.contains('drive-locked')"):
+        if open_records:open_bhr(page)
+        return
     snapshot=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')||'{\"version\":1,\"people\":[]}')")
     routes=[]
     def add(pattern,handler):routes.append((pattern,handler));page.route(pattern,handler)
@@ -44,6 +52,7 @@ def unlock_test_drive(page,profile=True):
     page.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'")
     page.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()
     for pattern,handler in routes:page.unroute(pattern,handler)
+    if open_records:open_bhr(page)
 def fill_death_date(dialog,value):
     year,month,day=value.split('-')
     for label,text in [('Death year',year),('Death month',month),('Death day',day)]:dialog.get_by_label(label,exact=True).fill(text)
