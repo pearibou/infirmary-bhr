@@ -1,5 +1,12 @@
 # Version history
 
+## 0.26.0 — 2026-11-09
+
+- Add browser-local automatic directory sync frequency in Preferences, defaulting to 10 seconds with an Off (not recommended) option; keep access-expiry locking independent of polling.
+- Display tiny Synchronizing… text beside the rotating sync arrow throughout directory requests, reserving space to prevent toolbar movement.
+- Add subtle horizontal dividers between sections on person records.
+
+
 ## 0.25.0 — 2026-11-09
 
 - Add in-app refill alerts with a retro bottle/exclamation count, gentle attention animation and reduced-motion support.

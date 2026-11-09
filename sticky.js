@@ -1,7 +1,7 @@
-import {registerDesktopItem} from './desktop-selection.js?v=0.25.0';
-import {smallIcon} from './icons-ui.js?v=0.25.0';
-import {validateStickyDrawing,paintSticky} from './sticky-drawing.js?v=0.25.0';
-import {makeTrashable,draggedEntry,finishEntryDrag} from './trash.js?v=0.25.0';
+import {registerDesktopItem} from './desktop-selection.js?v=0.26.0';
+import {smallIcon} from './icons-ui.js?v=0.26.0';
+import {validateStickyDrawing,paintSticky} from './sticky-drawing.js?v=0.26.0';
+import {makeTrashable,draggedEntry,finishEntryDrag} from './trash.js?v=0.26.0';
 const desktop=document.querySelector('.desktop'),layer=document.querySelector('#sticky-notes'),menu=document.querySelector('#desktop-context-menu');
 let createNote,moveNote,editNote,dropOffset={x:0,y:0},menuOrigin={x:24,y:24};
 const top=()=>document.querySelector('.menubar').getBoundingClientRect().bottom;
