@@ -1,5 +1,9 @@
 # Version history
 
+## 0.13.5 — 2026-11-09
+
+- Use the standard arrow over clinical quick notes instead of the platform-dependent grab cursor, preserving author-only drag-to-trash and edit-button pointers.
+
 ## 0.13.4 — 2026-11-09
 
 - Add optional Race/ethnicity and Nationality fields to Additional information, demographics display, printouts, and Drive synchronization.
