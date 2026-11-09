@@ -1,5 +1,11 @@
 # Version history
 
+## 0.15.0 — 2026-11-09
+
+- Add shared sticky editing, right-click Edit/Minimize/Trash, and a local minimized-note strip below the menu bar.
+- Add sticky-only drawing tools with ink colors, brush sizes, undo and clear; persist validated strokes through Drive sync and clear drawing state on logout.
+- Preserve original sticky creators, attribute edits, and merge content separately from position updates; document future drawing-editor ideas.
+
 ## 0.14.1 — 2026-11-09
 
 - Rename Calendar Maker to Weekly Appts on the desktop, window titles, accessibility labels and connection message.

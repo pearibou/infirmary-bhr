@@ -1,5 +1,6 @@
-import {validateDemographics} from './demographics-model.js?v=0.14.1';
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.14.1';
+import {validateStickyDrawing} from './sticky-drawing.js?v=0.15.0';
+import {validateDemographics} from './demographics-model.js?v=0.15.0';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.15.0';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
@@ -11,7 +12,7 @@ export function validateDirectory(data) {
   }
   if(data.desktopNotes!==undefined){
     if(!Array.isArray(data.desktopNotes))throw new Error('Invalid desktop notes.');
-    const ids=new Set();for(const note of data.desktopNotes){if(!note||typeof note.id!=='string'||!note.id||ids.has(note.id)||typeof note.text!=='string'||!note.text.trim()||!validDate(note.createdAt)||!validDate(note.updatedAt)||typeof note.authorName!=='string'||!Number.isFinite(note.x)||!Number.isFinite(note.y)||note.x<0||note.y<0)throw new Error('Invalid desktop note.');ids.add(note.id);}
+    const ids=new Set();for(const note of data.desktopNotes){if(!note||typeof note.id!=='string'||!note.id||ids.has(note.id)||typeof note.text!=='string'||note.text.length>5000||(!note.text.trim()&&!note.drawing?.length)||!validDate(note.createdAt)||!validDate(note.updatedAt)||typeof note.authorName!=='string'||!Number.isFinite(note.x)||!Number.isFinite(note.y)||note.x<0||note.y<0)throw new Error('Invalid desktop note.');if(note.editedAt!==undefined&&!validDate(note.editedAt))throw new Error('Invalid sticky edit timestamp.');for(const key of ['editedBy','editedById'])if(note[key]!==undefined&&typeof note[key]!=='string')throw new Error('Invalid sticky editor.');validateStickyDrawing(note.drawing);ids.add(note.id);}
   }
   if(data.deleted?.desktopNotes!==undefined&&(!Array.isArray(data.deleted.desktopNotes)||data.deleted.desktopNotes.some(id=>typeof id!=='string'||!id)||new Set(data.deleted.desktopNotes).size!==data.deleted.desktopNotes.length))throw new Error('Invalid deleted desktop notes.');
   if(data.eventLog!==undefined)validateEventLog(data.eventLog);
@@ -68,8 +69,12 @@ export function mergeDirectories(local,remote){
   const removedDesktop=new Set([...(local.deleted?.desktopNotes||[]),...(remote.deleted?.desktopNotes||[])]),desktop=new Map();
   for(const note of [...(local.desktopNotes||[]),...(remote.desktopNotes||[])]){
     if(removedDesktop.has(note.id))continue;const old=desktop.get(note.id);
-    if(old&&['text','createdAt','authorName','authorId'].some(key=>old[key]!==note[key]))throw new Error('Conflicting desktop note. Sync stopped to protect both copies.');
-    if(!old||Date.parse(note.updatedAt)>Date.parse(old.updatedAt)||note.updatedAt===old.updatedAt&&JSON.stringify([note.x,note.y])>JSON.stringify([old.x,old.y]))desktop.set(note.id,structuredClone(note));
+    if(old&&['createdAt','authorName','authorId'].some(key=>old[key]!==note[key]))throw new Error('Conflicting desktop note. Sync stopped to protect both copies.');
+    if(!old){desktop.set(note.id,structuredClone(note));continue;}
+    const oldEdit=old.editedAt||old.createdAt,newEdit=note.editedAt||note.createdAt;
+    if(oldEdit===newEdit&&JSON.stringify([old.text,old.drawing||[]])!==JSON.stringify([note.text,note.drawing||[]]))throw new Error('Conflicting desktop note edits. Sync stopped to protect both copies.');
+    const content=Date.parse(newEdit)>Date.parse(oldEdit)?note:old,position=Date.parse(note.updatedAt)>Date.parse(old.updatedAt)||note.updatedAt===old.updatedAt&&JSON.stringify([note.x,note.y])>JSON.stringify([old.x,old.y])?note:old;
+    desktop.set(note.id,{...structuredClone(content),x:position.x,y:position.y,updatedAt:position.updatedAt});
   }
   const eventLog=mergeEventLogs(local.eventLog,remote.eventLog);
   return {version:1,people:[...people.values()],...(eventLog.length?{eventLog}:{}),...(desktop.size?{desktopNotes:[...desktop.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))}:{}),...((removedPeople.size||removedNotes.size||removedDesktop.size)?{deleted:{people:[...removedPeople].sort(),notes:[...removedNotes.values()].sort((a,b)=>JSON.stringify([a.personId,a.noteId]).localeCompare(JSON.stringify([b.personId,b.noteId]))),...(removedDesktop.size?{desktopNotes:[...removedDesktop].sort()}:{})}}:{})};
