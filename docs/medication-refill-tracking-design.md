@@ -1,6 +1,25 @@
 # Medication refill tracking — discussion notes
 
-Status: planned; no refill-tracking functionality has been implemented. These notes capture the discussion for future development alongside [the medication-list design](medication-list-design.md).
+Status: implemented in **0.17.0**. The discussion below is preserved for context alongside [the medication-list design](medication-list-design.md). The implementation decisions in the next section take precedence over earlier suggestions.
+
+## Implementation decisions
+
+- Open **Refill tracking…** from the medication toolbar for the full overview, or **Refills…** on a medication for its history.
+- Existing medication entries and their 21-column clinical schema stay unchanged. Refill records link to their stable medication IDs; no medication re-entry is needed.
+- Use separate per-person **Refills Surname I** tabs inside the existing private **Medication Lists (BHR)** workbook. Create a tab only when saving the first refill. Sheet/person/row metadata carries identity; renaming a tab does not break linkage.
+- Last filled means **dispensing date**; the estimate assumes supply begins that day. Dates and elapsed calendar days use the workbook timezone (normally America/New_York), including daylight saving changes.
+- Preserve signed days-left values, with an overdue label when negative. Missing date or days supply yields “Not recorded”; future dates show when supply starts instead of a misleading estimate.
+- Dispensing/prescription fields are optional; at least one must be entered. Blank refills means unknown, zero means none remain. Rx numbers are stored as raw text, preserving leading zeros.
+- Each new refill is a separate history record. It defaults only the dispensing pharmacy from that medication's most recent record, not from the patient's preferred pharmacy. Confirm current Rx number, refills remaining and expiration yourself; these are not copied as though freshly verified.
+- A signed **Adjustment (days)** changes that fill's estimate without changing days supply. Nonzero adjustments require an explanation. Early-refill carryover is not inferred; use an explicit adjustment when appropriate. PRN medicines use the same pharmacy-days-supply estimate.
+- Latest overview record is chosen by dispensing date (entry date when dispensing date is blank), then entry timestamp. History appears newest first. Editing or deleting a record recalculates which record is shown.
+- Warnings distinguish supply overdue/exhausted/7 days or less, zero refills, and prescription expired/expiring within 30 days. No warning changes the clinical medication or its status.
+- Any connected staff member with current Drive/Sheets access can add, edit or delete refill records, consistent with medication-list editing. Preserve original attribution; edits record their editor/time. Delete requires BHR confirmation and clears only the stable refill row, leaving other records and the medication intact.
+- Removing a medication retains its refill history, shown as a removed medication. Changing medication names keeps the link. Discontinued medications remain available for history and historical dispensing entry.
+- Read on opening/refresh and after writes. No refill information is persisted in localStorage or the PWA cache. Logout/disconnect clears rendered refill information and drafts. Do not treat API read failures as an empty history.
+- Use metadata-targeted writes with stale-baseline checks and retry-safe creation IDs. Spreadsheet writes still have the existing nontransactional check/write race; Google Sheets is not a transactional database. Keep all clients updated.
+- Log refill mutation metadata without pharmacy, Rx number, supply values or adjustment text. Real records stay in private Google storage, never in repository files.
+- **Exclude all refill tracking from medication printouts.** The clinical print renderer keeps its explicit existing columns; there is no refill Print button.
 
 ## Intended behavior
 

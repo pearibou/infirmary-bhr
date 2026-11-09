@@ -1,5 +1,11 @@
 # Version history
 
+## 0.17.0 — 2026-11-09
+
+- Add medication refill overview/history, optional dispensing and prescription fields, pharmacy defaults, signed supply estimates, explained manual adjustments and separate warnings.
+- Store refills in on-demand per-person tabs in the existing private medication workbook, linked by stable medication IDs; retain existing medication rows and print layouts.
+- Add retry-safe creation, stale-update protection, edit/delete attribution, history retention after medication removal, mobile forms and logout cleanup.
+
 ## 0.16.2 — 2026-11-09
 
 - Add a per-calendar print symbol picker with 20 outlined medical symbols plus the existing blue Star of Life default. Preserve selection in Drive and omit captions from print.

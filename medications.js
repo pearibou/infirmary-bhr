@@ -1,10 +1,11 @@
-import {printDocument,clearPrint} from './printing.js?v=0.16.2';
-import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.16.2';
-import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.16.2';
-import {isPrnMedication,compareMedications,EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.16.2';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.16.2';
+import {initRefills,refillsSession,openRefills} from './refills.js?v=0.17.0';
+import {printDocument,clearPrint} from './printing.js?v=0.17.0';
+import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.17.0';
+import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.17.0';
+import {isPrnMedication,compareMedications,EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.17.0';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.17.0';
 const $=selector=>document.querySelector(selector),dialog=$('#medications-dialog'),formDialog=$('#medication-form-dialog'),actionDialog=$('#medication-action-dialog');
-let hooks,active=false,epoch=0,queue=Promise.resolve(),pending=0,currentPerson=null,context=null,tab='Active',formState=null,actionState=null,formDirty=false;
+let hooks,active=false,epoch=0,queue=Promise.resolve(),pending=0,currentPerson=null,context=null,tab='Active',formState=null,actionState=null,formDirty=false,refillsBusy=false;
 const node=(tag,text,cls)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;};
 const people=()=>hooks.people(),knownIds=()=>people().map(person=>person.medicationSheet?.spreadsheetId).filter(Boolean);
 const personById=id=>people().find(person=>person.id===id);
@@ -12,9 +13,9 @@ function alive(stamp){if(!active||stamp!==epoch||!hasDriveAccess())throw new Err
 function run(work){
  const stamp=epoch;pending++;hooks.busy(true);controls();
  const next=queue.catch(()=>{}).then(()=>{alive(stamp);return work(stamp);});queue=next;
- return next.finally(()=>{if(stamp===epoch){pending=Math.max(0,pending-1);hooks.busy(pending>0);controls();}});
+ return next.finally(()=>{if(stamp===epoch){pending=Math.max(0,pending-1);hooks.busy(pending>0||refillsBusy);controls();}});
 }
-function controls(){for(const id of ['med-add','med-refresh','med-active','med-discontinued','med-print','med-print-history'])$('#'+id).disabled=pending>0;for(const button of document.querySelectorAll('.med-entry-actions button'))button.disabled=pending>0;}
+function controls(){for(const id of ['med-add','med-refresh','med-active','med-discontinued','med-print','med-print-history','med-refills'])$('#'+id).disabled=pending>0||refillsBusy;for(const button of document.querySelectorAll('.med-entry-actions button'))button.disabled=pending>0||refillsBusy;}
 function status(text){$('#med-status').textContent=text;}
 function audit(action,entryId,personId,automatic=false){hooks.activity('medication.'+action,'medication',entryId,'Medication '+action.replaceAll('_',' '),personId,automatic?{id:getCurrentUser()?.id,name:`Automatic (checked by ${getCurrentUser()?.name||'connected staff'})`}:getCurrentUser());}
 function failure(error,prefix=''){
@@ -29,7 +30,7 @@ async function load(personId,stamp){
  alive(stamp);if(currentPerson!==personId)return;loaded.retrievedAt=new Date().toISOString();context=loaded;render();status(result.pending.length?'Scheduled end passed—update pending. '+result.pending[0].error:result.completed.length?'Scheduled course completed. See Discontinued.':'');return result.pending.length===0;
 }
 export function initMedications(options){
- hooks=options;$('#med-print').onclick=printMedications;$('#med-refresh').onclick=()=>openMedications(currentPerson,true);
+ hooks=options;initRefills({person:personById,personName:options.personName,activity:options.activity,busy:value=>{refillsBusy=value;hooks.busy(value||pending>0);controls();},medications:id=>readMedicationList(personById(id),knownIds())});$('#med-refills').onclick=()=>{if(!pending&&!refillsBusy&&context&&!context.missing)openRefills(currentPerson);};$('#med-print').onclick=printMedications;$('#med-refresh').onclick=()=>openMedications(currentPerson,true);
  $('#med-active').onclick=()=>{tab='Active';render();};$('#med-discontinued').onclick=()=>{tab='Discontinued';render();};$('#med-add').onclick=()=>openForm();
  $('#med-short-course').onchange=endFields;
  $('#medication-form').addEventListener('input',()=>formDirty=true);
@@ -41,8 +42,8 @@ export function initMedications(options){
  window.addEventListener('beforeunload',event=>{if(formDirty||pending){event.preventDefault();event.returnValue='';}});
 }
 export function medicationsSession(ready){
- if(ready){if(!active){active=true;epoch++;startupCheck();}return;}
- if(!active)return;active=false;epoch++;pending=0;queue=Promise.resolve();resetMedicationSource();clearPrint();$('#med-print-history').checked=false;context=null;currentPerson=null;formState=null;actionState=null;formDirty=false;
+ if(ready){refillsSession(true);if(!active){active=true;epoch++;startupCheck();}return;}
+ refillsSession(false);if(!active)return;active=false;epoch++;pending=0;queue=Promise.resolve();resetMedicationSource();clearPrint();$('#med-print-history').checked=false;context=null;currentPerson=null;formState=null;actionState=null;formDirty=false;
  hooks.busy(false);for(const win of [dialog,formDialog,actionDialog]){if(win.open)win.close();document.querySelector(`#window-dock [data-window="${win.id}"]`)?.remove();}
  $('#med-content').replaceChildren();$('#medications-title').textContent='Medications';$('#med-form-title').textContent='Add medication';$('#medication-form').reset();$('#medication-action-form').reset();
  formDisabled(false);actionDialog.querySelectorAll('button').forEach(button=>button.disabled=false);
@@ -78,7 +79,7 @@ function render(){
   if(medicationDue(entry,new Date(),context.timezone))card.append(node('p','Scheduled end passed—update pending','med-pending'));
   if(tab==='Discontinued'){card.append(node('p','Discontinued: '+(entry.discontinuedAt.replace('T',' ')||'date not recorded'),'small'));if(entry.discontinuationReason)card.append(node('p',entry.discontinuationReason,'small'));if(entry.processedAt)card.append(node('p','Automatic completion processed '+new Date(entry.processedAt).toLocaleString(),'small'));}
   const buttons=node('div',undefined,'med-entry-actions');
-  for(const [action,label] of tab==='Active'?[['edit','Edit…'],['discontinue','Discontinue…'],['delete','Delete entry…']]:[['delete','Delete entry…']]){const button=node('button',label);button.type='button';button.disabled=pending>0;button.onclick=()=>action==='edit'?openForm(entry):openAction(entry,action);buttons.append(button);}card.append(buttons);$('#med-content').append(card);
+  for(const [action,label] of tab==='Active'?[['edit','Edit…'],['discontinue','Discontinue…'],['delete','Delete entry…']]:[['delete','Delete entry…']]){const button=node('button',label);button.type='button';button.disabled=pending>0||refillsBusy;button.onclick=()=>action==='edit'?openForm(entry):openAction(entry,action);buttons.append(button);}const refill=node('button','Refills…');refill.type='button';refill.disabled=pending>0||refillsBusy;refill.onclick=()=>{if(!pending&&!refillsBusy)openRefills(currentPerson,entry.id);};buttons.append(refill);card.append(buttons);$('#med-content').append(card);
  }
 }
 function endFields(){const enabled=$('#med-short-course').checked;$('#med-end-fields').disabled=!enabled;$('#medication-form').elements.endDate.required=enabled;}
