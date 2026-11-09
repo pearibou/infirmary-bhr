@@ -39,15 +39,19 @@ def unlock_test_drive(page,profile=True,open_records=True):
     routes=[]
     def add(pattern,handler):routes.append((pattern,handler));page.route(pattern,handler)
     add('https://www.googleapis.com/drive/v3/files/*?fields=*',lambda route:route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}}))
-    add('https://www.googleapis.com/drive/v3/files?*',lambda route:route.fulfill(json={'files':[] if 'BHR_event_log.txt' in route.request.url else [{'id':'__test-bootstrap'}]}))
+    add('https://www.googleapis.com/drive/v3/files?*',lambda route:route.fulfill(json={'files':[] if 'BHR_event_log.txt' in route.request.url or 'staff_profile_' in route.request.url else [{'id':'__test-bootstrap'}]}))
     add('https://www.googleapis.com/drive/v3/files/__test-bootstrap?*',lambda route:route.fulfill(json=snapshot))
     add('https://www.googleapis.com/upload/drive/v3/files/__test-bootstrap?*',lambda route:route.fulfill(json={'id':'__test-bootstrap'}))
+    add('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart*',lambda route:route.fulfill(json={'id':'synthetic-profile'}) if 'staff_profile_' in (route.request.post_data or '') else route.fallback())
     if profile:page.route('https://www.googleapis.com/oauth2/v3/userinfo',lambda route:route.fulfill(json={'sub':'synthetic-staff','name':'Synthetic Staff'}))
     page.wait_for_function("window.google?.accounts?.oauth2 && !document.querySelector('#drive-status').textContent.startsWith('Preparing')")
     page.locator('#google-connect').click()
-    page.locator('#use-drive-root').wait_for(state='visible')
+    page.locator('#use-drive-root').wait_for(state='attached')
     # Stored locations trigger the initial sync directly after authentication.
-    if page.locator('#sync-folder-name').inner_text()=='No directory folder selected':page.locator('#use-drive-root').click()
+    if page.locator('#sync-folder-name').inner_text()=='No directory folder selected':
+        page.locator('#drive-dialog details summary').click();page.locator('#use-drive-root').click()
+    page.locator('#staff-profile-panel').wait_for(state='visible')
+    page.locator('#save-staff-profile').click()
     page.wait_for_function("!document.body.classList.contains('drive-locked')")
     page.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'")
     page.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()

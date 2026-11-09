@@ -1,23 +1,24 @@
-import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.19.0';
-import {changeFolderLink} from './model.js?v=0.19.0';
-import {openMainWindow,closeMainWindow} from './windows.js?v=0.19.0';
-import {initCalendar,calendarSession} from './calendar.js?v=0.19.0';
-import {initBackground} from './background.js?v=0.19.0';
-import {initHistory,historySession,openHistory} from './history.js?v=0.19.0';
-import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.19.0';
-import {printDocument} from './printing.js?v=0.19.0';
-import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.19.0';
-import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.19.0';
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.19.0';
-import {updateSessionPresence} from './presence.js?v=0.19.0';
-import {closeAppMenu} from './app-menu.js?v=0.19.0';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.19.0';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.19.0';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.19.0';
-import {validatePhoto} from './photos.js?v=0.19.0';
-import './windows.js?v=0.19.0';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.19.0';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.19.0';
+import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.20.0';
+import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.20.0';
+import {changeFolderLink} from './model.js?v=0.20.0';
+import {openMainWindow,closeMainWindow} from './windows.js?v=0.20.0';
+import {initCalendar,calendarSession} from './calendar.js?v=0.20.0';
+import {initBackground} from './background.js?v=0.20.0';
+import {initHistory,historySession,openHistory} from './history.js?v=0.20.0';
+import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.20.0';
+import {printDocument} from './printing.js?v=0.20.0';
+import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.20.0';
+import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.20.0';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.20.0';
+import {updateSessionPresence} from './presence.js?v=0.20.0';
+import {closeAppMenu} from './app-menu.js?v=0.20.0';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.20.0';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.20.0';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.20.0';
+import {validatePhoto} from './photos.js?v=0.20.0';
+import './windows.js?v=0.20.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.20.0';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.20.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
@@ -161,12 +162,15 @@ try{
   const remembered=JSON.parse(localStorage.getItem('infirmary.drive')||'{}');
   driveConfig={...remembered,...Object.fromEntries(Object.entries(driveConfig).filter(([,value])=>value))};
 }catch{}
+let dataWorkspace=driveConfig.folder;
 function fillSettings(){
   const driveActive=connected&&hasDriveAccess(),driveReady=driveActive&&workspaceReady;$('#drive-dialog').classList.toggle('drive-connected',driveReady);$('#drive-connection-badge').hidden=!driveActive;const connectionLabel=driveReady?'● Connected to Google Drive':'Google signed in · finish directory sync';if($('#drive-connection-badge').textContent!==connectionLabel)$('#drive-connection-badge').textContent=connectionLabel;
   $('#sync-folder-name').textContent=driveConfig.folder?(driveConfig.folderName||'Directory folder selected'):'No directory folder selected';
-  $('#google-connect').disabled=connecting;
+  $('#google-connect').disabled=connecting||connected;
   $('#google-connect').setAttribute('aria-busy',String(connecting));
   $('#choose-sync-folder').disabled=!connected||!pickerReady;
+  $('#open-shared-workspace').disabled=!connected||syncing;
+  $('#edit-staff-profile').hidden=!workspaceReady;
   $('#use-drive-root').disabled=!connected;
   $('#sync').disabled=!connected||!driveConfig.folder||syncing;
   $('#manual-sync').disabled=syncing||!workspaceReady;
@@ -174,8 +178,10 @@ function fillSettings(){
   $('#logout-power').disabled=!workspaceReady||loggingOut||personSaveBusy||uploading||fileBusy;
   updateSessionPresence(workspaceReady&&hasDriveAccess()?(getCurrentUser()||{id:'current-session',name:'Connected Google account'}):null);
   $('#manual-sync').setAttribute('aria-busy',String(syncing));
-  $('#choose-sync-folder').disabled ||= syncing;
-  $('#use-drive-root').disabled ||= syncing;
+  $('#choose-sync-folder').disabled ||= syncing||workspaceReady;
+  $('#open-shared-workspace').disabled ||= workspaceReady;
+  $('#shared-workspace-link').disabled=syncing||workspaceReady;
+  $('#use-drive-root').disabled ||= syncing||workspaceReady;
   $('#disconnect').disabled=syncing;
 }
 fillSettings();
@@ -197,16 +203,20 @@ $('#google-connect').onclick=async()=>{
   // A ready SDK lets OAuth open directly from this click, avoiding popup blockers.
   if(!googleReady){await readyGoogle();return;}
   const authEpoch=sessionEpoch;connecting=true;fillSettings();$('#drive-status').textContent='Complete sign-in in the Google window. Close it to cancel.';
-  try{await authorize(driveConfig.clientId);if(authEpoch!==sessionEpoch){disconnect();return;}connected=true;sessionCleared=false;clearPhotos();try{const user=await loadCurrentUser();$('#current-user').textContent='Signed in as '+user.name;}catch(error){$('#current-user').textContent='Author identity unavailable; new notes will be unattributed.';}if(authEpoch!==sessionEpoch){$('#current-user').textContent='';return;}appendActivity('drive.connected','directory',driveConfig.folder||'unselected','Google Drive connection established');renderKeepingDraft();$('#drive-status').textContent=pickerReady?'Connected. Use Infirmary-BHR, or choose its storage location.':'Connected. Use Infirmary-BHR, or choose its storage location.';if(driveConfig.folder&&!workspaceReady)await runSync();}
-  catch(error){if(authEpoch!==sessionEpoch)return;connected=false;$('#drive-status').textContent=error.message;}
+  try{await authorize(driveConfig.clientId);if(authEpoch!==sessionEpoch){disconnect();return;}connected=true;sessionCleared=false;clearPhotos();const user=await loadCurrentUser();$('#current-user').textContent='Google account: '+(user.email||user.googleName);if(authEpoch!==sessionEpoch){$('#current-user').textContent='';return;}appendActivity('drive.connected','directory',driveConfig.folder||'unselected','Google Drive connection established');renderKeepingDraft();$('#drive-status').textContent='Signed in. Open the shared Infirmary-BHR folder supplied by your administrator.';if(driveConfig.folder&&!workspaceReady)await runSync();}
+  catch(error){if(authEpoch!==sessionEpoch)return;disconnect();connected=false;$('#drive-status').textContent=error.message;}
   finally{connecting=false;fillSettings();}
 };
 async function chooseFolder(dialog){
   // Native Google Picker must appear above the app, outside a modal's top layer.
   const pickerEpoch=sessionEpoch;choosingFolder=true;dialog.close();try{const folder=await pickFolder(driveConfig);return pickerEpoch===sessionEpoch?folder:null;}finally{choosingFolder=false;if(pickerEpoch===sessionEpoch&&!dialog.open)dialog.showModal();}
 }
-$('#choose-sync-folder').onclick=async()=>{try{await authorize(driveConfig.clientId);const folder=await chooseFolder($('#drive-dialog'));if(folder){driveConfig.folder=folder.id;driveConfig.folderName=folder.name;rememberSettings();appendActivity('directory.selected','directory',folder.id,'Directory storage folder selected');fillSettings();$('#drive-status').textContent='Directory folder selected. Choose Sync directory to merge your records.';if(!workspaceReady)await runSync();}}catch(error){$('#drive-status').textContent=error.message;}};
-$('#use-drive-root').onclick=()=>{driveConfig.folder='root';driveConfig.folderName='Infirmary-BHR';rememberSettings();appendActivity('directory.selected','directory','root','Infirmary-BHR storage selected');fillSettings();$('#drive-status').textContent='Sync will create or reuse Infirmary-BHR and organize existing BHR files there.';if(!workspaceReady)runSync();};
+$('#choose-sync-folder').onclick=async()=>{try{await authorize(driveConfig.clientId);const folder=await chooseFolder($('#drive-dialog'));if(folder){driveConfig.folder=folder.id;driveConfig.folderName=folder.name;driveConfig.existingWorkspace=true;rememberSettings();appendActivity('directory.selected','directory',folder.id,'Directory storage folder selected');fillSettings();$('#drive-status').textContent='Directory folder selected. Choose Sync directory to merge your records.';if(!workspaceReady)await runSync();}}catch(error){$('#drive-status').textContent=error.message;}};
+$('#use-drive-root').onclick=()=>{if(workspaceReady)return;driveConfig.folder='root';driveConfig.existingWorkspace=false;driveConfig.folderName='Infirmary-BHR';rememberSettings();appendActivity('directory.selected','directory','root','Infirmary-BHR storage selected');fillSettings();$('#drive-status').textContent='Sync will create or reuse Infirmary-BHR and organize existing BHR files there.';if(!workspaceReady)runSync();};
+$('#open-shared-workspace').onclick=async()=>{if(workspaceReady)return;try{const id=parseFolder($('#shared-workspace-link').value);if(id==='root')throw new Error('Use the shared folder link, not My Drive.');driveConfig.folder=id;driveConfig.existingWorkspace=true;driveConfig.folderName='Shared Infirmary-BHR';rememberSettings();await runSync();}catch(error){$('#drive-status').textContent=error.message;}};
+function showStaffProfile(){const user=getCurrentUser();$('#staff-display-name').value=user?.name||'';$('#staff-profile-panel').hidden=false;$('#drive-status').textContent='Choose the name shown on your BHR entries, then continue.';$('#staff-display-name').focus();}
+$('#edit-staff-profile').onclick=showStaffProfile;
+$('#save-staff-profile').onclick=async()=>{const epoch=sessionEpoch;$('#save-staff-profile').disabled=true;try{await saveStaffProfile($('#staff-display-name').value);if(epoch!==sessionEpoch)return;$('#staff-profile-panel').hidden=true;$('#current-user').textContent='Google account: '+(getCurrentUser().email||getCurrentUser().googleName)+' · BHR: '+getCurrentUser().name;await runSync();}catch(error){if(epoch===sessionEpoch)$('#drive-status').textContent=error.message;}finally{$('#save-staff-profile').disabled=false;}};
 function clearProtectedWorkspace(removeStorage=true){
   if(removeStorage){
     // Remove only BHR data, preserving unrelated origin storage/preferences.
@@ -216,9 +226,9 @@ function clearProtectedWorkspace(removeStorage=true){
     if(localStorage.getItem(KEY)!==null)throw new Error('Browser records could not be cleared.');
     try{localStorage.setItem(LOGOUT_KEY,crypto.randomUUID());}catch{} // Removal itself also notifies other tabs.
   }
-  sessionEpoch++;sessionCleared=true;syncAgain=false;choosingFolder=false;disconnect();connected=false;
+  $('#staff-profile-panel').hidden=true;$('#shared-workspace-link').value='';$('#staff-display-name').value='';sessionEpoch++;sessionCleared=true;syncAgain=false;choosingFolder=false;disconnect();connected=false;
   clearPhotos();clearPhotoPreview();clearTrashSelection();finishEntryDrag();clearStickyState();stickyEditId=null;stickyBaseline=null;
-  data=emptyDirectory();selected=undefined;editPersonId=null;recordBaseline=undefined;noteEditTarget=undefined;folderTarget=undefined;uploadPersonId=undefined;trashTarget=undefined;
+  data=emptyDirectory();dataWorkspace=undefined;selected=undefined;editPersonId=null;recordBaseline=undefined;noteEditTarget=undefined;folderTarget=undefined;uploadPersonId=undefined;trashTarget=undefined;
   for(const form of document.querySelectorAll('form'))form.reset();
   for(const input of document.querySelectorAll('input:not([type="checkbox"]),textarea'))input.value='';
   $('#upload-folder').replaceChildren();$('#person-deceased').checked=false;updateDeathFields();updateAllergyFields();
@@ -233,7 +243,7 @@ function clearProtectedWorkspace(removeStorage=true){
 function disconnectWorkspace(logout=false){
   if(logout){clearProtectedWorkspace();return;}
   if(!sessionCleared&&connected)appendActivity('drive.disconnected','directory',driveConfig.folder||'unselected','Google Drive disconnected');
-  sessionEpoch++;syncAgain=false;disconnect();connected=false;clearPhotos();clearPhotoPreview();
+  $('#staff-profile-panel').hidden=true;$('#staff-display-name').value='';sessionEpoch++;syncAgain=false;disconnect();connected=false;clearPhotos();clearPhotoPreview();
   $('#person-form').reset();$('#upload-form').reset();$('#note-edit-text').value='';$('#sticky-text').value='';if($('.note-form input'))$('.note-form input').value='';
   $('#current-user').textContent='';renderKeepingDraft();fillSettings();$('#connection').textContent='Local workspace';$('#drive-status').textContent=logout?'Logged out. Connect Google Drive to open BHR again.':'Disconnected. Connect Google Drive to reopen the workspace.';lockWorkspace();
 }
@@ -271,6 +281,7 @@ function runSync(automatic=false,finalLogout=false){
   return syncPromise;
 }
 async function performSync(automatic=false){
+  if(automatic&&!workspaceReady)return false;
   if(syncing){syncAgain=true;return;}
   if(storageFailed){if(!automatic)toast('Resolve local storage before syncing.');return;}
   if(!navigator.onLine){if(!automatic)toast('Offline. Notes will sync after your connection returns.');return;}
@@ -282,8 +293,12 @@ async function performSync(automatic=false){
   }
   const epoch=sessionEpoch;syncing=true;fillSettings();$('#drive-status').textContent='Syncing with Google Drive…';
   try{
-    const storage=await ensureWorkspaceFolder(driveConfig.folder);if(epoch!==sessionEpoch)return;
+    if(!getCurrentUser())throw new Error('Sign in again to identify your Google account.');
+    const storage=await (driveConfig.folder!=='root'?useSharedWorkspace(driveConfig.folder):ensureWorkspaceFolder(driveConfig.folder));if(epoch!==sessionEpoch)return;
     if(driveConfig.folder!==storage.id||driveConfig.folderName!==storage.name){driveConfig.folder=storage.id;driveConfig.folderName=storage.name;rememberSettings();appendActivity('directory.selected','directory',storage.id,'Infirmary-BHR storage folder ready');}
+    if(dataWorkspace&&dataWorkspace!=='root'&&dataWorkspace!==storage.id&&(data.people.length||data.desktopNotes?.length))throw new Error('This device has records from another workspace. Reconnect the original folder and log out before choosing a different workspace.');
+    dataWorkspace=storage.id;
+    if(!hasStaffProfile()){const profile=await loadStaffProfile();if(epoch!==sessionEpoch)return;if(!profile){showStaffProfile();return false;}$('#current-user').textContent='Google account: '+(profile.email||profile.googleName)+' · BHR: '+profile.name;$('#staff-profile-panel').hidden=true;}
     const snapshot=structuredClone(data),merged=await syncDirectory(storage.id,snapshot);
     if(epoch!==sessionEpoch)return;
     // Preserve notes added during the request; the next cycle uploads them.

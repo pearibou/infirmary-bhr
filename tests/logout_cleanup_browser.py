@@ -15,7 +15,7 @@ with sync_playwright() as p:
     page.goto('http://127.0.0.1:8000');unlock_test_drive(page)
     store=[seed]
     page.route('https://www.googleapis.com/drive/v3/files/*?fields=*',lambda route:route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}}))
-    page.route('https://www.googleapis.com/drive/v3/files?*',lambda route:route.fulfill(json={'files':[] if 'BHR_event_log.txt' in route.request.url else [{'id':'cleanup-directory'}]}))
+    page.route('https://www.googleapis.com/drive/v3/files?*',lambda route:route.fulfill(json={'files':[] if 'BHR_event_log.txt' in route.request.url or 'staff_profile_' in route.request.url else [{'id':'cleanup-directory'}]}))
     page.route('https://www.googleapis.com/drive/v3/files/cleanup-directory?*',lambda route:route.fulfill(json=store[0]))
     def save(route):store[0]=route.request.post_data_json;route.fulfill(json={'id':'cleanup-directory'})
     page.route('https://www.googleapis.com/upload/drive/v3/files/cleanup-directory?*',save)
@@ -44,7 +44,11 @@ with sync_playwright() as p:
     assert len(store[0]['people'])==1 and store[0]['desktopNotes'][0]['text']=='Synthetic shared reminder'
     assert any(event['action']=='session.logout_requested' for event in store[0]['eventLog'])
     # Reconnecting pulls the preserved Drive copy instead of resurrecting local data.
-    page.locator('#google-connect').click();page.locator('#use-drive-root').click()
+    page.route('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart*',lambda route:route.fulfill(json={'id':'synthetic-profile'}) if 'staff_profile_' in (route.request.post_data or '') else route.fallback())
+    page.locator('#google-connect').click()
+    if not page.locator('#drive-dialog details').evaluate('e=>e.open'):page.locator('#drive-dialog details summary').click()
+    page.locator('#use-drive-root').click()
+    page.locator('#staff-profile-panel').wait_for(state='visible');page.locator('#save-staff-profile').click()
     page.wait_for_function("!document.body.classList.contains('drive-locked')")
     assert 'Synthetic Private Person' in page.locator('#people').inner_text()
     assert 'Synthetic shared reminder' in page.locator('#sticky-notes').inner_text()

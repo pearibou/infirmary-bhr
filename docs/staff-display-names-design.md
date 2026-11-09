@@ -1,20 +1,20 @@
 # Persistent staff display names
 
-Status: discussion/design only. No display-name prompt or profile storage has been implemented.
+Status: initial direct-Google implementation shipped in 0.20.0. The migration sections below remain future design.
 
-## Proposed experience
+## Implemented experience
 
 After a staff member signs in with their own Google account, load their BHR profile. If they have no profile yet, offer a custom display name, prefilled from their Google name as a convenient starting point. A familiar label such as a professional title and preferred name can be used.
 
-Use that chosen name for new Created by / Entered by / Edited by attribution throughout BHR: quick notes, clinical documents, stickies, calendar changes, medications, history, refills, vital signs and Event Log actor labels where applicable. Offer a profile/preferences control to change it later.
+Use that chosen name for new Created by / Entered by / Edited by attribution throughout BHR: quick notes, clinical documents, stickies, calendar changes, medications, history, refills, vital signs and Event Log actor labels where applicable. The Drive connection dialog includes Change my display name.
 
 On subsequent sign-ins, retrieve the saved profile using the authenticated identity so the name does not need to be entered again, including on a different device using the same BHR workspace.
 
 ## Storage without an additional account database
 
-The near-term direct-Google edition could keep a small private `staff_profiles.json` in the existing Infirmary-BHR Drive folder. This is a proposed filename/schema, not a file created by this change.
+The direct-Google edition keeps one private `staff_profile_<Google subject>.json` per account in the existing Infirmary-BHR folder. Separate files avoid concurrent staff updates overwriting other people. Duplicate files and identity mismatches stop loading/saving. Same-account simultaneous edits use last successful save; this is a preference, not a transactional audit record.
 
-A profile would contain an internal BHR user ID, verified Google identity mapping, chosen display name, and profile update metadata. It must not contain passwords, Google tokens, login secrets, approval decisions or authoritative roles.
+A profile contains schema version, Google issuer/subject, display name and update timestamp. The current stable user ID remains the Google subject; a separate internal BHR ID awaits the future verified backend mapping. It must not contain passwords, Google tokens, login secrets, approval decisions or authoritative roles.
 
 Load profiles after Google authentication. Prefer session-memory caching so a shared device cannot accidentally reuse the previous staff member's name. Handle concurrent profile updates without overwriting other staff profiles; fail visibly and retain the typed name for retry if saving fails.
 

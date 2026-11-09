@@ -1,10 +1,10 @@
-import {validateCalendar,calendarContent} from './calendar-model.js?v=0.19.0';
-import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.19.0';
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.19.0';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.19.0';
+import {validateCalendar,calendarContent} from './calendar-model.js?v=0.20.0';
+import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.20.0';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.20.0';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.20.0';
 let token,expires=0,loading,authorizedClient,currentUser,workspaceFolder,workspaceName,legacyRootId,storageEpoch=0;
 const activeRequests=new Set();
-export function disconnect(){storageEpoch++;workspaceFolder=undefined;workspaceName=undefined;legacyRootId=undefined;for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
+export function disconnect(){staffProfileReady=false;staffProfileFolder=undefined;storageEpoch++;workspaceFolder=undefined;workspaceName=undefined;legacyRootId=undefined;for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
 function loadGoogle(){
   if(globalThis.google?.accounts?.oauth2)return Promise.resolve();
   if(loading)return loading;
@@ -13,9 +13,9 @@ function loadGoogle(){
 export async function prepareGoogle(){await loadGoogle();}
 export function authorize(clientId){
   if(token && authorizedClient===clientId && Date.now()<expires)return Promise.resolve();
-  currentUser=undefined;
+  currentUser=undefined;staffProfileReady=false;staffProfileFolder=undefined;
   return new Promise((resolve,reject)=>{
-    google.accounts.oauth2.initTokenClient({client_id:clientId,scope:'openid email profile https://www.googleapis.com/auth/drive',callback:r=>{if(r.error){reject(new Error(r.error_description||r.error));return;}token=r.access_token;authorizedClient=clientId;expires=Date.now()+(Number(r.expires_in)-60)*1000;resolve();},error_callback:r=>reject(new Error(r.type==='popup_closed'?'Sign-in window closed.':r.message||'Google sign-in failed.'))}).requestAccessToken({prompt:''});
+    google.accounts.oauth2.initTokenClient({client_id:clientId,scope:'openid email profile https://www.googleapis.com/auth/drive',callback:r=>{if(r.error){reject(new Error(r.error_description||r.error));return;}token=r.access_token;authorizedClient=clientId;expires=Date.now()+(Number(r.expires_in)-60)*1000;resolve();},error_callback:r=>reject(new Error(r.type==='popup_closed'?'Sign-in window closed.':r.message||'Google sign-in failed.'))}).requestAccessToken({prompt:'select_account'});
   });
 }
 async function driveFetch(url,options={},timeout=30000){
@@ -106,7 +106,7 @@ export async function loadCurrentUser(){
   const profile=await response.json();
   if(!profile.sub||typeof profile.sub!=='string'||(!profile.name&&!profile.email))throw new Error('Google did not return an account identity.');
   if(token!==activeToken)throw new Error('Google connection changed. Reconnect before editing notes.');
-  currentUser={id:profile.sub,name:profile.name||profile.email};return currentUser;
+  currentUser={id:profile.sub,name:profile.name||profile.email,googleName:profile.name||profile.email,email:profile.email||'',issuer:'https://accounts.google.com'};return currentUser;
 }
 export async function readPersonPhoto(fileId){
   if(!hasDriveAccess())throw new Error('Connect Google to view this photo.');
@@ -320,4 +320,52 @@ export async function saveAppointmentCalendar(calendar,baseline=null){
  if(epoch!==storageEpoch)throw new Error('Connection changed.');
  const metadata={name:`Calendar ${calendar.weekStart} — ${calendar.title}.json`,mimeType:'application/json',appProperties:{bhrCalendar:'1',calendarId:calendar.id,weekStart:calendar.weekStart},...(!baseline?{parents:[workspaceFolder]}:{})},boundary='bhrcalendar_'+crypto.randomUUID(),body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(calendar)}\r\n--${boundary}--`;
  const response=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files${baseline?'/'+safeDriveId(baseline.id):''}?uploadType=multipart&fields=${calendarFields}`,{method:baseline?'PATCH':'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`,...(file?.etag?{'If-Match':file.etag}:{})},body});if(epoch!==storageEpoch)throw new Error('Connection changed.');if(!response.ok)throw new Error(response.status===412?'This calendar changed in Drive. Reopen it before editing.':'Calendar save failed. Your draft has been kept.');return response.json();
+}
+
+// Profiles are preferences only. Google userinfo remains the source of identity.
+// One file per subject avoids overwriting another staff member's preferences.
+let staffProfileReady=false,staffProfileFolder;
+export function hasStaffProfile(){return hasDriveAccess()&&staffProfileReady&&staffProfileFolder===workspaceFolder;}
+export async function useSharedWorkspace(id){
+  safeDriveId(id);if(id==='root')throw new Error('Paste the shared Infirmary-BHR folder link, not My Drive.');
+  const epoch=storageEpoch;
+  const folder=await(await api(`files/${id}?fields=id,name,mimeType,capabilities(canAddChildren)&supportsAllDrives=true`)).json();
+  if(folder.mimeType!=='application/vnd.google-apps.folder'||!folder.capabilities?.canAddChildren)throw new Error('This account needs Editor access to the shared Infirmary-BHR folder.');
+  const files=await storageListing(`'${id}' in parents and name = 'people_directory.json' and trashed = false`);
+  if(files.length!==1)throw new Error('Choose the existing Infirmary-BHR folder containing one people_directory.json. No workspace was created.');
+  if(epoch!==storageEpoch||!hasDriveAccess())throw new Error('Google connection changed.');
+  workspaceFolder=id;workspaceName=folder.name;legacyRootId=undefined;return {id,name:folder.name};
+}
+function profileName(){const user=getCurrentUser();if(!user||!/^[-\w]+$/.test(user.id))throw new Error('Reconnect to identify your Google account.');return 'staff_profile_'+user.id+'.json';}
+async function profileFile(){
+ const files=await storageListing(`'${safeDriveId(workspaceFolder)}' in parents and name = '${profileName()}' and trashed = false`);
+ if(files.length>1)throw new Error('Duplicate staff profiles found. Ask the administrator to resolve the copies in Drive.');return files[0];
+}
+function applyStaffProfile(value){
+ if(value?.version!==1||value.subject!==getCurrentUser()?.id||value.issuer!=='https://accounts.google.com')throw new Error('This staff profile does not match the signed-in Google account.');
+ const name=validateStaffName(value.displayName);currentUser={...currentUser,name};staffProfileReady=true;staffProfileFolder=workspaceFolder;return currentUser;
+}
+export function validateStaffName(value){if(typeof value!=='string'||!value.trim()||value.trim().length>100||/[\x00-\x1f\x7f]/.test(value))throw new Error('Enter a display name of 1–100 characters.');return value.trim();}
+export async function loadStaffProfile(){
+ staffProfileReady=false;staffProfileFolder=undefined;const epoch=storageEpoch,subject=getCurrentUser()?.id,folder=workspaceFolder;
+ const file=await profileFile();if(!file)return null;
+ const value=await(await api(`files/${safeDriveId(file.id)}?alt=media&supportsAllDrives=true`)).json();
+ if(epoch!==storageEpoch||subject!==getCurrentUser()?.id||folder!==workspaceFolder)throw new Error('Google connection changed.');await profileFile();
+ if(epoch!==storageEpoch||subject!==getCurrentUser()?.id||folder!==workspaceFolder)throw new Error('Google connection changed.');return applyStaffProfile(value);
+}
+export async function saveStaffProfile(displayName){
+ const name=validateStaffName(displayName),epoch=storageEpoch,subject=getCurrentUser()?.id,folder=workspaceFolder,file=await profileFile();
+ const value={version:1,issuer:'https://accounts.google.com',subject,displayName:name,updatedAt:new Date().toISOString()};
+ if(file){
+  const existing=await(await api(`files/${safeDriveId(file.id)}?alt=media&supportsAllDrives=true`)).json();
+  if(existing?.subject!==subject||existing?.issuer!==value.issuer||existing?.version!==1)throw new Error('Staff profile identity mismatch; existing file was preserved.');
+  const response=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${safeDriveId(file.id)}?uploadType=media&supportsAllDrives=true`,{method:'PATCH',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(value)});
+  if(!response.ok)throw new Error('Could not save your display name. Please retry.');
+ }else{
+  const boundary='profile_'+crypto.randomUUID(),body=`--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify({name:profileName(),parents:[folder],mimeType:'application/json'})}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(value)}\r\n--${boundary}--`;
+  const response=await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`},body});
+  if(!response.ok)throw new Error('Could not save your display name. Please retry.');
+ }
+ if(epoch!==storageEpoch||subject!==getCurrentUser()?.id||folder!==workspaceFolder)throw new Error('Google connection changed.');await profileFile();
+ if(epoch!==storageEpoch||subject!==getCurrentUser()?.id||folder!==workspaceFolder)throw new Error('Google connection changed.');return applyStaffProfile(value);
 }
