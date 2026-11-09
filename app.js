@@ -1,27 +1,28 @@
-import {calendarSymbol} from './calendar-symbols.js?v=0.23.0';
-import {clearDesktopSelection} from './desktop-selection.js?v=0.23.0';
-import {trashDesktopBatch} from './documents.js?v=0.23.0';
-import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.23.0';
-import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.23.0';
-import {changeFolderLink} from './model.js?v=0.23.0';
-import {openMainWindow,closeMainWindow} from './windows.js?v=0.23.0';
-import {initCalendar,calendarSession} from './calendar.js?v=0.23.0';
-import {initBackground} from './background.js?v=0.23.0';
-import {initHistory,historySession,openHistory} from './history.js?v=0.23.0';
-import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.23.0';
-import {printDocument} from './printing.js?v=0.23.0';
-import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.23.0';
-import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.23.0';
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.23.0';
-import {updateSessionPresence} from './presence.js?v=0.23.0';
-import {closeAppMenu} from './app-menu.js?v=0.23.0';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.23.0';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.23.0';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.23.0';
-import {validatePhoto} from './photos.js?v=0.23.0';
-import './windows.js?v=0.23.0';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.23.0';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.23.0';
+import {initAccountMenu,updateAccountMenu} from './account-menu.js?v=0.24.0';
+import {calendarSymbol} from './calendar-symbols.js?v=0.24.0';
+import {clearDesktopSelection} from './desktop-selection.js?v=0.24.0';
+import {trashDesktopBatch} from './documents.js?v=0.24.0';
+import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.24.0';
+import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.24.0';
+import {changeFolderLink} from './model.js?v=0.24.0';
+import {openMainWindow,closeMainWindow} from './windows.js?v=0.24.0';
+import {initCalendar,calendarSession} from './calendar.js?v=0.24.0';
+import {initBackground} from './background.js?v=0.24.0';
+import {initHistory,historySession,openHistory} from './history.js?v=0.24.0';
+import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.24.0';
+import {printDocument} from './printing.js?v=0.24.0';
+import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.24.0';
+import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.24.0';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.24.0';
+import {updateSessionPresence} from './presence.js?v=0.24.0';
+import {closeAppMenu} from './app-menu.js?v=0.24.0';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.24.0';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.24.0';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.24.0';
+import {validatePhoto} from './photos.js?v=0.24.0';
+import './windows.js?v=0.24.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.24.0';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.24.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let bulkTargets=[],bulkBusy=false;
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
@@ -188,6 +189,7 @@ function fillSettings(){
   $('#manual-sync').disabled=syncing||!workspaceReady;
   $('#export').disabled=!workspaceReady;$('#event-log-icon').disabled=!workspaceReady;
   $('#logout-power').disabled=!workspaceReady||loggingOut||personSaveBusy||uploading||fileBusy;
+  updateAccountMenu(workspaceReady&&hasDriveAccess()?getCurrentUser():null);
   updateSessionPresence(workspaceReady&&hasDriveAccess()?(getCurrentUser()||{id:'current-session',name:'Connected Google account'}):null);
   $('#manual-sync').setAttribute('aria-busy',String(syncing));
   $('#choose-sync-folder').disabled ||= syncing||workspaceReady;
@@ -228,6 +230,7 @@ $('#use-drive-root').onclick=()=>{if(workspaceReady)return;driveConfig.folder='r
 $('#open-shared-workspace').onclick=async()=>{if(workspaceReady)return;try{const id=parseFolder($('#shared-workspace-link').value);if(id==='root')throw new Error('Use the shared folder link, not My Drive.');driveConfig.folder=id;driveConfig.existingWorkspace=true;driveConfig.folderName='Shared Infirmary-BHR';rememberSettings();await runSync();}catch(error){$('#drive-status').textContent=error.message;}};
 function showStaffProfile(){const user=getCurrentUser();$('#staff-display-name').value=user?.name||'';$('#staff-profile-panel').hidden=false;$('#drive-status').textContent='Choose the name shown on your BHR entries, then continue.';$('#staff-display-name').focus();}
 $('#edit-staff-profile').onclick=showStaffProfile;
+initAccountMenu(()=>{if(!workspaceReady||!hasDriveAccess())return;if(!$('#drive-dialog').open)$('#drive-dialog').showModal();fillSettings();showStaffProfile();});
 $('#save-staff-profile').onclick=async()=>{const epoch=sessionEpoch;$('#save-staff-profile').disabled=true;try{await saveStaffProfile($('#staff-display-name').value);if(epoch!==sessionEpoch)return;$('#staff-profile-panel').hidden=true;$('#current-user').textContent='Google account: '+(getCurrentUser().email||getCurrentUser().googleName)+' · BHR: '+getCurrentUser().name;await runSync();}catch(error){if(epoch===sessionEpoch)$('#drive-status').textContent=error.message;}finally{$('#save-staff-profile').disabled=false;}};
 function clearProtectedWorkspace(removeStorage=true){
   if(removeStorage){

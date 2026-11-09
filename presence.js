@@ -1,5 +1,5 @@
 // Presence transport boundary. Later supply a server-authorized provider with
-// subscribe(onUsers) => unsubscribe, emitting [{id, name}] for active sessions.
+// subscribe(onUsers) => unsubscribe, emitting [{id, name, email}] for active sessions.
 // Until then this reports only this browser's authenticated session.
 const button=document.querySelector('#connected-users'),pane=document.querySelector('#connected-users-pane'),list=document.querySelector('#connected-users-list');
 let sessionUser=null,unsubscribe=null,provider=null,generation=0;
@@ -8,7 +8,7 @@ function render(users){
   for(const user of users||[])if(user?.id)unique.set(user.id,user);
   button.textContent=`Connected Users: ${unique.size}`;
   list.replaceChildren();
-  for(const user of unique.values()){const item=document.createElement('li');item.textContent=user.name||'Connected user';list.append(item);}
+  for(const user of unique.values()){const item=document.createElement('li');item.textContent=(user.name||'Connected user')+(user.email?' ('+user.email+')':'');list.append(item);}
   document.querySelector('#presence-scope').textContent=provider?'Connected sessions':'This browser session';
 }
 export function closePresence(){pane.hidden=true;button.setAttribute('aria-expanded','false');}
@@ -23,7 +23,7 @@ function subscribe(){
   unsubscribe=provider.subscribe(users=>{if(current===generation&&sessionUser)render(users);});
 }
 export function updateSessionPresence(user){
-  if(sessionUser?.id===user?.id&&sessionUser?.name===user?.name)return;
+  if(sessionUser?.id===user?.id&&sessionUser?.name===user?.name&&sessionUser?.email===user?.email)return;
   generation++;unsubscribe?.();unsubscribe=null;sessionUser=user;
   if(user)subscribe();else{render([]);closePresence();}
 }
