@@ -1,5 +1,9 @@
 # Version history
 
+## 0.14.1 — 2026-11-09
+
+- Rename Calendar Maker to Weekly Appts on the desktop, window titles, accessibility labels and connection message.
+
 ## 0.14.0 — 2026-11-09
 
 - Open saved appointment calendars in a readable day-by-day view with compact appointment cards and separated administrator details.

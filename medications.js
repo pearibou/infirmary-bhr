@@ -1,8 +1,8 @@
-import {printDocument,clearPrint} from './printing.js?v=0.14.0';
-import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.14.0';
-import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.14.0';
-import {isPrnMedication,compareMedications,EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.14.0';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.14.0';
+import {printDocument,clearPrint} from './printing.js?v=0.14.1';
+import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.14.1';
+import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.14.1';
+import {isPrnMedication,compareMedications,EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.14.1';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.14.1';
 const $=selector=>document.querySelector(selector),dialog=$('#medications-dialog'),formDialog=$('#medication-form-dialog'),actionDialog=$('#medication-action-dialog');
 let hooks,active=false,epoch=0,queue=Promise.resolve(),pending=0,currentPerson=null,context=null,tab='Active',formState=null,actionState=null,formDirty=false;
 const node=(tag,text,cls)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;};
