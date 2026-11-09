@@ -17,7 +17,7 @@ with sync_playwright() as p:
     # Provider seam accepts future shared presence, deduplicates identities and
     # ignores stale callbacks after replacing a provider.
     page.evaluate("""async()=>{
-        const presence=await import('./presence.js?v=0.24.1');
+        const presence=await import('./presence.js?v=0.26.0');
         window.presenceModule=presence;
         presence.setPresenceProvider({subscribe:cb=>{window.oldPresence=cb;cb([{id:'a',name:'Synthetic One'},{id:'a',name:'Synthetic One'},{id:'b',name:'Synthetic Two',email:'two@example.test'}]);return ()=>window.presenceStopped=true;}});
     }""")
@@ -71,7 +71,7 @@ with sync_playwright() as p:
         page.set_viewport_size({'width':width,'height':900})
         account.click();assert account_pane.is_visible()
         if width in [1280,390]:page.locator('.menubar').screenshot(path=f'/tmp/bhr-account-menu-{width}.png')
-        rect=account_pane.bounding_box();assert rect['x']>=0 and rect['x']+rect['width']<=width
+        rect=account_pane.bounding_box();assert rect['x']>=0 and rect['x']+rect['width']<=width,(width,rect,page.locator('.menubar').bounding_box())
         assert abs(account.bounding_box()['y']-page.locator('#logout-power').bounding_box()['y'])<5
         page.keyboard.press('Escape')
         toggle.click();assert menu.is_visible()

@@ -1,9 +1,11 @@
-import {validateStickyDrawing} from './sticky-drawing.js?v=0.24.1';
-import {validateDemographics} from './demographics-model.js?v=0.24.1';
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.24.1';
+import {validateAlertEvents,mergeAlertEvents} from './refill-alerts-model.js?v=0.26.0';
+import {validateStickyDrawing} from './sticky-drawing.js?v=0.26.0';
+import {validateDemographics} from './demographics-model.js?v=0.26.0';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.26.0';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
+  validateAlertEvents(data.refillAlertEvents);
   if(data.deleted!==undefined){
     if(!data.deleted||!Array.isArray(data.deleted.people)||!Array.isArray(data.deleted.notes))throw new Error('Invalid deletion markers.');
     const people=new Set(),notes=new Set();
@@ -80,7 +82,8 @@ export function mergeDirectories(local,remote){
     desktop.set(note.id,{...structuredClone(content),x:position.x,y:position.y,updatedAt:position.updatedAt});
   }
   const eventLog=mergeEventLogs(local.eventLog,remote.eventLog);
-  return {version:1,people:[...people.values()],...(eventLog.length?{eventLog}:{}),...(desktop.size?{desktopNotes:[...desktop.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))}:{}),...((removedPeople.size||removedNotes.size||removedDesktop.size)?{deleted:{people:[...removedPeople].sort(),notes:[...removedNotes.values()].sort((a,b)=>JSON.stringify([a.personId,a.noteId]).localeCompare(JSON.stringify([b.personId,b.noteId]))),...(removedDesktop.size?{desktopNotes:[...removedDesktop].sort()}:{})}}:{})};
+  const refillAlertEvents=mergeAlertEvents(local.refillAlertEvents,remote.refillAlertEvents);
+  return {version:1,people:[...people.values()],...(refillAlertEvents.length?{refillAlertEvents}:{}),...(eventLog.length?{eventLog}:{}),...(desktop.size?{desktopNotes:[...desktop.values()].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))}:{}),...((removedPeople.size||removedNotes.size||removedDesktop.size)?{deleted:{people:[...removedPeople].sort(),notes:[...removedNotes.values()].sort((a,b)=>JSON.stringify([a.personId,a.noteId]).localeCompare(JSON.stringify([b.personId,b.noteId]))),...(removedDesktop.size?{desktopNotes:[...removedDesktop].sort()}:{})}}:{})};
 }
 
 export function personName(person){

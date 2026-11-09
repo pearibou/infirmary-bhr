@@ -1,6 +1,6 @@
-import {findVitalsWorkbook,medicationSheetsRequest as vitalsSheetsRequest,getDriveSessionEpoch,getCurrentUser} from './drive.js?v=0.24.1';
-import {VITAL_FIELDS,VITAL_HEADERS,EDITABLE_VITAL_FIELDS,parseVitalRows,vitalToRow,validateVital} from './vitals-model.js?v=0.24.1';
-import {medicationSheetTitle,medicationSheetId} from './medications-model.js?v=0.24.1';
+import {findVitalsWorkbook,medicationSheetsRequest as vitalsSheetsRequest,getDriveSessionEpoch,getCurrentUser} from './drive.js?v=0.26.0';
+import {VITAL_FIELDS,VITAL_HEADERS,EDITABLE_VITAL_FIELDS,parseVitalRows,vitalToRow,validateVital} from './vitals-model.js?v=0.26.0';
+import {medicationSheetTitle,medicationSheetId} from './medications-model.js?v=0.26.0';
 const PERSON_KEY='bhr.vitals.personId',ROW_KEY='bhr.vitals.entryId',SCHEMA_KEY='bhr.vitals.schema';
 let source,sourceEpoch=-1;
 export function resetVitalsSource(){source=null;sourceEpoch=-1;}

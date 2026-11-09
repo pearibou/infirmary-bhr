@@ -1,6 +1,6 @@
 # In-BHR medication refill alerts — discussion notes
 
-Status: design only. Refill tracking exists, but the alert indicator, acknowledgments, configurable thresholds and refill-request workflow below are not implemented. See [refill tracking](medication-refill-tracking-design.md).
+Status: implemented in 0.25.0. The sections below preserve the original design discussion; see Implementation decisions for the shipped behavior. See [refill tracking](medication-refill-tracking-design.md).
 
 ## Scope
 
@@ -63,3 +63,14 @@ Suggested acknowledgments and refill-request state are shared across the team in
 - Exact acknowledgment and reminder controls, re-alert rules, and treatment of discontinued medications.
 - Initial settings-edit permissions under the current shared Google connection.
 - Shared configuration schema and concurrency approach for alert/request records.
+
+## Implementation decisions (0.25.0)
+
+- Use the compact bottle/exclamation/count beside sync in the top bar. Indicator only at startup; no extra startup popups or external notifications.
+- Include active medications for living patients. Count medications, with distinct reasons within each card. Missing values are not zero.
+- Shared defaults are 7 supply days / 30 expiration days / no-refills enabled. All connected Drive editors can change these; no administrator role is claimed.
+- Acknowledge each current reason; defer all current reasons to a shared team reminder date. Low→exhausted→overdue and expiring→expired are distinct stages. Daily countdowns and medication renames preserve acknowledgments. Relevant data/threshold changes use new stable issue tokens; new refill IDs create independent issues.
+- Pending requests are per medication/current dispensing context, shared and separate from acknowledgement. Record the pharmacy request manually; no API contacts the pharmacy. Duplicate concurrent request events reduce to one visible pending state while preserving attribution. A fresh sync/read precedes writes; changed issues/settings/pending requests require review.
+- Store immutable action/settings events in optional `refillAlertEvents` inside the private directory JSON, preserving older directory/clinical/refill schemas. No medication/refill sheet columns are changed. Merge unions events and refuses conflicting mutations of an existing ID. Existing directory write races remain reduced, not fully transactional; all clients should update together.
+- Scan medication/refill sheets in read-only batches at connection/open, relevant local changes and tab visibility; recalculate date-based conditions from session memory every minute. Failed/partial reads remain explicitly incomplete. State and comments follow existing protected browser-storage cleanup; full scanned medication/refill/pharmacy values remain memory-only.
+- Refill tracking warnings and alerts use the same settings. Printed clinical lists never include alert/request/refill fields.

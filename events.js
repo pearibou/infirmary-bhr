@@ -33,6 +33,7 @@ export function recordChanges(before,after,user){
   const oldStickies=new Map((before.desktopNotes||[]).map(n=>[n.id,n])),newStickies=new Set((after.desktopNotes||[]).map(n=>n.id));
   for(const note of before.desktopNotes||[])if(!newStickies.has(note.id))emit('sticky.deleted','sticky',note.id,'Shared sticky note permanently deleted');
   for(const note of after.desktopNotes||[]){const old=oldStickies.get(note.id);if(!old)emit('sticky.created','sticky',note.id,'Shared sticky note created');else {if(old.text!==note.text||JSON.stringify(old.drawing||[])!==JSON.stringify(note.drawing||[]))emit('sticky.edited','sticky',note.id,'Shared sticky note edited');if(old.x!==note.x||old.y!==note.y)emit('sticky.moved','sticky',note.id,'Shared sticky note moved');}}
+  const knownAlerts=new Set((before.refillAlertEvents||[]).map(e=>e.id));for(const e of after.refillAlertEvents||[])if(!knownAlerts.has(e.id))emit('refill_alert.'+e.kind,'refill_alert',e.id,'Refill alert '+e.kind,e.personId);
   const events=mergeEventLogs(mergeEventLogs(before.eventLog,after.eventLog),added);return {...after,...(events.length?{eventLog:events}:{})};
 }
 const HEADER='Infirmary BHR Event Log v1 (newest first)\nTime (UTC)\tActor\tAction\tType\tEntry ID\tPerson ID\tDetails\tActor ID\tEvent ID\n';

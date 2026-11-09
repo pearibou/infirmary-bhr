@@ -1,8 +1,8 @@
-import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.24.1';
-import {readRefills,saveRefill,deleteRefill} from './refills-api.js?v=0.24.1';
-import {REFILL_EDITABLE,newRefill,reviseRefill,compareRefills,refillEstimate,refillWarnings} from './refills-model.js?v=0.24.1';
-import {localMedicationTime,compareMedications} from './medications-model.js?v=0.24.1';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.24.1';
+import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.26.0';
+import {readRefills,saveRefill,deleteRefill} from './refills-api.js?v=0.26.0';
+import {REFILL_EDITABLE,newRefill,reviseRefill,compareRefills,refillEstimate,refillWarnings} from './refills-model.js?v=0.26.0';
+import {localMedicationTime,compareMedications} from './medications-model.js?v=0.26.0';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.26.0';
 const $=s=>document.querySelector(s),node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 let hooks,active=false,epoch=0,busy=false,personId=null,medContext=null,context=null,filterId=null,draft=null,dirty=false,deleting=null;
 function alive(stamp){if(!active||stamp!==epoch||!hasDriveAccess())throw new Error('Reconnect Google Drive to use refill tracking.');}
@@ -22,7 +22,7 @@ function render(){
  for(const med of medications.filter(m=>!filterId||m.id===filterId)){
   const card=node('article');card.className='refill-medication';card.dataset.medicationId=med.id;card.append(node('h3',med.medication));if(med.status!=='Active')card.append(node('p',med.status==='Removed'?'Medication removed · refill history retained':'Discontinued medication'));
   const records=context.rows.filter(r=>r.medicationId===med.id).sort(compareRefills),latest=records[0];
-  if(latest){card.append(summary(latest));const warnings=refillWarnings(latest,context.timezone);if(warnings.length){const warning=node('p',warnings.join(' · '));warning.className='refill-warning';card.append(warning);}}
+  if(latest){card.append(summary(latest));const warnings=refillWarnings(latest,context.timezone,new Date(),hooks.alertSettings?.());if(warnings.length){const warning=node('p',warnings.join(' · '));warning.className='refill-warning';card.append(warning);}}
   else card.append(node('p','No refill information recorded.'));
   if(!med.removed){const add=node('button','+ Record refill');add.type='button';add.onclick=()=>openForm(med);card.append(add);}
   if(records.length){const history=node('details'),caption=node('summary','Refill history ('+records.length+')');history.append(caption);for(const entry of records){const row=node('section');row.className='refill-history-entry';row.append(node('h4',entry.lastFilled||'Fill date not recorded'),summary(entry),node('p','Entered by '+entry.enteredBy+' · '+new Date(entry.enteredAt).toLocaleString()+(entry.revision!=='1'?' · Edited by '+entry.updatedBy+' · '+new Date(entry.updatedAt).toLocaleString():'')));const actions=node('div');actions.className='refill-actions';const edit=node('button','Edit refill…'),remove=node('button','Delete refill…');edit.type=remove.type='button';edit.onclick=()=>openForm(med,entry);remove.onclick=()=>{if(busy)return;deleting=entry;$('#refill-delete-error').textContent='';$('#refill-delete-subject').textContent=med.medication+' · '+(entry.lastFilled||'Date not recorded');showWindow($('#refill-delete-dialog'));};actions.append(edit,remove);row.append(actions);history.append(row);}card.append(history);}
