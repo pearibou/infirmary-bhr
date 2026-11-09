@@ -1,5 +1,14 @@
 # Version history
 
+## 0.21.0 — 2026-11-09
+
+- Make the connected Drive dialog glow bright neon green with a much broader halo.
+- Add desktop rectangle selection and confirmed bulk deletion, preserving note ownership and empty-folder checks and showing any per-item failures.
+- Keep minimized sticky notes beneath windows; expanded sticky-note layering is unchanged.
+- Add optional three-column GCS response buttons, pressed selection states, calculated total/interpretation and E/V/M viewing details to Vital Signs.
+- Read older vital-sign tabs without GCS and append the three optional columns safely on the next write, preserving existing observations and stable IDs.
+
+
 ## 0.20.0 — 2026-11-09
 
 - Individual Google account selection, explicit existing shared-folder setup and mandatory authenticated attribution before opening the desktop.

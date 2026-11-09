@@ -20,6 +20,8 @@ with sync_playwright() as p:
             fail[0]=False;route.fulfill(status=503,json={'error':{'message':'Synthetic write failed'}});return
         if url.path.endswith('/files') and method=='GET':
             q=query.get('q',[''])[0]
+            if 'staff_profile_' in q:
+                name=re.search("name = '([^']+)'",q)[1];route.fulfill(json={'files':[file for file in files.values() if file['name']==name and not file.get('trashed')]});return
             if 'people_directory.json' in q:route.fulfill(json={'files':[{'id':'directory'}]});return
             if 'BHR_event_log.txt' in q:route.fulfill(json={'files':[]});return
             person=re.search("key='personId' and value='([^']+)'",q);parent=re.search("'([^']+)' in parents",q)
@@ -217,7 +219,9 @@ with sync_playwright() as p:
     assert not prompts,prompts
     # A second connected identity can read but cannot edit, rename, move or trash this note.
     open_drive(page);page.locator('#disconnect').click();account.update(sub='other-staff',name='Other Synthetic Staff')
-    page.locator('#google-connect').click();page.wait_for_function("!document.body.classList.contains('drive-locked')")
+    page.locator('#google-connect').click();page.wait_for_function("!document.body.classList.contains('drive-locked') || !document.querySelector('#staff-profile-panel').hidden")
+    if page.locator('#staff-profile-panel').is_visible():page.locator('#save-staff-profile').click()
+    page.wait_for_function("!document.body.classList.contains('drive-locked')")
     page.locator('#drive-dialog [data-close]').click();open_bhr(page);page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
     page.wait_for_function("document.querySelector('#rich-note-dialog').open&&document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
     assert 'Synthetic unsaved private draft' not in body.inner_text()
@@ -242,7 +246,9 @@ with sync_playwright() as p:
     assert page.locator('.folder-window').count()==0
     assert page.locator('#window-dock .dock-folder-icon').count()==0
     account.update(sub='synthetic-staff',name='Synthetic Staff')
-    page.locator('#google-connect').click();page.wait_for_function("!document.body.classList.contains('drive-locked')");page.locator('#drive-dialog [data-close]').click();open_bhr(page)
+    page.locator('#google-connect').click();page.wait_for_function("!document.body.classList.contains('drive-locked') || !document.querySelector('#staff-profile-panel').hidden")
+    if page.locator('#staff-profile-panel').is_visible():page.locator('#save-staff-profile').click()
+    page.wait_for_function("!document.body.classList.contains('drive-locked')");page.locator('#drive-dialog [data-close]').click();open_bhr(page)
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic Folder').dblclick()
     topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').dblclick()
     own=nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note');own.wait_for();own.dblclick()
