@@ -12,7 +12,7 @@ The application's last menu item, **About…**, displays the abbey emblem, Broth
 
 ## Required connection and desktop handoff notes
 
-The Drive dialog gains a steady green perimeter glow and a Connected label after sign-in and successful directory sync. Signing in without completing directory sync is labeled separately and does not show the ready glow. Disconnecting or expiring access removes the glow.
+The Drive dialog gains a bright neon-green perimeter and broad green glow and a Connected label after sign-in and successful directory sync. Signing in without completing directory sync is labeled separately and does not show the ready glow. Disconnecting or expiring access removes the glow.
 
 Every opening shows the Drive connection dialog and hides/disables the workspace until Google sign-in and a successful directory sync finish. Sign in with your **own Google account**, paste the administrator's shared **Infirmary-BHR** folder link and select **Open shared workspace** (or choose the existing folder with the Google picker). The folder must contain the existing `people_directory.json` and the account needs Editor access. A remembered location reconnects automatically. First use asks for a BHR display name; subsequent connections load it from the same workspace. Change it through **Google Drive… → Change my display name…**. Owners creating/upgrading a workspace can expand the separate administrator section; staff must not create a private copy in their own My Drive.
 
@@ -23,6 +23,8 @@ The existing OAuth setup uses `openid email profile` plus full Drive access (whi
 Right-click an empty desktop area to open its context menu, then choose **New Sticky Note**. Type a handoff message and select **Leave note**. The pastel-yellow card records the connected user's name and syncs immediately into `desktopNotes` in `people_directory.json`; the next connected user of that same Drive directory receives it during their opening sync. Drag cards to move them, or focus a card and use arrow keys. Drag a card to Trash (or focus it and press Delete) for the existing permanent-delete confirmation. Deleted card IDs sync so stale copies cannot restore them. A network failure can leave a handoff pending locally; verify successful sync before expecting the next user to receive it. Cards may contain protected information, so none are written into source, GitHub, logs or app-shell caches.
 
 Edit a sticky with its pencil button, a double-click, or right-click **Edit note**. Any connected staff member can edit shared stickies. The editor's pencil/palette toggle enables drawing in the area below the message and opens color/brush controls, Undo stroke and Clear drawing. Save preserves both text and drawing; Cancel preserves the saved version. A drawing-only note is allowed. Original creators stay attributed and edits show editor/time.
+
+Opened sticky notes retain their foreground layer. Minimized stickies sit at desktop level, beneath overlapping BHR/folder windows.
 
 Right-click a sticky to **Minimize note** or **Trash (delete) note…**. Minimized stickies snap to a strip below the menu bar; click to restore. This is local session state and does not hide notes from other users. Deletion uses the existing confirmation. Sticky drawings sync as bounded strokes in directory JSON; logout/disconnect clears editor canvas and minimized labels. The [drawing design notes](docs/note-drawing-design.md) describe current scope and future ideas; clinical-note editors remain unchanged. Update all clients before editing shared stickies with this release; older clients do not support content edits/drawings.
 
@@ -37,6 +39,8 @@ Saved clinical note files open in **viewing mode**, with a readable title, date/
 ## Vital Signs
 
 Double-click **Vital Signs** on the desktop and choose a person, or use **Vital Signs** in their chart navigation. **+ Add vital signs** opens a dated observation form. Record any subset of blood pressure, pulse, respirations, temperature, oxygen saturation, height and weight, with an optional comment. Oxygen delivery defaults to **RA** (room air); enter another method and flow rate as needed. Temperature supports °F/°C, height total inches/cm, and weight lb/kg.
+
+The optional **Glasgow Coma Scale (GCS)** section has Eye Opening (1–4), Verbal Response (1–5) and Motor Response (1–6) buttons. Each column has one visibly pressed selection. Completing all three displays the 3–15 total and a concise interpretation; **Clear GCS** removes the assessment. An incomplete assessment cannot be saved. A complete GCS may be recorded alone. Viewing shows the total and E/V/M breakdown only when recorded. Existing tabs gain three appended GCS columns on the next write, retaining earlier observations and stable row IDs. Update all clients together before recording GCS; older clients do not understand the additional fields.
 
 Observations appear newest first by measurement time. Backdated entries are supported; the editor labels its device timezone and stores times in UTC. History entries offer Edit and confirmed Delete. The main chart shows the latest height and weight independently, each with its measurement date; missing values stay hidden. A blood-pressure-only entry does not replace prior dimensions.
 
@@ -93,6 +97,9 @@ The main BHR window stays closed on initial entry and after logout/reconnection.
 Use the small red × to the left of an attached Drive folder. The confirmation warns that detaching can break chart file links or upload destinations. Cancel preserves the link. Confirm removes only the chart's reference; the Drive folder, files and profile-photo references remain intact. Reattach with **Attach folder…** when needed. Per-folder attachment states sync with the directory, preventing stale clients from silently restoring detached links; intentionally reattaching records a newer attachment state. Update clients before using this feature. Existing nontransactional directory-sync limitations still apply.
 
 ## Desktop and permanent deletion
+
+Click and drag empty desktop space to draw a selection rectangle around note files, folders and sticky notes. Hold Shift/Ctrl/Command to add another rectangle. Press **Delete**, click **Trash**, or drag selected items to Trash, then confirm the listed items. Cancel preserves the selection. Built-in app icons are excluded. Only visible desktop items are selected; icons concealed by windows are skipped. Bulk trash rechecks creator permissions and folder contents before each Drive mutation. Successful deletions stay applied if another item fails; the dialog lists only failures for retry. Drive files go to recoverable Drive Trash; sticky deletions propagate permanently through directory sync. Individual quick-note/person deletion remains unchanged.
+
 
 Desktop icons occupy a grid anchored at the top right, filling downward before creating another column to the left. Future `.desktop-icon` elements added to `#desktop-icons` use the same grid. The BHR occupies the first top-right grid slot; Trash is separately anchored at the bottom right and comes forward during an entry drag so it can receive drops even when the main window is maximized.
 

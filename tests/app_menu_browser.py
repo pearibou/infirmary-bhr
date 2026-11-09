@@ -16,7 +16,7 @@ with sync_playwright() as p:
     # Provider seam accepts future shared presence, deduplicates identities and
     # ignores stale callbacks after replacing a provider.
     page.evaluate("""async()=>{
-        const presence=await import('./presence.js?v=0.20.0');
+        const presence=await import('./presence.js?v=0.21.0');
         window.presenceModule=presence;
         presence.setPresenceProvider({subscribe:cb=>{window.oldPresence=cb;cb([{id:'a',name:'Synthetic One'},{id:'a',name:'Synthetic One'},{id:'b',name:'Synthetic Two'}]);return ()=>window.presenceStopped=true;}});
     }""")
@@ -38,7 +38,7 @@ with sync_playwright() as p:
     assert not menu.is_visible()
     toggle.click();page.locator('#drive-open').click()
     assert page.locator('#drive-dialog').is_visible() and not menu.is_visible()
-    assert page.locator('#drive-dialog').evaluate("e=>e.classList.contains('drive-connected') && getComputedStyle(e).outlineWidth==='2px'")
+    assert page.locator('#drive-dialog').evaluate("e=>e.classList.contains('drive-connected') && getComputedStyle(e).outlineWidth==='5px'")
     assert page.locator('#drive-connection-badge').inner_text()=='● Connected to Google Drive'
     page.locator('#drive-dialog [data-close]').click()
     toggle.click();page.locator('.abbey-mark').click();assert not menu.is_visible()

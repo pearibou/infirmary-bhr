@@ -1,6 +1,7 @@
-import {smallIcon} from './icons-ui.js?v=0.20.0';
-import {validateStickyDrawing,paintSticky} from './sticky-drawing.js?v=0.20.0';
-import {makeTrashable,draggedEntry,finishEntryDrag} from './trash.js?v=0.20.0';
+import {registerDesktopItem} from './desktop-selection.js?v=0.21.0';
+import {smallIcon} from './icons-ui.js?v=0.21.0';
+import {validateStickyDrawing,paintSticky} from './sticky-drawing.js?v=0.21.0';
+import {makeTrashable,draggedEntry,finishEntryDrag} from './trash.js?v=0.21.0';
 const desktop=document.querySelector('.desktop'),layer=document.querySelector('#sticky-notes'),menu=document.querySelector('#desktop-context-menu');
 let createNote,moveNote,editNote,dropOffset={x:0,y:0},menuOrigin={x:24,y:24};
 const top=()=>document.querySelector('.menubar').getBoundingClientRect().bottom;
@@ -26,7 +27,7 @@ export function initDesktopNotes(create,move,edit){
 export function renderDesktopNotes(notes){
   layer.replaceChildren();const dock=document.querySelector('#sticky-dock');dock.replaceChildren();const ids=new Set(notes.map(n=>n.id));for(const id of minimized)if(!ids.has(id))minimized.delete(id);
   currentNotes=notes;for(const note of notes){
-    if(minimized.has(note.id)){const button=document.createElement('button');button.type='button';button.className='sticky-minimized';button.textContent=note.text.trim().split('\n')[0]||'Drawing';button.title='Restore sticky note: '+button.textContent;button.onclick=()=>{minimized.delete(note.id);renderDesktopNotes(currentNotes);};button.oncontextmenu=event=>showStickyMenu(event,note.id,true);dock.append(button);continue;}
+    if(minimized.has(note.id)){const button=document.createElement('button');button.type='button';button.className='sticky-minimized';button.textContent=note.text.trim().split('\n')[0]||'Drawing';button.title='Restore sticky note: '+button.textContent;button.onclick=()=>{minimized.delete(note.id);renderDesktopNotes(currentNotes);};button.oncontextmenu=event=>showStickyMenu(event,note.id,true);dock.append(button);registerDesktopItem(button,{desktopNoteId:note.id,name:button.textContent});continue;}
     const card=document.createElement('article');card.className='sticky-note';card.tabIndex=0;card.setAttribute('aria-label','Shared desktop note');card.dataset.noteId=note.id;card.dataset.x=note.x;card.dataset.y=note.y;
     const header=document.createElement('div');header.className='sticky-title';header.textContent='Note';const pencil=document.createElement('button');pencil.type='button';pencil.className='sticky-edit';pencil.setAttribute('aria-label','Edit sticky note');pencil.title='Edit sticky note';pencil.append(smallIcon('pencil'));pencil.onclick=()=>editNote(note.id);header.append(pencil);
     const text=document.createElement('p');text.textContent=note.text;
@@ -34,7 +35,7 @@ export function renderDesktopNotes(notes){
     card.append(header,text);if(note.drawing?.length){const drawing=document.createElement('canvas');drawing.width=520;drawing.height=240;drawing.className='sticky-card-drawing';drawing.setAttribute('aria-label','Sticky drawing');drawing.setAttribute('role','img');paintSticky(drawing,note.drawing);card.append(drawing);}if(note.editedAt)author.textContent+=' · Edited by '+(note.editedBy||'Connected staff')+' · '+new Date(note.editedAt).toLocaleString();card.append(author);card.ondblclick=event=>{if(!event.target.closest('button'))editNote(note.id);};card.oncontextmenu=event=>showStickyMenu(event,note.id,false);position(card,note);makeTrashable(card,{desktopNoteId:note.id});
     card.addEventListener('dragstart',event=>{const rect=card.getBoundingClientRect();dropOffset={x:event.clientX-rect.left,y:event.clientY-rect.top};});
     card.addEventListener('keydown',event=>{if(event.target.closest('button'))return;if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();moveNote(note.id,{x:Math.max(0,note.x+(event.key==='ArrowRight'?10:event.key==='ArrowLeft'?-10:0)),y:Math.max(0,note.y+(event.key==='ArrowDown'?10:event.key==='ArrowUp'?-10:0))});});
-    layer.append(card);
+    layer.append(card);registerDesktopItem(card,{desktopNoteId:note.id,name:note.text.trim().split('\n')[0]||'Sticky drawing'});
   }
 }
 

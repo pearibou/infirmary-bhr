@@ -1,25 +1,28 @@
-import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.20.0';
-import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.20.0';
-import {changeFolderLink} from './model.js?v=0.20.0';
-import {openMainWindow,closeMainWindow} from './windows.js?v=0.20.0';
-import {initCalendar,calendarSession} from './calendar.js?v=0.20.0';
-import {initBackground} from './background.js?v=0.20.0';
-import {initHistory,historySession,openHistory} from './history.js?v=0.20.0';
-import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.20.0';
-import {printDocument} from './printing.js?v=0.20.0';
-import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.20.0';
-import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.20.0';
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.20.0';
-import {updateSessionPresence} from './presence.js?v=0.20.0';
-import {closeAppMenu} from './app-menu.js?v=0.20.0';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.20.0';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.20.0';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.20.0';
-import {validatePhoto} from './photos.js?v=0.20.0';
-import './windows.js?v=0.20.0';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.20.0';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.20.0';
+import {clearDesktopSelection} from './desktop-selection.js?v=0.21.0';
+import {trashDesktopBatch} from './documents.js?v=0.21.0';
+import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.21.0';
+import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.21.0';
+import {changeFolderLink} from './model.js?v=0.21.0';
+import {openMainWindow,closeMainWindow} from './windows.js?v=0.21.0';
+import {initCalendar,calendarSession} from './calendar.js?v=0.21.0';
+import {initBackground} from './background.js?v=0.21.0';
+import {initHistory,historySession,openHistory} from './history.js?v=0.21.0';
+import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.21.0';
+import {printDocument} from './printing.js?v=0.21.0';
+import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.21.0';
+import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.21.0';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.21.0';
+import {updateSessionPresence} from './presence.js?v=0.21.0';
+import {closeAppMenu} from './app-menu.js?v=0.21.0';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.21.0';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.21.0';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.21.0';
+import {validatePhoto} from './photos.js?v=0.21.0';
+import './windows.js?v=0.21.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.21.0';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.21.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
+let bulkTargets=[],bulkBusy=false;
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
 const photoUrls=new Map();let photoGeneration=0;
@@ -383,6 +386,7 @@ $('#trash-form').onsubmit=event=>{
 $('#trash-dialog').addEventListener('close',()=>{trashTarget=undefined;$('#trash-entry-label').textContent='';});
 
 function lockWorkspace(){
+  clearDesktopSelection();bulkTargets=[];
   closeMainWindow();detachFolderTarget=null;  clearStickyState();stickyEditId=null;stickyBaseline=null;clearDemographics();vitalsSession(false);calendarSession(false);historySession(false);medicationsSession(false);documentsSession(false);
   if(!hasDriveAccess()){connected=false;clearPhotos();$('#current-user').textContent='';}
   workspaceReady=false;document.body.classList.add('drive-locked');$('.desktop').inert=true;closeDesktopMenu();closeAppMenu();
@@ -430,3 +434,22 @@ function openEventLog(){document.querySelector('#window-dock [data-window="event
 $('#event-log-icon').onclick=openEventLog;
 function openBHR(){if(!workspaceReady||!hasDriveAccess()){lockWorkspace();return;}openMainWindow();}
 $('#bhr-icon').ondblclick=openBHR;$('#bhr-icon').onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openBHR();}};
+
+document.addEventListener('desktop-trash-request',event=>{
+ if(!workspaceReady||bulkBusy||fileBusy||uploading||personSaveBusy)return;bulkTargets=event.detail.map(target=>({...target}));$('#bulk-trash-list').replaceChildren(...bulkTargets.map(target=>element('li',target.name)));$('#bulk-trash-error').textContent='';$('#bulk-trash-dialog').showModal();
+});
+$('#bulk-trash-confirm').onclick=async()=>{
+ if(!workspaceReady||bulkBusy)return;bulkBusy=true;externalBusy('bulk-trash',true);$('#bulk-trash-dialog').querySelectorAll('button').forEach(button=>button.disabled=true);const epoch=sessionEpoch;
+ try{
+  const files=bulkTargets.filter(target=>target.fileId),result=files.length?await trashDesktopBatch(files):{deleted:[],failed:[]};if(epoch!==sessionEpoch)return;
+  let next=structuredClone(data);const stickies=bulkTargets.filter(target=>target.desktopNoteId);
+  for(const target of stickies)if(next.desktopNotes?.some(note=>note.id===target.desktopNoteId))next=deleteDirectoryEntry(next,{desktopNoteId:target.desktopNoteId},getCurrentUser());
+  if(stickies.length&&!save(next))result.failed.push(...stickies.map(target=>({...target,error:'Could not save deletion. Please retry.'})));
+  clearDesktopSelection();renderKeepingDraft();bulkTargets=result.failed;
+  if(result.failed.length){$('#bulk-trash-list').replaceChildren(...result.failed.map(target=>element('li',target.name+' — '+target.error)));$('#bulk-trash-error').textContent='These items were not deleted. Other selected items were removed.';}
+  else $('#bulk-trash-dialog').close();await runSync();
+ }catch(error){if(epoch===sessionEpoch)$('#bulk-trash-error').textContent=error.message;}
+ finally{bulkBusy=false;externalBusy('bulk-trash',false);$('#bulk-trash-dialog').querySelectorAll('button').forEach(button=>button.disabled=false);}
+};
+$('#bulk-trash-dialog').addEventListener('cancel',event=>{if(bulkBusy)event.preventDefault();});
+$('#bulk-trash-dialog').addEventListener('close',()=>{bulkTargets=[];$('#bulk-trash-list').replaceChildren();$('#bulk-trash-error').textContent='';});

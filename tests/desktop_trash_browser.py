@@ -76,7 +76,7 @@ with sync_playwright() as p:
     drag_to_trash(page.locator('.person').filter(has_text='Beta Test'))
     confirm.get_by_role('button',name='Permanently delete',exact=True).click()
     assert page.locator('.person').count()==1
-    open_drive(page);page.locator('#google-connect').click();page.locator('#use-drive-root').click();page.locator('#sync').click()
+    open_drive(page);page.locator('#sync').click()
     page.wait_for_function("document.querySelector('#drive-status').textContent.startsWith('Synced.')")
     assert uploads and len(uploads[-1]['people'])==1 and uploads[-1]['people'][0]['notes']==[]
     assert uploads[-1]['deleted']['people']==['b']

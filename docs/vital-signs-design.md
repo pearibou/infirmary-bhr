@@ -51,3 +51,11 @@ Show the values, units and a compact measurement date beside the person's main d
 Read/write directly through authenticated Google Drive/Sheets APIs. No observation values, summaries or comments are written to localStorage, service-worker caches, GitHub, or static hosting. Observation mutation events contain action/person/entry IDs and actor metadata, not measurement values or comments.
 
 Save failures retain the form for retry. Switching people while a draft is active resumes that draft rather than silently changing its patient. Logout/disconnect clears observation lists, summaries, picker labels, drafts, cached measurements and pending request state. Connection-epoch checks prevent a stale request from populating a later session.
+
+## Optional Glasgow Coma Scale (0.21.0)
+
+Store `gcsEye`, `gcsVerbal`, `gcsMotor` as optional string fields in three appended spreadsheet columns (22–24, zero based). Calculate the total from components; never maintain a separately editable total. All blank means no assessment. All three valid choices are required for any assessment, including a GCS-only observation. Display E/V/M breakdown and total; old observations omit this line entirely.
+
+Read legacy 22-column tabs without changing them. Before a write, validate existing headers/rows and append only missing GCS headers, increasing grid column count if required. Unexpected data in the appended columns stops the upgrade. Existing observations, author IDs, revision fields and row metadata retain their positions. Original schemas still use their existing workbook marker; all clients must update together because earlier frontends do not interpret or validate the new fields.
+
+Descriptions use the adult eye/verbal/motor responses. A component that cannot be assessed should remain unsubmitted; this version does not invent a numeric value for untestable responses. The brief total interpretation describes a score range, not a diagnosis.

@@ -1,9 +1,10 @@
-import {smallIcon} from './icons-ui.js?v=0.20.0';
-import {printDocument} from './printing.js?v=0.20.0';
-import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.20.0';
-import {clearTrashSelection} from './trash.js?v=0.20.0';
-import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.20.0';
-import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.20.0';
+import {registerDesktopItem} from './desktop-selection.js?v=0.21.0';
+import {smallIcon} from './icons-ui.js?v=0.21.0';
+import {printDocument} from './printing.js?v=0.21.0';
+import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.21.0';
+import {clearTrashSelection} from './trash.js?v=0.21.0';
+import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.21.0';
+import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.21.0';
 const $=selector=>document.querySelector(selector),noteDialog=$('#rich-note-dialog'),folderTemplate=$('#file-browser-template'),context=$('#file-context-menu');
 let hooks,active=false,generation=0,refreshNumber=0,busy=false,editor=null,contextFile,contextView,actionFile,actionKind,dragged,dirty=false,renaming=false,refreshPending=false,editorRequest=0;
 let desktopFiles=[],tooltipTimer,tooltipTarget,windowNumber=0;
@@ -161,7 +162,7 @@ function fileIcon(file,view=null){
   const button=node('button',undefined,'desktop-icon drive-file');button.type='button';button.dataset.fileId=file.id;button.setAttribute('aria-label',file.name);button.setAttribute('aria-description',folder(file)?'Folder':allowed(file)?'Your clinical note':'Read-only · another author');filenameHint(button,file.name);
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 48 48');svg.setAttribute('aria-hidden','true');
   svg.innerHTML=folder(file)?'<path d="M4 12h17l5 5h18v25H4z" fill="#ddd" stroke="#111" stroke-width="2"/><path d="M4 19h40" stroke="#111"/>':'<path d="M10 3h20l9 9v33H10z" fill="#fff" stroke="#111" stroke-width="2"/><path d="M30 3v10h9M16 20h17m-17 6h17m-17 6h17m-17 6h12" fill="none" stroke="#555" stroke-width="2"/>';
-  button.append(svg,node('span',file.name));
+  button.append(svg,node('span',file.name));if(!view)registerDesktopItem(button,{fileId:file.id,name:file.name});
   button.addEventListener('pointerdown',clearTrashSelection);button.addEventListener('focus',clearTrashSelection);
   button.ondblclick=()=>handleAction(file,'open',view);
   button.addEventListener('keydown',event=>{if(event.target!==button||openingEditor||noteDialog.open)return;if(event.key==='Enter'){event.preventDefault();handleAction(file,'open',view);}if(event.key==='Delete'){event.preventDefault();handleAction(file,'trash',view);}if(event.key==='F2'){event.preventDefault();handleAction(file,'rename',view);}});
@@ -319,4 +320,15 @@ export function chartDocuments(container,personId){
    for(const file of files.filter(file=>!folder(file)).sort((a,b)=>(Date.parse(created(b))||0)-(Date.parse(created(a))||0)||a.id.localeCompare(b.id))){const item=node('div',undefined,'chart-document-entry'),open=node('button');open.type='button';open.append(smallIcon('document'),node('span',file.name));open.onclick=()=>openEditor(file);const time=node('time',created(file)&&Number.isFinite(Date.parse(created(file)))?new Date(created(file)).toLocaleString():'Creation time unavailable','chart-document-time');if(created(file))time.dateTime=created(file);item.append(open,time);items.append(item);}
   }catch(error){if(epoch===generation&&items.isConnected)items.textContent='Could not load clinical notes. '+error.message;}
  };refresh.onclick=load;load();
+}
+
+export async function trashDesktopBatch(targets){
+ const result={deleted:[],failed:[]};await operation(async epoch=>{
+  for(const target of targets){try{const file=await desktopFileMetadata(target.fileId);if(!allowed(file))throw new Error('Only the creator can delete this clinical note.');
+   const changed=await changeDesktopFile(file,{trash:true});if(epoch!==generation)throw new Error('Connection changed.');result.deleted.push(target);noteDrafts.delete('file:'+file.id);
+   if(editor?.file?.id===file.id){dirty=false;editor=null;$('#rich-note-body').replaceChildren();$('#rich-note-name').value='';$('#rich-note-time').value='';noteDialog.close();}
+   if(folder(file)){const view=folderViews.get(file.id);if(view)closeFolder(view);}record('trashed',changed);
+  }catch(error){result.failed.push({...target,error:error.message});if(epoch!==generation)break;}}
+  refreshDraftControls();
+ });await refreshFiles();hooks.chartChanged();return result;
 }

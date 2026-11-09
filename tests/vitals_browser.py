@@ -95,7 +95,9 @@ with sync_playwright() as p:
                     for i,row in enumerate(change['rows']):
                         index=start['rowIndex']+i
                         while len(rows)<=index:rows.append([])
-                        rows[index]=[cell.get('userEnteredValue',{}).get('stringValue','') for cell in row['values']]
+                        start_col=start.get('columnIndex',0);values=[cell.get('userEnteredValue',{}).get('stringValue','') for cell in row['values']]
+                        while len(rows[index])<start_col+len(values):rows[index].append('')
+                        rows[index][start_col:start_col+len(values)]=values
             if is_add and lost_add[0]:lost_add[0]=False;route.fulfill(status=503,json={'error':{'message':'Synthetic save response lost'}});return
             route.fulfill(json={'replies':[{} for _ in body['requests']]});return
         route.fulfill(status=404,json={'error':{'message':'Unknown synthetic Sheets route'}})
@@ -132,7 +134,7 @@ with sync_playwright() as p:
     assert form.get_by_label('Comment (optional)',exact=True).input_value()=='SYNTHETIC PRIVATE VITAL COMMENT'
     sid=next(tab['properties']['sheetId'] for tab in book['sheets'] if tab['properties']['title']=='Smith J');assert len(entry_rows(sid))==1
     page.locator('#vitals-save').click();page.wait_for_function("!document.querySelector('#vitals-form-dialog').open && !document.querySelector('#vitals-add').disabled")
-    assert len(entry_rows(sid))==1 and workbook_exists[0] and len(grids[sid][0])==22
+    assert len(entry_rows(sid))==1 and workbook_exists[0] and len(grids[sid][0])==25
     first=copy.deepcopy(entry_rows(sid)[0]);assert first[1]=='2026-11-01T14:00:00.000Z' and first[9]=='RA'
     assert page.locator('#records-window').is_hidden() and '98% · RA' in page.locator('#vitals-content').inner_text()
     directory_value=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1'))");assert directory_value['people'][0]['vitalsSheet']=={'spreadsheetId':'workbook','sheetId':sid} and 'SYNTHETIC PRIVATE VITAL COMMENT' not in json.dumps(directory_value)
@@ -163,6 +165,24 @@ with sync_playwright() as p:
     page.locator('#vitals-add').click();form.get_by_label('Height',exact=True).fill('165');form.get_by_label('Height unit',exact=True).select_option('cm');form.get_by_label('Oxygen saturation · %',exact=True).fill('96');form.get_by_label('Oxygen delivery method (optional)',exact=True).fill('NC 2 L/min');page.locator('#vitals-save').click();page.wait_for_function("!document.querySelector('#vitals-form-dialog').open && !document.querySelector('#vitals-add').disabled")
     assert any(tab['properties']['title']=='Smith J (2)' for tab in book['sheets']) and len(book['sheets'])==3
     assert '96% · NC 2 L/min' in page.locator('#vitals-content').inner_text() and 'SYNTHETIC PRIVATE VITAL COMMENT' not in page.locator('#vitals-content').inner_text() and '5′ 10″' in summary.inner_text()
+    # Simulate an existing 22-column patient tab and verify append-only GCS upgrade.
+    sid_b=next(tab['properties']['sheetId'] for tab in book['sheets'] if tab['properties']['title']=='Smith J (2)')
+    grids[sid_b]=[row[:22] for row in grids[sid_b]];sheet(sid_b)['properties']['gridProperties']['columnCount']=22
+    old_b=copy.deepcopy(entry_rows(sid_b)[0]);assert 'GCS' not in page.locator('#vitals-content').inner_text()
+    page.locator('#vitals-add').click()
+    page.locator('[data-gcs-field="gcsEye"][data-gcs-value="4"]').click();page.locator('#vitals-save').click();assert 'all three' in page.locator('#vitals-form-error').inner_text()
+    for field,value in [('gcsVerbal','5'),('gcsMotor','6')]:page.locator(f'[data-gcs-field="{field}"][data-gcs-value="{value}"]').click()
+    assert page.locator('#gcs-score').inner_text()=='15 / 15'
+    page.locator('[data-gcs-field="gcsEye"][data-gcs-value="3"]').click()
+    assert page.locator('[data-gcs-field="gcsEye"][aria-pressed="true"]').count()==1 and page.locator('#gcs-score').inner_text()=='14 / 15'
+    page.locator('#vitals-form-dialog').screenshot(path='/tmp/bhr-gcs-form.png')
+    page.locator('#vitals-save').click();page.wait_for_function("!document.querySelector('#vitals-form-dialog').open && !document.querySelector('#vitals-add').disabled")
+    assert '14/15 · E3 V5 M6' in page.locator('#vitals-content').inner_text()
+    assert entry_rows(sid_b)[-1][:22]==old_b and grids[sid_b][0][22:25]==['GCS Eye','GCS Verbal','GCS Motor']
+    page.locator('.vitals-entry').filter(has_text='14/15').get_by_role('button',name='Edit…',exact=True).click()
+    assert page.locator('#gcs-score').inner_text()=='14 / 15'
+    page.locator('#gcs-clear').click();form.get_by_label('Pulse · bpm',exact=True).fill('77');page.locator('#vitals-save').click();page.wait_for_function("!document.querySelector('#vitals-form-dialog').open && !document.querySelector('#vitals-add').disabled")
+    assert 'GCS' not in page.locator('#vitals-content').inner_text()
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.locator('#vitals-add').click();assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');form.get_by_label('Pulse · bpm',exact=True).fill('90');page.locator('#vitals-form-dialog').screenshot(path='/tmp/bhr-vitals-form-mobile.png');page.locator('#vitals-form-dialog .window-control').click();page.locator('#vitals-person').select_option('person-a');assert page.locator('#vitals-form-dialog').is_visible() and form.get_by_label('Pulse · bpm',exact=True).input_value()=='90';page.locator('#vitals-cancel').click();page.set_viewport_size({'width':1440,'height':1000})
     disabled_api[0]=True;page.locator('#vitals-refresh').click();page.wait_for_function("document.querySelector('#vitals-status').textContent.includes('unavailable')");assert 'No vital signs recorded.' not in page.locator('#vitals-content').inner_text();disabled_api[0]=False;page.locator('#vitals-content').get_by_role('button',name='Retry',exact=True).click();page.wait_for_function("!document.querySelector('#vitals-add').disabled")
     page.locator('#vitals-add').click();form.get_by_label('Comment (optional)',exact=True).fill('SYNTHETIC UNSAVED VITAL DRAFT');page.locator('#vitals-form-dialog .window-control').click();page.locator('#vitals-dialog [data-close]').click();page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
