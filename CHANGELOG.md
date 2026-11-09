@@ -1,5 +1,10 @@
 # Version history
 
+## 0.16.1 — 2026-11-09
+
+- Match the reference calendar’s print-only palette: pale-yellow week heading, light-gray day headers, white rows, dotted gray rules and black administrator divider.
+- Add a compact blue Star of Life beside the calendar print disclaimer in public and administrator copies; wait for the emblem before fitting the one-page layout.
+
 ## 0.16.0 — 2026-11-09
 
 - Open saved clinical note files in a readable viewing mode with title, timestamps and formatted content; hide editing fields and toolbar.

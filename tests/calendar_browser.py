@@ -64,6 +64,9 @@ with sync_playwright() as p:
         frame=page.frame_locator('#calendar-print-frame');page.wait_for_function("!document.querySelector('#calendar-save').disabled")
         assert page.locator('#calendar-status').inner_text().startswith('Print dialog requested'),page.locator('#calendar-status').inner_text()
         assert page.evaluate('window.calendarPrintCalls')>=1
+        assert frame.locator('.week').evaluate("e=>getComputedStyle(e).backgroundColor")=='rgb(255, 255, 179)'
+        assert frame.locator('.day-heading th').first.evaluate("e=>getComputedStyle(e).backgroundColor")=='rgb(243, 243, 243)'
+        assert frame.locator('.notice-row .notice-mark').evaluate('img=>img.complete&&img.naturalWidth>0')
         html=page.locator('#calendar-print-frame').evaluate('frame=>frame.contentDocument.documentElement.outerHTML')
         if mode=='public':assert 'PRIVATE' not in html and 'Reason' not in html and 'Address / phone' not in html and 'appointmentTime' not in html
         else:assert 'PRIVATE REASON TOKEN' in html and 'PRIVATE ADDRESS TOKEN' in html and frame.locator('.private-start').count()>0
