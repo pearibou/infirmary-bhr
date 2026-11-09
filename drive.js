@@ -1,7 +1,7 @@
-import {validateCalendar,calendarContent} from './calendar-model.js?v=0.22.0';
-import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.22.0';
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.22.0';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.22.0';
+import {validateCalendar,calendarContent} from './calendar-model.js?v=0.22.1';
+import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.22.1';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.22.1';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.22.1';
 let token,expires=0,loading,authorizedClient,currentUser,workspaceFolder,workspaceName,legacyRootId,storageEpoch=0;
 const activeRequests=new Set();
 export function disconnect(){staffProfileReady=false;staffProfileFolder=undefined;storageEpoch++;workspaceFolder=undefined;workspaceName=undefined;legacyRootId=undefined;for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}

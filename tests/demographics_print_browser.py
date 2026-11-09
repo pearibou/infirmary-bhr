@@ -53,6 +53,8 @@ with sync_playwright() as p:
     page.locator('.person strong').filter(has_text='Synthetic Zulu').click()
     page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
     assert 'Synthetic private address' not in page.locator('body').text_content();assert page.locator('#dem-contacts').inner_text()=='';assert page.get_by_label('Primary language',exact=True).input_value()=='';assert page.locator('#bhr-print-frame').count()==0
+    page.route('https://www.googleapis.com/drive/v3/files?*staff_profile_*',lambda route:route.fulfill(json={'files':[{'id':'synthetic-staff-profile'}]}))
+    page.route('https://www.googleapis.com/drive/v3/files/synthetic-staff-profile?*',lambda route:route.fulfill(json={'version':1,'issuer':'https://accounts.google.com','subject':'synthetic-staff','displayName':'Synthetic Staff'}))
     page.locator('#google-connect').click();page.locator('#use-drive-root').click();page.wait_for_function("!document.body.classList.contains('drive-locked')")
     open_bhr(page);assert page.locator('.person.selected strong').inner_text()=='Synthetic Alpha'
     assert directory[0]['people'][2]['demographics']['language']=='Synthetic language'

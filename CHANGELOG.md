@@ -1,5 +1,11 @@
 # Version history
 
+## 0.22.1 — 2026-11-09
+
+- Restyle patient chart sections as compact rounded rectangle buttons, with the medical document, stethoscope, pills and double-helix symbols beside their labels.
+- Retain the desktop single-row layout and allow wrapping on narrow screens.
+
+
 ## 0.22.0 — 2026-11-09
 
 - Fix GCS responses carrying into new vital-sign entries: explicitly clear hidden values/defaults and selection states for every fresh form, preserving saved scores when editing.
