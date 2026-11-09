@@ -2,7 +2,7 @@
 import json,re,urllib.parse
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from browser_helpers import prepare_test_page,unlock_test_drive,ignore_event_log_projection,open_drive
+from browser_helpers import open_bhr,prepare_test_page,unlock_test_drive,ignore_event_log_projection,open_drive
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
     page=browser.new_page(viewport={'width':1440,'height':1000},service_workers='block');prepare_test_page(page)
@@ -218,7 +218,7 @@ with sync_playwright() as p:
     # A second connected identity can read but cannot edit, rename, move or trash this note.
     open_drive(page);page.locator('#disconnect').click();account.update(sub='other-staff',name='Other Synthetic Staff')
     page.locator('#google-connect').click();page.wait_for_function("!document.body.classList.contains('drive-locked')")
-    page.locator('#drive-dialog [data-close]').click();page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
+    page.locator('#drive-dialog [data-close]').click();open_bhr(page);page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
     page.wait_for_function("document.querySelector('#rich-note-dialog').open&&document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
     assert 'Synthetic unsaved private draft' not in body.inner_text()
     assert page.locator('#rich-note-edit').is_hidden() and page.locator('.rich-toolbar').is_hidden()
@@ -242,7 +242,7 @@ with sync_playwright() as p:
     assert page.locator('.folder-window').count()==0
     assert page.locator('#window-dock .dock-folder-icon').count()==0
     account.update(sub='synthetic-staff',name='Synthetic Staff')
-    page.locator('#google-connect').click();page.wait_for_function("!document.body.classList.contains('drive-locked')");page.locator('#drive-dialog [data-close]').click()
+    page.locator('#google-connect').click();page.wait_for_function("!document.body.classList.contains('drive-locked')");page.locator('#drive-dialog [data-close]').click();open_bhr(page)
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic Folder').dblclick()
     topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').dblclick()
     own=nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note');own.wait_for();own.dblclick()

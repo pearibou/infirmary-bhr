@@ -2,7 +2,7 @@
 import json,subprocess
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from browser_helpers import prepare_test_page,unlock_test_drive
+from browser_helpers import open_bhr,prepare_test_page,unlock_test_drive
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
     context=browser.new_context(viewport={'width':1440,'height':1000},service_workers='block');page=context.new_page();prepare_test_page(page)
@@ -19,7 +19,7 @@ with sync_playwright() as p:
         directory[0]=route.request.post_data_json;route.fulfill(json={'id':'__test-bootstrap'})
     page.route('https://www.googleapis.com/upload/drive/v3/files/__test-bootstrap?*',write)
     page.goto('http://127.0.0.1:8000');unlock_test_drive(page)
-    assert page.locator('.person.selected strong').inner_text()=='Synthetic Alpha'
+    open_bhr(page);assert page.locator('.person.selected strong').inner_text()=='Synthetic Alpha'
     page.locator('#detail .record-pencil').click();page.locator('#person-additional-tab').click()
     assert page.locator('#person-additional-fields').is_visible() and page.locator('#person-basic-fields').is_hidden()
     page.get_by_label('Primary care provider',exact=True).fill('Synthetic PCP');page.get_by_label('Patient e-mail address',exact=True).fill('synthetic@example.invalid');page.get_by_label('Primary language',exact=True).fill('Synthetic language');page.get_by_label('Religion',exact=True).fill('Synthetic religion');page.get_by_label('Originally from',exact=True).fill('Synthetic origin');page.get_by_label('Patient address',exact=True).fill('Synthetic private address\nSecond line');page.get_by_label('Home phone number',exact=True).fill('555 0100');page.get_by_label('Cell phone number',exact=True).fill('555 0101');page.get_by_label('Preferred pharmacy',exact=True).fill('Synthetic pharmacy');page.get_by_label('Pharmacy address',exact=True).fill('Synthetic pharmacy address\nSecond pharmacy line');page.get_by_label('Pharmacy phone number',exact=True).fill('555 0103');page.get_by_label('Pharmacy fax number',exact=True).fill('555 0104')
@@ -54,7 +54,7 @@ with sync_playwright() as p:
     page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
     assert 'Synthetic private address' not in page.locator('body').text_content();assert page.locator('#dem-contacts').inner_text()=='';assert page.get_by_label('Primary language',exact=True).input_value()=='';assert page.locator('#bhr-print-frame').count()==0
     page.locator('#google-connect').click();page.locator('#use-drive-root').click();page.wait_for_function("!document.body.classList.contains('drive-locked')")
-    assert page.locator('.person.selected strong').inner_text()=='Synthetic Alpha'
+    open_bhr(page);assert page.locator('.person.selected strong').inner_text()=='Synthetic Alpha'
     assert directory[0]['people'][2]['demographics']['language']=='Synthetic language'
     assert not errors,errors
     browser.close()

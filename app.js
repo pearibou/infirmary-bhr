@@ -1,20 +1,22 @@
-import {initCalendar,calendarSession} from './calendar.js?v=0.17.0';
-import {initBackground} from './background.js?v=0.17.0';
-import {initHistory,historySession,openHistory} from './history.js?v=0.17.0';
-import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.17.0';
-import {printDocument} from './printing.js?v=0.17.0';
-import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.17.0';
-import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.17.0';
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.17.0';
-import {updateSessionPresence} from './presence.js?v=0.17.0';
-import {closeAppMenu} from './app-menu.js?v=0.17.0';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.17.0';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.17.0';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.17.0';
-import {validatePhoto} from './photos.js?v=0.17.0';
-import './windows.js?v=0.17.0';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.17.0';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.17.0';
+import {changeFolderLink} from './model.js?v=0.18.0';
+import {openMainWindow,closeMainWindow} from './windows.js?v=0.18.0';
+import {initCalendar,calendarSession} from './calendar.js?v=0.18.0';
+import {initBackground} from './background.js?v=0.18.0';
+import {initHistory,historySession,openHistory} from './history.js?v=0.18.0';
+import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.18.0';
+import {printDocument} from './printing.js?v=0.18.0';
+import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.18.0';
+import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.18.0';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.18.0';
+import {updateSessionPresence} from './presence.js?v=0.18.0';
+import {closeAppMenu} from './app-menu.js?v=0.18.0';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.18.0';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.18.0';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.18.0';
+import {validatePhoto} from './photos.js?v=0.18.0';
+import './windows.js?v=0.18.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.18.0';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.18.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
 try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='true';}catch{}
@@ -56,7 +58,7 @@ function render(){
   else if(person.allergies?.trim())panel.append(element('p','Allergies: '+person.allergies.trim(),'allergies'));
   if(person.deceased)panel.append(element('p',`Date of death: ${formatDeathDate(person.deathDate)}`,'death-status'));
   const folderSection=element('section',undefined,'person-folders'),folderHeading=element('div',undefined,'notes-heading'),attach=element('button','Attach folder…');attach.type='button';attach.onclick=()=>openPersonFolder(person.id);folderHeading.append(element('h3','Drive folders'),attach);folderSection.append(folderHeading);
-  for(const folder of person.driveFolders||[]){const link=element('a',folder.name||'Drive folder','folder-link');link.href=`https://drive.google.com/drive/folders/${encodeURIComponent(folder.id)}`;link.target='_blank';link.rel='noopener noreferrer';folderSection.append(link);}
+  for(const folder of person.driveFolders||[]){const row=element('div',undefined,'folder-entry'),detach=element('button','×','detach-folder');detach.type='button';detach.title='Detach folder';detach.setAttribute('aria-label','Detach folder '+(folder.name||'Drive folder'));detach.onclick=()=>openDetachFolder(person.id,folder.id);const link=element('a',folder.name||'Drive folder','folder-link');link.href=`https://drive.google.com/drive/folders/${encodeURIComponent(folder.id)}`;link.target='_blank';link.rel='noopener noreferrer';row.append(detach,link);folderSection.append(row);}
   if(!person.driveFolders?.length)folderSection.append(element('p','No folders attached.','muted'));
   const documents=element('section',undefined,'clinical-documents');panel.append(documents);chartDocuments(documents,person.id);
   if(person.info)panel.append(element('p',person.info,'info'));
@@ -165,7 +167,7 @@ function fillSettings(){
   $('#use-drive-root').disabled=!connected;
   $('#sync').disabled=!connected||!driveConfig.folder||syncing;
   $('#manual-sync').disabled=syncing||!workspaceReady;
-  $('#export').disabled=!workspaceReady;
+  $('#export').disabled=!workspaceReady;$('#event-log-icon').disabled=!workspaceReady;
   $('#logout-power').disabled=!workspaceReady||loggingOut||personSaveBusy||uploading||fileBusy;
   updateSessionPresence(workspaceReady&&hasDriveAccess()?(getCurrentUser()||{id:'current-session',name:'Connected Google account'}):null);
   $('#manual-sync').setAttribute('aria-busy',String(syncing));
@@ -297,11 +299,15 @@ $('#manual-sync').onclick=()=>runSync();
 setInterval(()=>{if(workspaceReady&&!hasDriveAccess())lockWorkspace();if(!document.hidden)runSync(true);},10000);
 // Refresh derived ages after midnight without replacing an in-progress note.
 setInterval(()=>{const p=data.people.find(p=>p.id===selected),field=$('.age');if(field&&p){const age=personAge(p);field.textContent=`${p.deceased?'Age at death':'Age'}: ${age===null?'— (complete dates needed)':age+' years'}`;}},60000);
+let detachFolderTarget=null;
+function openDetachFolder(personId,folderId){if(!workspaceReady)return;const person=data.people.find(p=>p.id===personId),folder=person?.driveFolders?.find(f=>f.id===folderId);if(!folder)return;detachFolderTarget={personId,folderId};$('#detach-folder-subject').textContent=personName(person)+' · '+(folder.name||'Drive folder');$('#detach-folder-error').textContent='';$('#detach-folder-dialog').showModal();}
+$('#detach-folder-confirm').onclick=()=>{if(!workspaceReady||!detachFolderTarget)return;const {personId,folderId}=detachFolderTarget,next=structuredClone(data),person=next.people.find(p=>p.id===personId),folder=person?.driveFolders?.find(f=>f.id===folderId);if(!folder){$('#detach-folder-error').textContent='This folder is no longer attached to this chart.';return;}Object.assign(person,changeFolderLink(person,folder,false));if(save(next)){$('#detach-folder-dialog').close();renderKeepingDraft();runSync();}else $('#detach-folder-error').textContent='The detachment could not be saved. The folder link is unchanged.';};
+$('#detach-folder-dialog').addEventListener('close',()=>{detachFolderTarget=null;$('#detach-folder-subject').textContent='';$('#detach-folder-error').textContent='';});
 function openPersonFolder(id){folderTarget=id;$('#folder-form').reset();$('#folder-error').textContent='';$('#folder-dialog').showModal();}
 function attachFolder(folder){
   const next=structuredClone(data),person=next.people.find(p=>p.id===folderTarget);if(!person)throw new Error('Select a person first.');
   if(person.driveFolders?.some(existing=>existing.id===folder.id))throw new Error('This folder is already attached.');
-  person.driveFolders=[...(person.driveFolders||[]),folder];person.updatedAt=new Date().toISOString();
+  Object.assign(person,changeFolderLink(person,folder,true));
   if(save(next)){render();$('#folder-dialog').close();return true;}return false;
 }
 $('#folder-form').onsubmit=event=>{event.preventDefault();try{const form=new FormData(event.target),id=parseFolder(form.get('url'));attachFolder({id,name:form.get('label').trim()||'Drive folder'});}catch(error){$('#folder-error').textContent=error.message;}};
@@ -359,7 +365,7 @@ $('#trash-form').onsubmit=event=>{
 $('#trash-dialog').addEventListener('close',()=>{trashTarget=undefined;$('#trash-entry-label').textContent='';});
 
 function lockWorkspace(){
-  clearStickyState();stickyEditId=null;stickyBaseline=null;clearDemographics();calendarSession(false);historySession(false);medicationsSession(false);documentsSession(false);
+  closeMainWindow();detachFolderTarget=null;  clearStickyState();stickyEditId=null;stickyBaseline=null;clearDemographics();calendarSession(false);historySession(false);medicationsSession(false);documentsSession(false);
   if(!hasDriveAccess()){connected=false;clearPhotos();$('#current-user').textContent='';}
   workspaceReady=false;document.body.classList.add('drive-locked');$('.desktop').inert=true;closeDesktopMenu();closeAppMenu();
   for(const dialog of document.querySelectorAll('dialog'))if(dialog.id!=='drive-dialog'&&dialog.open)dialog.close();
@@ -402,5 +408,6 @@ function refreshEventLog(){
   pre.textContent=(mergeEventLogs(data.eventLog).map(event=>`${new Date(event.createdAt).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'medium'})} | ${event.actorName} | ${event.summary} | ${event.entityType}: ${event.entityId}${event.personId?' | person: '+event.personId:''}`).join('\n\n'))||'No events recorded yet.';pre.scrollTop=scroll;
 }
 function openEventLog(){document.querySelector('#window-dock [data-window="event-log-dialog"]')?.remove();if(!workspaceReady||!hasDriveAccess()){lockWorkspace();return;}refreshEventLog();if(!$('#event-log-dialog').open)$('#event-log-dialog').showModal();}
-$('#event-log-icon').ondblclick=openEventLog;
-$('#event-log-icon').onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openEventLog();}};
+$('#event-log-icon').onclick=openEventLog;
+function openBHR(){if(!workspaceReady||!hasDriveAccess()){lockWorkspace();return;}openMainWindow();}
+$('#bhr-icon').ondblclick=openBHR;$('#bhr-icon').onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openBHR();}};

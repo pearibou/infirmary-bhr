@@ -1,6 +1,6 @@
 """Protected data is synthetic. Full Event Log JSON/text persistence across users."""
 from playwright.sync_api import sync_playwright
-from browser_helpers import prepare_test_page
+from browser_helpers import open_bhr,open_event_log,prepare_test_page
 import copy,json
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
@@ -31,13 +31,13 @@ with sync_playwright() as p:
             else:route.fulfill(json={'id':'root','name':'Infirmary-BHR','appProperties':{'bhrWorkspace':'1'},'mimeType':'application/vnd.google-apps.folder','capabilities':{'canAddChildren':True}})
         page.route('https://www.googleapis.com/**',drive);page.goto('http://127.0.0.1:8000');return context,page
     def connect(page):
-        page.locator('#google-connect').click();page.locator('#use-drive-root').click();page.wait_for_function("!document.body.classList.contains('drive-locked')");page.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()
+        page.locator('#google-connect').click();page.locator('#use-drive-root').click();page.wait_for_function("!document.body.classList.contains('drive-locked')");page.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click();open_bhr(page)
     def sync(page):
         page.locator('#manual-sync').click();page.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'")
     c,a=setup('Synthetic Staff A');connect(a)
-    icon=a.locator('#event-log-icon');trash=a.locator('#desktop-trash')
+    icon=a.locator('#bhr-icon');trash=a.locator('#desktop-trash')
     assert icon.bounding_box()['y']<trash.bounding_box()['y'] and abs(icon.bounding_box()['x']-trash.bounding_box()['x'])<1
-    icon.dblclick();assert a.locator('#event-log-dialog').is_visible();assert a.locator('#event-log-text').get_attribute('contenteditable') is None
+    open_event_log(a);assert a.locator('#event-log-dialog').is_visible();assert a.locator('#event-log-text').get_attribute('contenteditable') is None
     assert a.locator('#event-log-dialog textarea').count()==0
     a.locator('#event-log-dialog').get_by_role('button',name='Close',exact=True).click()
     a.locator('#add-person').click();form=a.locator('#person-dialog');form.get_by_label('Preferred name',exact=True).fill('Synthetic Brother');form.get_by_label('Other information',exact=True).fill('SYNTHETIC PRIVATE HEALTH INFORMATION');a.locator('#person-submit').click()
@@ -53,7 +53,7 @@ with sync_playwright() as p:
     ids={event['id'] for event in backend['directory']['eventLog']};actions={event['action'] for event in backend['directory']['eventLog']}
     assert {'drive.connected','directory.selected','person.created','note.created','note.edited','note.deleted','folder.attached','file.uploaded','sticky.created'}<=actions
     assert 'SYNTHETIC CLINICAL' not in backend['text'] and 'SYNTHETIC PRIVATE' not in backend['text'] and 'SYNTHETIC HANDOFF CONTENT' not in backend['text']
-    icon.dblclick();view=a.locator('#event-log-text').inner_text();assert 'Chronological note permanently deleted' in view and 'Synthetic Staff A' in view
+    open_event_log(a);view=a.locator('#event-log-text').inner_text();assert 'Chronological note permanently deleted' in view and 'Synthetic Staff A' in view
     a.locator('#event-log-dialog').get_by_role('button',name='Close',exact=True).click()
     # The second user is allowed to delete the first user's shared sticky.
     c2,b=setup('Synthetic Staff B');connect(b);assert b.locator('.sticky-note').is_visible()
@@ -66,12 +66,12 @@ with sync_playwright() as p:
     retained={event['id'] for event in events};backend['directory'].pop('eventLog')
     c3,d=setup('Synthetic Staff C');connect(d)
     assert retained<={event['id'] for event in backend['directory']['eventLog']}
-    d.locator('#event-log-icon').dblclick();assert 'Shared sticky note permanently deleted' in d.locator('#event-log-text').inner_text()
+    open_event_log(d);assert 'Shared sticky note permanently deleted' in d.locator('#event-log-text').inner_text()
     d.locator('#event-log-dialog').get_by_role('button',name='Close',exact=True).click()
     d.set_viewport_size({'width':390,'height':844})
-    d.locator('#event-log-icon').dblclick()
+    open_event_log(d)
     assert d.locator('#event-log-dialog').is_visible()
     assert d.evaluate('document.documentElement.scrollWidth<=innerWidth')
     assert not errors,errors
     browser.close()
-    print('PASS: New Sticky Note label; clipboard at top right; Trash bottom right; read-only Event Log window; record/note/folder/upload/delete logging; metadata-only text; immutable cross-user merge; anyone can delete shared stickies; newest-first chronology; recovery from text copy')
+    print('PASS: New Sticky Note label; menu clipboard; The BHR top right; Trash bottom right; read-only Event Log window; record/note/folder/upload/delete logging; metadata-only text; immutable cross-user merge; anyone can delete shared stickies; newest-first chronology; recovery from text copy')

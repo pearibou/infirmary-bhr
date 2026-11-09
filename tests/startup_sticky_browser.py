@@ -1,6 +1,6 @@
 """Synthetic end-to-end startup gate, partial death dates, collapse and cross-user handoff."""
 from playwright.sync_api import sync_playwright
-from browser_helpers import prepare_test_page,open_drive,ignore_event_log_projection
+from browser_helpers import open_bhr,prepare_test_page,open_drive,ignore_event_log_projection
 import copy
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
@@ -27,7 +27,7 @@ with sync_playwright() as p:
     assert a.locator('body').evaluate("el=>el.classList.contains('drive-locked')")
     fail[0]=False;a.locator('#sync').click()
     a.wait_for_function("!document.body.classList.contains('drive-locked')")
-    a.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()
+    a.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click();open_bhr(a)
     a.get_by_role('button',name='Hide deceased people').click();assert a.locator('.deceased-row').count()==0
     a.get_by_role('button',name='Show deceased people').click();assert a.locator('.deceased-row').count()==1
     a.locator('.person').filter(has_text='Deceased Test').click();a.get_by_role('button',name='Edit this record').click()
@@ -79,7 +79,7 @@ with sync_playwright() as p:
     a.locator('#manual-sync').click();a.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'")
     assert a.locator('.sticky-note').count()==0
     a.reload();assert a.locator('#drive-dialog').is_visible() and a.locator('.desktop').evaluate('el=>el.inert')
-    a.locator('#google-connect').click();a.wait_for_function("!document.body.classList.contains('drive-locked')");a.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()
+    a.locator('#google-connect').click();a.wait_for_function("!document.body.classList.contains('drive-locked')");a.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click();open_bhr(a)
     assert a.locator('.deceased-row').count()==0 and a.get_by_role('button',name='Show deceased people').is_visible()
     open_drive(a);a.locator('#disconnect').click();assert a.locator('body').evaluate("el=>el.classList.contains('drive-locked')")
     a.keyboard.press('Escape');assert a.locator('#drive-dialog').is_visible()
