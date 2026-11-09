@@ -1,9 +1,9 @@
-import {smallIcon} from './icons-ui.js?v=0.13.2';
-import {printDocument} from './printing.js?v=0.13.2';
-import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.13.2';
-import {clearTrashSelection} from './trash.js?v=0.13.2';
-import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.13.2';
-import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.13.2';
+import {smallIcon} from './icons-ui.js?v=0.13.3';
+import {printDocument} from './printing.js?v=0.13.3';
+import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.13.3';
+import {clearTrashSelection} from './trash.js?v=0.13.3';
+import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.13.3';
+import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.13.3';
 const $=selector=>document.querySelector(selector),noteDialog=$('#rich-note-dialog'),folderTemplate=$('#file-browser-template'),context=$('#file-context-menu');
 let hooks,active=false,generation=0,refreshNumber=0,busy=false,editor=null,contextFile,contextView,actionFile,actionKind,dragged,dirty=false,renaming=false,refreshPending=false,editorRequest=0;
 let desktopFiles=[],tooltipTimer,tooltipTarget,windowNumber=0;
@@ -248,7 +248,7 @@ function openDrafts(){
   $('#note-drafts-list').replaceChildren();
   for(const draft of drafts.values()){
     const button=node('button',draft.name.trim()||genericName(draft.entry.document.noteAt));button.type='button';button.className='draft-choice';
-    button.onclick=()=>{$('#note-drafts-dialog').close();openEditor(draft.entry.file,draft.entry.target);};$('#note-drafts-list').append(button);
+    button.onclick=()=>{$('#note-drafts-dialog').close();openEditor(draft.entry.file,draft.entry.target,draft.entry.personId);};$('#note-drafts-list').append(button);
   }
   if(drafts.size&&!$('#note-drafts-dialog').open)$('#note-drafts-dialog').showModal();
 }
@@ -256,9 +256,9 @@ function focusNoteEditor(){
   document.querySelector('#window-dock [data-window="rich-note-dialog"]')?.remove();
   if(!noteDialog.open)noteDialog.showModal();$('#rich-note-body').focus();
 }
-async function openEditor(file=null,target='root'){
+async function openEditor(file=null,target='root',personId=null){
   if(!active)return;
-  const key=file?'file:'+file.id:'new';
+  const key=file?'file:'+file.id:personId?'new:person:'+personId:'new';
   if(dirty&&editor?.key===key){focusNoteEditor();return;}
   if(dirty&&editor)noteDrafts.set(editor.key,draftSnapshot());
   const draft=noteDrafts.get(key),epoch=generation,request=++editorRequest;
@@ -270,11 +270,11 @@ async function openEditor(file=null,target='root'){
   document.querySelector('#window-dock [data-window="rich-note-dialog"]')?.remove();if(!noteDialog.open)noteDialog.showModal();
   try{
     let content,fileMetadata=file;
-    if(draft){content=draft.entry.document;fileMetadata=draft.entry.file;target=draft.entry.target;}
+    if(draft){content=draft.entry.document;fileMetadata=draft.entry.file;target=draft.entry.target;personId=draft.entry.personId;}
     else if(file){const loaded=await readDesktopDocument(file.id);fileMetadata=loaded.file;content=validateDocument(loaded.content);if(content.authorId!==fileMetadata.appProperties.authorId)throw new Error('Note author metadata does not match. The note was not opened.');}
     else {const user=getCurrentUser();if(!user)throw new Error('Reconnect to identify the clinical note author.');const now=new Date().toISOString();content={kind:'bhr-rich-note',version:1,html:'',noteAt:now,createdAt:now,updatedAt:now,authorId:user.id,authorName:user.name};}
     if(epoch!==generation||request!==editorRequest)return;
-    openingEditor=false;noteDialog.setAttribute('aria-busy','false');noteDrafts.delete(key);editor={file:fileMetadata,document:content,target,key};dirty=Boolean(draft);const editable=!fileMetadata||canManageDocument(fileMetadata,getCurrentUser());
+    openingEditor=false;noteDialog.setAttribute('aria-busy','false');noteDrafts.delete(key);editor={file:fileMetadata,document:content,target,key,personId};dirty=Boolean(draft);const editable=!fileMetadata||canManageDocument(fileMetadata,getCurrentUser());
     $('#rich-note-name').value=draft?draft.name:fileMetadata?.name||genericName(content.noteAt);$('#rich-note-time').value=draft?draft.time:localDate(content.noteAt);$('#rich-note-body').innerHTML=cleanNoteHtml(draft?draft.html:content.html);$('#rich-note-author').textContent='Entered by '+content.authorName+(editable?'':' · Read-only: only the creator can edit or delete');
     noteDialog.querySelectorAll('button').forEach(button=>button.disabled=false);
     $('#rich-note-name').disabled=!editable;$('#rich-note-time').disabled=!editable;$('#rich-note-body').contentEditable=String(editable);$('#rich-note-save').hidden=!editable;$('#rich-note-trash').hidden=!editable;documentButtons(!editable);$('#rich-note-error').textContent=draft?'Unsaved draft restored. Save note to store these changes in Drive.':'';
@@ -290,7 +290,7 @@ async function saveEditor(){
   const entry=editor,name=$('#rich-note-name').value.trim()||genericName(date),content={...entry.document,html,noteAt:date.toISOString(),updatedAt:new Date().toISOString()};
   setEditorBusy(true);$('#rich-note-error').textContent='Saving directly to Google Drive…';
   try{
-    await operation(async epoch=>{const saved=await saveDesktopDocument(entry.target,name,content,entry.file);if(epoch!==generation)return;record(entry.file?'updated':'created',saved);dirty=false;noteDrafts.delete(entry.key);editor={file:saved,document:content,target:entry.target,key:'file:'+saved.id};refreshDraftControls();noteDialog.close();});
+    await operation(async epoch=>{const saved=await saveDesktopDocument(entry.target,name,content,entry.file,entry.personId);if(epoch!==generation)return;record(entry.file?'updated':'created',saved,entry.personId);dirty=false;noteDrafts.delete(entry.key);editor={file:saved,document:content,target:entry.target,key:'file:'+saved.id};refreshDraftControls();noteDialog.close();});
     await refreshFiles();hooks.chartChanged();
   }catch(error){if(active)$('#rich-note-error').textContent=error.message;}
   finally{setEditorBusy(false);}
@@ -302,11 +302,11 @@ function setEditorBusy(value){
 }
 async function printEditor(){
  if(!active||!editor||busy||openingEditor)return;const entry=editor,stamp=generation,time=new Date($('#rich-note-time').value);if(!Number.isFinite(time.getTime())){$('#rich-note-error').textContent='Enter a valid date and time.';return;}
- const name=$('#rich-note-name').value.trim()||'Clinical note',html=cleanNoteHtml($('#rich-note-body').innerHTML),personId=entry.file?.appProperties?.personId,person=personId?hooks.person?.(personId):null;
+ const name=$('#rich-note-name').value.trim()||'Clinical note',html=cleanNoteHtml($('#rich-note-body').innerHTML),personId=entry.file?.appProperties?.personId||entry.personId,person=personId?hooks.person?.(personId):null;
  setEditorBusy(true);try{await operation(async epoch=>{await printDocument({title:name,person:person?structuredClone(person):null,sections:[{html}],subtitle:'Note date: '+time.toLocaleString()+' · Entered by '+entry.document.authorName+' · Created: '+new Date(entry.document.createdAt).toLocaleString()+(!entry.file||dirty?' · Unsaved draft':'')});if(epoch===generation)hooks.activity('document.print_requested','document',entry.file?.id||'unsaved','Clinical note print dialog requested',personId);});}catch(error){if(stamp===generation)$('#rich-note-error').textContent=error.message;}finally{if(stamp===generation)setEditorBusy(false);}
 }
 export function chartDocuments(container,personId){
- const heading=node('div',undefined,'notes-heading'),title=node('h3','Clinical notes'),refresh=node('button','↻ Refresh');refresh.type='button';heading.append(title,refresh);container.append(heading);
+ const heading=node('div',undefined,'notes-heading'),title=node('h3','Clinical notes'),refresh=node('button','↻ Refresh');refresh.type='button';const create=node('button','+ New note');create.type='button';create.onclick=()=>openEditor(null,'root',personId);heading.append(title,create,refresh);container.append(heading);
  const items=node('div',undefined,'chart-documents');container.append(items);
  const load=async()=>{if(!active)return;const epoch=generation;items.textContent='Loading clinical notes…';
   try{const files=await listDesktopFiles('root',personId);if(epoch!==generation||!items.isConnected)return;items.replaceChildren();if(!files.length)items.textContent='No clinical notes attached.';

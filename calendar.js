@@ -1,7 +1,7 @@
-import {listAppointmentCalendars,readAppointmentCalendar,saveAppointmentCalendar,getCurrentUser,hasDriveAccess} from './drive.js?v=0.13.2';
-import {newCalendar,validateCalendar,calendarContent,weekFor,dayNames,dayIncluded,dayDate,dateLabel,DAY_NAMES,APPOINTMENT_FIELDS} from './calendar-model.js?v=0.13.2';
-import {printCalendar,clearCalendarPrint} from './calendar-print.js?v=0.13.2';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.13.2';
+import {listAppointmentCalendars,readAppointmentCalendar,saveAppointmentCalendar,getCurrentUser,hasDriveAccess} from './drive.js?v=0.13.3';
+import {newCalendar,validateCalendar,calendarContent,weekFor,dayNames,dayIncluded,dayDate,dateLabel,DAY_NAMES,APPOINTMENT_FIELDS} from './calendar-model.js?v=0.13.3';
+import {printCalendar,clearCalendarPrint} from './calendar-print.js?v=0.13.3';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.13.3';
 const $=s=>document.querySelector(s),make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 let hooks,active=false,epoch=0,busy=false,dirty=false,editor=null,files=[],pendingAction=null;
 function status(text){$('#calendar-status').textContent=text;}
