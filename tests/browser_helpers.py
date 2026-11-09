@@ -43,7 +43,7 @@ def unlock_test_drive(page,profile=True,open_records=True):
     add('https://www.googleapis.com/drive/v3/files/__test-bootstrap?*',lambda route:route.fulfill(json=snapshot))
     add('https://www.googleapis.com/upload/drive/v3/files/__test-bootstrap?*',lambda route:route.fulfill(json={'id':'__test-bootstrap'}))
     add('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart*',lambda route:route.fulfill(json={'id':'synthetic-profile'}) if 'staff_profile_' in (route.request.post_data or '') else route.fallback())
-    if profile:page.route('https://www.googleapis.com/oauth2/v3/userinfo',lambda route:route.fulfill(json={'sub':'synthetic-staff','name':'Synthetic Staff'}))
+    if profile:page.route('https://www.googleapis.com/oauth2/v3/userinfo',lambda route:route.fulfill(json={'sub':'synthetic-staff','name':'Synthetic Staff','email':'synthetic-staff@example.test'}))
     page.wait_for_function("window.google?.accounts?.oauth2 && !document.querySelector('#drive-status').textContent.startsWith('Preparing')")
     page.locator('#google-connect').click()
     page.locator('#use-drive-root').wait_for(state='attached')

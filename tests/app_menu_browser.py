@@ -12,18 +12,29 @@ with sync_playwright() as p:
     presence=page.locator('#connected-users')
     assert presence.inner_text()=='Connected Users: 1'
     presence.click();assert page.locator('#connected-users-pane').is_visible()
+    assert page.locator('#connected-users-list').inner_text()=='Synthetic Staff (synthetic-staff@example.test)'
     page.keyboard.press('Escape');assert not page.locator('#connected-users-pane').is_visible()
     # Provider seam accepts future shared presence, deduplicates identities and
     # ignores stale callbacks after replacing a provider.
     page.evaluate("""async()=>{
-        const presence=await import('./presence.js?v=0.23.0');
+        const presence=await import('./presence.js?v=0.24.1');
         window.presenceModule=presence;
-        presence.setPresenceProvider({subscribe:cb=>{window.oldPresence=cb;cb([{id:'a',name:'Synthetic One'},{id:'a',name:'Synthetic One'},{id:'b',name:'Synthetic Two'}]);return ()=>window.presenceStopped=true;}});
+        presence.setPresenceProvider({subscribe:cb=>{window.oldPresence=cb;cb([{id:'a',name:'Synthetic One'},{id:'a',name:'Synthetic One'},{id:'b',name:'Synthetic Two',email:'two@example.test'}]);return ()=>window.presenceStopped=true;}});
     }""")
     assert presence.inner_text()=='Connected Users: 2'
+    assert 'Synthetic Two (two@example.test)' in page.locator('#connected-users-list').inner_text()
     page.evaluate("presenceModule.setPresenceProvider(null);oldPresence([{id:'stale',name:'Stale'}])")
     assert presence.inner_text()=='Connected Users: 1'
     assert page.evaluate('presenceStopped')
+    account=page.locator('#account-toggle');account_pane=page.locator('#account-pane')
+    assert account.bounding_box()['x']<page.locator('#logout-power').bounding_box()['x']
+    account.click();assert account_pane.is_visible()
+    assert page.locator('#account-email').inner_text()=='synthetic-staff@example.test' and page.locator('#account-display-name').inner_text()=='Synthetic Staff'
+    page.keyboard.press('Escape');assert account_pane.is_hidden()
+    account.focus();page.keyboard.press('ArrowDown');assert page.locator('#account-edit-name').evaluate('n=>n===document.activeElement')
+    page.keyboard.press('Enter');assert account_pane.is_hidden() and page.locator('#drive-dialog').is_visible() and page.locator('#staff-profile-panel').is_visible()
+    assert page.locator('#staff-display-name').input_value()=='Synthetic Staff'
+    page.locator('#drive-dialog [data-close]').click()
     toggle=page.locator('#app-menu-toggle');menu=page.locator('#app-menu')
     assert not menu.is_visible()
     toggle.click();assert menu.is_visible()
@@ -56,8 +67,13 @@ with sync_playwright() as p:
     page.pdf(path='/tmp/bhr-about.pdf',format='Letter');printed=subprocess.check_output(['pdftotext','/tmp/bhr-about.pdf','-'],text=True)
     assert 'Brother Health Records System' in ' '.join(printed.split()) and 'Directory' not in printed and 'Google Drive' not in printed
     about.get_by_role('button',name='Close',exact=True).click();assert about.is_hidden()
-    for width in [1280,960,700,390,320]:
+    for width in [1280,960,820,701,700,390,320]:
         page.set_viewport_size({'width':width,'height':900})
+        account.click();assert account_pane.is_visible()
+        if width in [1280,390]:page.locator('.menubar').screenshot(path=f'/tmp/bhr-account-menu-{width}.png')
+        rect=account_pane.bounding_box();assert rect['x']>=0 and rect['x']+rect['width']<=width
+        assert abs(account.bounding_box()['y']-page.locator('#logout-power').bounding_box()['y'])<5
+        page.keyboard.press('Escape')
         toggle.click();assert menu.is_visible()
         box=menu.bounding_box();assert box['x']>=0 and box['x']+box['width']<=width
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')

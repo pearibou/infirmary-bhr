@@ -28,6 +28,10 @@ Opened sticky notes retain their foreground layer. Minimized stickies sit at des
 
 Right-click a sticky to **Minimize note** or **Trash (delete) note…**. Minimized stickies snap to a strip below the menu bar; click to restore. This is local session state and does not hide notes from other users. Deletion uses the existing confirmation. Sticky drawings sync as bounded strokes in directory JSON; logout/disconnect clears editor canvas and minimized labels. The [drawing design notes](docs/note-drawing-design.md) describe current scope and future ideas; clinical-note editors remain unchanged. Update all clients before editing shared stickies with this release; older clients do not support content edits/drawings.
 
+## Your account
+
+The small retro bust to the left of the power button opens an account pane showing your signed-in Google email and chosen BHR display name. **Edit display name…** opens the existing private profile editor; saved changes update the account pane and connected-users label without changing identity or note ownership. The control is disabled while locked, and displayed account details clear on sign-out.
+
 ## Log out
 
 The power symbol at the far right of the top bar opens **Do you want to log out?** Cancel or Escape keeps the session and draft. Log out waits for any current sync, records the logout request, then completes a fresh Drive sync before clearing protected browser data. If sync or storage cleanup fails, the session and records remain available for retry. Finish active uploads/record saves before logging out.
@@ -198,7 +202,7 @@ With login, the local/offline cache also needs an explicit policy: avoid unencry
 
 The top-bar power button confirms logout, waits for any active sync, then performs a fresh final sync before disconnecting. A failed final sync keeps the session open for retry; Cancel becomes available again. After successful sync, logout removes protected local records and remembered folder settings, clears UI/memory and other open tabs, then requires a new connection. Unsaved input drafts are discarded rather than posted automatically. Closing a tab or browser does not run this logout flow.
 
-**Connected Users: N** opens a compact list. Currently it reports only the authenticated session in this browser, not all people using the shared Drive account. `presence.js` exports `setPresenceProvider(provider)` for future shared presence: `provider.subscribe(onUsers)` emits arrays of `{id, name}` and returns an unsubscribe function. The provider starts only during an unlocked session and stops at logout; stale callbacks are ignored. Supply this from a future authenticated backend with session expiry/heartbeats and authorization, without writing presence to the clinical directory or GitHub.
+**Connected Users: N** opens a compact list showing each available display name followed by its Google email in parentheses. Currently it reports only the authenticated session in this browser, not all people using the shared Drive account. `presence.js` exports `setPresenceProvider(provider)` for future shared presence: `provider.subscribe(onUsers)` emits arrays of `{id, name, email}` (email is optional for older providers) and returns an unsubscribe function. The provider starts only during an unlocked session and stops at logout; stale callbacks are ignored. Supply this from a future authenticated backend with session expiry/heartbeats and authorization, without writing presence to the clinical directory or GitHub.
 
 
 Person records optionally include **Allergies:** or **No known allergies** below age. The checkbox disables/dims the text field; saving it checked stores the no-known-allergies state and clears previously entered allergy text. Leaving both blank hides the line. These clinical fields follow existing protected directory storage, Drive sync and logout cleanup; the Event Log records field names only.

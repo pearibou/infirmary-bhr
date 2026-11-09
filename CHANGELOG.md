@@ -1,5 +1,17 @@
 # Version history
 
+## 0.24.1 — 2026-11-09
+
+- Enlarge the visible Vital Signs desktop artwork by 50%, compensating for its transparent image margins while preserving the grid cell and label placement.
+
+
+## 0.24.0 — 2026-11-09
+
+- Show email addresses parenthetically beside display names in the connected-users pane.
+- Add a compact retro account-bust menu beside the power button with the signed-in Google email, display name and Edit display name action.
+- Clear account details at lock/logout and retain compact top-bar layout across desktop and mobile widths.
+
+
 ## 0.23.0 — 2026-11-09
 
 - Click a patient profile photo, or focus it and press Enter, to open a simple full-image viewer with an uncropped, proportional image and Close/Escape support.

@@ -52,6 +52,13 @@ with sync_playwright() as p:
  page.locator('#staff-display-name').fill('Second Pilot');page.locator('#save-staff-profile').click();page.wait_for_function("!document.body.classList.contains('drive-locked')")
  assert profiles['staff_profile_pilot-a']['displayName']=='Nurse Pilot'
  assert profiles['staff_profile_pilot-b']['displayName']=='Second Pilot'
+ page.locator('#drive-dialog [data-close]').click();page.locator('#account-toggle').click()
+ assert page.locator('#account-email').inner_text()=='pilot-b@example.test'
+ page.locator('#account-edit-name').click();page.locator('#staff-display-name').fill('Updated Pilot');page.locator('#save-staff-profile').click()
+ page.wait_for_function("document.querySelector('#account-display-name').textContent==='Updated Pilot'")
+ assert profiles['staff_profile_pilot-b']['displayName']=='Updated Pilot' and profiles['staff_profile_pilot-a']['displayName']=='Nurse Pilot'
+ page.locator('#drive-dialog [data-close]').click();page.locator('#connected-users').click()
+ assert page.locator('#connected-users-list').inner_text()=='Updated Pilot (pilot-b@example.test)'
  page.screenshot(path='/tmp/bhr-staff-login.png')
  assert not errors,errors
  assert not any('access_token' in body for _,body in writes)
