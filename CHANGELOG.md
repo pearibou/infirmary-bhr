@@ -1,5 +1,11 @@
 # Version history
 
+## 0.16.0 — 2026-11-09
+
+- Open saved clinical note files in a readable viewing mode with title, timestamps and formatted content; hide editing fields and toolbar.
+- Add a pencil Edit note button for the original author only. New notes and resumed unsaved drafts open in editing mode; saving switches to viewing mode.
+- Recheck note ownership in edit/save handlers, retain creator-only deletion, and clear reading headers on logout.
+
 ## 0.15.0 — 2026-11-09
 
 - Add shared sticky editing, right-click Edit/Minimize/Trash, and a local minimized-note strip below the menu bar.
