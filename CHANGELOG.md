@@ -1,5 +1,10 @@
 # Version history
 
+## 0.13.1 — 2026-11-09
+
+- Start new appointment calendars on Sunday; show optional Sunday before Monday in the editor and printouts.
+- Preserve dates and weekend settings in previously saved Monday-based calendars, explicitly labeled as archived format.
+
 ## 0.13.0 — 2026-11-09
 
 - Add Calendar Maker beside Event Log, with weekly appointment editing and a saved-calendar archive in the private Infirmary-BHR Drive folder.
