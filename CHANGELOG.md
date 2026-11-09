@@ -1,5 +1,14 @@
 # Version history
 
+## 0.25.0 — 2026-11-09
+
+- Add in-app refill alerts with a retro bottle/exclamation count, gentle attention animation and reduced-motion support.
+- Add shared 7-day supply / 30-day prescription-expiration / zero-refill settings through Preferences and alert Settings.
+- Add attributed acknowledgment, pending refill requests and shared reminder dates without changing dispensing or clinical medication status.
+- Persist mergeable immutable follow-up metadata in private directory JSON; scan existing medication/refill sheets in read-only batches, show incomplete reads clearly and clear alert data at logout.
+- Preserve existing medication/refill rows and printing; no spreadsheet migration or re-entry is required.
+
+
 ## 0.24.1 — 2026-11-09
 
 - Enlarge the visible Vital Signs desktop artwork by 50%, compensating for its transparent image margins while preserving the grid cell and label placement.

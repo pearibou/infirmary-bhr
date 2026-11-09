@@ -1,5 +1,5 @@
-import {calendarSymbol} from './calendar-symbols.js?v=0.24.1';
-import {printableCalendar,dayNames,dayIncluded,dayDate,dateLabel} from './calendar-model.js?v=0.24.1';
+import {calendarSymbol} from './calendar-symbols.js?v=0.25.0';
+import {printableCalendar,dayNames,dayIncluded,dayDate,dateLabel} from './calendar-model.js?v=0.25.0';
 let frame=null,generation=0;
 export function clearCalendarPrint(){generation++;frame?.remove();frame=null;}
 const node=(doc,tag,text)=>{const e=doc.createElement(tag);if(text!==undefined)e.textContent=text;return e;};

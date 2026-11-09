@@ -150,6 +150,31 @@ with sync_playwright() as p:
     first=copy.deepcopy(entry_rows(refill_sid)[0]);assert first[1]==med_id and first[5]=='000-SYNTHETIC-RX' and first[6]=='0'
     assert '20 days' in page.locator('#refill-content').inner_text() and 'Prescription expired' in page.locator('#refill-content').inner_text() and 'No refills remaining' in page.locator('#refill-content').inner_text()
     assert 'SYNTHETIC PRIVATE PHARMACY' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
+    # Alerts use existing refill rows and must not mutate the medication/refill sheets.
+    page.locator('#refills-dialog [data-close]').click();page.locator('#medications-dialog [data-close]').click()
+    snapshot_alerts=copy.deepcopy(grids)
+    page.locator('#refill-alert-toggle').click();page.wait_for_function("document.querySelector('#refill-alert-toggle').getAttribute('aria-busy')==='false'")
+    assert page.locator('.refill-alert-card').count()==1 and page.locator('#refill-alert-count').inner_text()=='1'
+    assert 'No refills remaining' in page.locator('#refill-alert-content').inner_text() and 'SYNTHETIC PRIVATE PHARMACY' in page.locator('#refill-alert-content').inner_text()
+    page.locator('#refill-alert-content').get_by_role('button',name='Acknowledge',exact=True).click()
+    page.wait_for_function("!document.querySelector('#refill-alert-toggle').classList.contains('needs-attention') && !document.querySelector('#refill-alert-refresh').disabled")
+    assert page.locator('#refill-alert-count').inner_text()=='1' and grids==snapshot_alerts
+    page.locator('#refill-alert-content').get_by_role('button',name='Refill requested…',exact=True).click();page.locator('#refill-alert-comment').fill('Synthetic pending request');page.locator('#refill-alert-action-form').get_by_role('button',name='Save',exact=True).click()
+    page.wait_for_function("!document.querySelector('#refill-alert-action-dialog').open && !document.querySelector('#refill-alert-refresh').disabled")
+    assert page.locator('#refill-alert-content').get_by_role('button',name='Request pending',exact=True).is_disabled() and grids==snapshot_alerts
+    page.locator('#refill-alert-content').get_by_role('button',name='Remind team on…',exact=True).click();page.locator('#refill-alert-date').fill('2026-11-10');page.locator('#refill-alert-action-form').get_by_role('button',name='Save',exact=True).click()
+    page.wait_for_function("!document.querySelector('#refill-alert-action-dialog').open && !document.querySelector('#refill-alert-refresh').disabled")
+    assert 'Team reminder 2026-11-10' in page.locator('#refill-alert-content').inner_text()
+    page.locator('#alert-preferences-open').click();page.locator('#alert-low-days').fill('25');page.locator('#alert-preferences-form').get_by_role('button',name='Save shared settings',exact=True).click()
+    page.wait_for_function("!document.querySelector('#alert-preferences-dialog').open && !document.querySelector('#refill-alert-refresh').disabled")
+    assert {event['kind'] for event in directory[0]['refillAlertEvents']}=={'ack','request','remind','settings'}
+    assert page.locator('#refill-alert-toggle').evaluate("n=>n.classList.contains('needs-attention')") and 'Low estimated supply' in page.locator('#refill-alert-content').inner_text() and grids==snapshot_alerts
+    page.emulate_media(reduced_motion='reduce');assert page.locator('#refill-alert-toggle svg').evaluate('n=>getComputedStyle(n).animationName')=='none';page.emulate_media(reduced_motion='no-preference')
+    disabled_api[0]=True;page.locator('#refill-alert-refresh').click();page.wait_for_function("document.querySelector('#refill-alert-status').textContent.includes('incomplete')");assert page.locator('#refill-alert-count').inner_text()=='?'
+    disabled_api[0]=False;page.locator('#refill-alert-refresh').click();page.wait_for_function("document.querySelector('#refill-alert-toggle').getAttribute('aria-busy')==='false'");assert page.locator('.refill-alert-card').count()==1
+    page.locator('#refill-alert-dialog').screenshot(path='/tmp/bhr-refill-alerts.png');page.locator('#refill-alert-dialog [data-close]').click()
+    page.locator('.chart-navigation').get_by_role('button',name='Medications',exact=True).click();page.wait_for_function("!document.querySelector('#med-add').disabled")
+    page.locator('.med-entry').filter(has_text='Synthetic tablet 10 mg').get_by_role('button',name='Refills…',exact=True).click();page.wait_for_function("!document.querySelector('#refill-refresh').disabled")
     page.get_by_role('button',name='+ Record refill',exact=True).click();assert refill_form.get_by_label('Dispensing pharmacy',exact=True).input_value()=='SYNTHETIC PRIVATE PHARMACY'
     refill_form.get_by_label('Days supply',exact=True).fill('10');page.locator('#refill-save').click();page.wait_for_function("!document.querySelector('#refill-form-dialog').open && !document.querySelector('#refill-refresh').disabled")
     assert len(entry_rows(refill_sid))==2 and entry_rows(refill_sid)[0][6]==''

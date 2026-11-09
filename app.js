@@ -1,28 +1,30 @@
-import {initAccountMenu,updateAccountMenu} from './account-menu.js?v=0.24.1';
-import {calendarSymbol} from './calendar-symbols.js?v=0.24.1';
-import {clearDesktopSelection} from './desktop-selection.js?v=0.24.1';
-import {trashDesktopBatch} from './documents.js?v=0.24.1';
-import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.24.1';
-import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.24.1';
-import {changeFolderLink} from './model.js?v=0.24.1';
-import {openMainWindow,closeMainWindow} from './windows.js?v=0.24.1';
-import {initCalendar,calendarSession} from './calendar.js?v=0.24.1';
-import {initBackground} from './background.js?v=0.24.1';
-import {initHistory,historySession,openHistory} from './history.js?v=0.24.1';
-import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.24.1';
-import {printDocument} from './printing.js?v=0.24.1';
-import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.24.1';
-import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.24.1';
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.24.1';
-import {updateSessionPresence} from './presence.js?v=0.24.1';
-import {closeAppMenu} from './app-menu.js?v=0.24.1';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.24.1';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.24.1';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.24.1';
-import {validatePhoto} from './photos.js?v=0.24.1';
-import './windows.js?v=0.24.1';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.24.1';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.24.1';
+import {initRefillAlerts,refillAlertsSession,refillAlertsDirectoryChanged,refreshRefillAlerts} from './refill-alerts.js?v=0.25.0';
+import {mergeAlertEvents,alertSettings} from './refill-alerts-model.js?v=0.25.0';
+import {initAccountMenu,updateAccountMenu} from './account-menu.js?v=0.25.0';
+import {calendarSymbol} from './calendar-symbols.js?v=0.25.0';
+import {clearDesktopSelection} from './desktop-selection.js?v=0.25.0';
+import {trashDesktopBatch} from './documents.js?v=0.25.0';
+import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.25.0';
+import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.25.0';
+import {changeFolderLink} from './model.js?v=0.25.0';
+import {openMainWindow,closeMainWindow} from './windows.js?v=0.25.0';
+import {initCalendar,calendarSession} from './calendar.js?v=0.25.0';
+import {initBackground} from './background.js?v=0.25.0';
+import {initHistory,historySession,openHistory} from './history.js?v=0.25.0';
+import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.25.0';
+import {printDocument} from './printing.js?v=0.25.0';
+import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.25.0';
+import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.25.0';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.25.0';
+import {updateSessionPresence} from './presence.js?v=0.25.0';
+import {closeAppMenu} from './app-menu.js?v=0.25.0';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.25.0';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.25.0';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.25.0';
+import {validatePhoto} from './photos.js?v=0.25.0';
+import './windows.js?v=0.25.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.25.0';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.25.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let bulkTargets=[],bulkBusy=false;
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
@@ -30,7 +32,7 @@ try{deceasedCollapsed=localStorage.getItem('infirmary.deceasedCollapsed')==='tru
 const photoUrls=new Map();let photoGeneration=0,photoViewerRequest=0;
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,6000);}
 try{const stored=localStorage.getItem(KEY);if(stored)data=validateDirectory(JSON.parse(stored));}catch{storageFailed=true;toast('Stored data could not be read. Existing storage has been preserved; reload after resolving the problem.');}
-function save(next,fromSync=false){if(sessionCleared)return false;if(!fromSync&&(!workspaceReady||!hasDriveAccess())){if(workspaceReady)lockWorkspace();toast('Connect Google Drive and sync the directory first.');return false;}if(storageFailed){toast('Storage is unavailable. Existing data is protected.');return false;}try{if(!fromSync)next=recordChanges(data,next,getCurrentUser());localStorage.setItem(KEY,JSON.stringify(next));data=next;refreshEventLog();$('#storage-status').textContent='Saved on this device';return true;}catch{toast('Could not save: device storage is unavailable or full. Export your existing records.');return false;}}
+function save(next,fromSync=false){if(sessionCleared)return false;if(!fromSync&&(!workspaceReady||!hasDriveAccess())){if(workspaceReady)lockWorkspace();toast('Connect Google Drive and sync the directory first.');return false;}if(storageFailed){toast('Storage is unavailable. Existing data is protected.');return false;}try{if(!fromSync)next=recordChanges(data,next,getCurrentUser());localStorage.setItem(KEY,JSON.stringify(next));data=next;refillAlertsDirectoryChanged();refreshEventLog();$('#storage-status').textContent='Saved on this device';return true;}catch{toast('Could not save: device storage is unavailable or full. Export your existing records.');return false;}}
 function element(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
 function render(){
   if(selected&&!data.people.some(person=>person.id===selected))selected=[...data.people].sort(compareDirectoryPeople)[0]?.id;
@@ -187,7 +189,7 @@ function fillSettings(){
   $('#use-drive-root').disabled=!connected;
   $('#sync').disabled=!connected||!driveConfig.folder||syncing;
   $('#manual-sync').disabled=syncing||!workspaceReady;
-  $('#export').disabled=!workspaceReady;$('#event-log-icon').disabled=!workspaceReady;
+  $('#preferences-open').disabled=!workspaceReady;$('#export').disabled=!workspaceReady;$('#event-log-icon').disabled=!workspaceReady;
   $('#logout-power').disabled=!workspaceReady||loggingOut||personSaveBusy||uploading||fileBusy;
   updateAccountMenu(workspaceReady&&hasDriveAccess()?getCurrentUser():null);
   updateSessionPresence(workspaceReady&&hasDriveAccess()?(getCurrentUser()||{id:'current-session',name:'Connected Google account'}):null);
@@ -398,7 +400,7 @@ $('#trash-form').onsubmit=event=>{
 $('#trash-dialog').addEventListener('close',()=>{trashTarget=undefined;$('#trash-entry-label').textContent='';});
 
 function lockWorkspace(){
-  clearDesktopSelection();bulkTargets=[];
+  refillAlertsSession(false);  clearDesktopSelection();bulkTargets=[];
   closeMainWindow();detachFolderTarget=null;  clearStickyState();stickyEditId=null;stickyBaseline=null;clearDemographics();vitalsSession(false);calendarSession(false);historySession(false);medicationsSession(false);documentsSession(false);
   if(!hasDriveAccess()){connected=false;clearPhotos();$('#current-user').textContent='';}
   workspaceReady=false;document.body.classList.add('drive-locked');$('.desktop').inert=true;closeDesktopMenu();closeAppMenu();
@@ -406,7 +408,7 @@ function lockWorkspace(){
   $('#connection-required').hidden=false;$('#drive-dialog [data-close]').disabled=true;fillSettings();
   if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();
 }
-function unlockWorkspace(){const opening=!workspaceReady;workspaceReady=true;document.body.classList.remove('drive-locked');$('.desktop').inert=storageFailed;$('#connection-required').hidden=true;$('#drive-dialog [data-close]').disabled=false;fillSettings();vitalsSession(true);documentsSession(true);medicationsSession(true);historySession(true);calendarSession(true);if(opening)renderKeepingDraft();}
+function unlockWorkspace(){const opening=!workspaceReady;workspaceReady=true;document.body.classList.remove('drive-locked');$('.desktop').inert=storageFailed;$('#connection-required').hidden=true;$('#drive-dialog [data-close]').disabled=false;fillSettings();vitalsSession(true);documentsSession(true);medicationsSession(true);historySession(true);calendarSession(true);refillAlertsSession(true);if(opening)renderKeepingDraft();}
 $('#drive-dialog').addEventListener('cancel',event=>{if(!workspaceReady)event.preventDefault();});
 $('#drive-dialog').addEventListener('close',()=>{if(!workspaceReady&&!choosingFolder)queueMicrotask(()=>{if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();});});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&workspaceReady&&!hasDriveAccess()){lockWorkspace();readyGoogle();}});
@@ -430,10 +432,12 @@ initDocuments({closeDesktopMenu,person:id=>data.people.find(person=>person.id===
 initDemographics({person:id=>workspaceReady?data.people.find(person=>person.id===id):null,personName,activity:(...args)=>{appendActivity(...args);runSync();}});
 initVitals({people:()=>data.people,personName,activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('vitals',value),link:(id,link)=>{const next=structuredClone(data),p=next.people.find(p=>p.id===id);if(!p)throw new Error('This person was removed.');p.vitalsSheet=link;p.updatedAt=new Date(Math.max(Date.now(),Date.parse(p.updatedAt)+1)).toISOString();if(!save(next))throw new Error('The vital signs sheet exists, but its directory link could not be saved. Retry after resolving storage.');renderKeepingDraft();runSync();}});
 initHistory({people:()=>data.people,personName,activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('history',value),notice:toast,link:(id,link)=>{const next=structuredClone(data),person=next.people.find(person=>person.id===id);if(!person)throw new Error('This person was removed.');person.historySheet=link;person.updatedAt=new Date(Math.max(Date.now(),Date.parse(person.updatedAt)+1)).toISOString();if(!save(next))throw new Error('The history sheet exists, but its directory link could not be saved. Retry after resolving storage.');renderKeepingDraft();runSync();}});
-initMedications({people:()=>data.people,personName,activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('medications',value),notice:toast,link:(id,link)=>{const next=structuredClone(data),person=next.people.find(person=>person.id===id);if(!person)throw new Error('This person was removed.');person.medicationSheet=link;person.updatedAt=new Date(Math.max(Date.now(),Date.parse(person.updatedAt)+1)).toISOString();if(!save(next))throw new Error('The medication sheet exists, but its directory link could not be saved. Retry after resolving storage.');renderKeepingDraft();runSync();}});
+initMedications({alertSettings:()=>alertSettings(data.refillAlertEvents),people:()=>data.people,personName,activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('medications',value),notice:toast,link:(id,link)=>{const next=structuredClone(data),person=next.people.find(person=>person.id===id);if(!person)throw new Error('This person was removed.');person.medicationSheet=link;person.updatedAt=new Date(Math.max(Date.now(),Date.parse(person.updatedAt)+1)).toISOString();if(!save(next))throw new Error('The medication sheet exists, but its directory link could not be saved. Retry after resolving storage.');renderKeepingDraft();runSync();}});
+initRefillAlerts({people:()=>data.people,directory:()=>data,personName,busy:value=>externalBusy('refill-alerts',value),sync:async()=>{if(!await runSync())throw new Error('Directory sync failed. Retry before changing shared alert state.');},commit:async entries=>{if(!workspaceReady||!hasDriveAccess())throw new Error('Reconnect first.');const next={...data,refillAlertEvents:mergeAlertEvents(data.refillAlertEvents,entries)};if(!save(next))throw new Error('Could not save alert state.');if(!await runSync())throw new Error('Saved locally; shared sync is pending. Retry directory sync.');}});
 lockWorkspace();readyGoogle();
 
 function appendActivity(action,type,id,summary,personId,user=getCurrentUser()){
+  if(/^(refill|medication)\.(created|updated|deleted|discontinued|list_created|scheduled_course_completed)$/.test(action))setTimeout(()=>refreshRefillAlerts(),0);
   if(sessionCleared)return;
   const next={...data,eventLog:mergeEventLogs(data.eventLog,[createEvent(user,action,type,id,summary,personId)])};
   if(!save(next,true))toast('The action completed, but its event log could not be saved. Keep this page open and resolve storage.');

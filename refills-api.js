@@ -1,7 +1,7 @@
-import {medicationSheetsRequest,getCurrentUser,getDriveSessionEpoch} from './drive.js?v=0.24.1';
-import {medicationWorkbook,readMedicationList} from './medications-api.js?v=0.24.1';
-import {medicationSheetId,medicationSheetTitle} from './medications-model.js?v=0.24.1';
-import {REFILL_FIELDS,REFILL_HEADERS,REFILL_EDITABLE,parseRefills,refillToRow,validateRefill} from './refills-model.js?v=0.24.1';
+import {medicationSheetsRequest,getCurrentUser,getDriveSessionEpoch} from './drive.js?v=0.25.0';
+import {medicationWorkbook,readMedicationList} from './medications-api.js?v=0.25.0';
+import {medicationSheetId,medicationSheetTitle} from './medications-model.js?v=0.25.0';
+import {REFILL_FIELDS,REFILL_HEADERS,REFILL_EDITABLE,parseRefills,refillToRow,validateRefill} from './refills-model.js?v=0.25.0';
 const PERSON='bhr.refills.personId',ROW='bhr.refillId',SCHEMA='bhr.refills.schema';
 const id=value=>{if(typeof value!=='string'||!/^[-\w]+$/.test(value))throw new Error('Invalid refill workbook ID.');return encodeURIComponent(value);};
 const post=(path,body)=>medicationSheetsRequest(path,{method:'POST',body:JSON.stringify(body)});
@@ -36,3 +36,11 @@ export async function saveRefill(ctx,person,entry,before=null){
  await post(id(ctx.spreadsheetId)+':batchUpdate',{requests:[{insertDimension:{range:{sheetId:current.sheetId,dimension:'ROWS',startIndex:1,endIndex:2},inheritFromBefore:false}},{updateCells:{start:{sheetId:current.sheetId,rowIndex:1,columnIndex:0},rows:[cells(refillToRow(entry))],fields:'userEnteredValue'}},{repeatCell:{range:{sheetId:current.sheetId,startRowIndex:1,endRowIndex:2},cell:{userEnteredFormat:{numberFormat:{type:'TEXT'},textFormat:{bold:false}}},fields:'userEnteredFormat.numberFormat,userEnteredFormat.textFormat.bold'}},{createDeveloperMetadata:{developerMetadata:{metadataKey:ROW,metadataValue:entry.id,visibility:'DOCUMENT',location:{dimensionRange:{sheetId:current.sheetId,dimension:'ROWS',startIndex:1,endIndex:2}}}}}]});
 }
 export async function deleteRefill(ctx,entry){actor();const check=sessionGuard();if(!await fresh(ctx,entry,true)){check();return;}check();await fresh(ctx,entry);check();await post(id(ctx.spreadsheetId)+'/values:batchUpdateByDataFilter',{valueInputOption:'RAW',data:[{dataFilter:{developerMetadataLookup:{metadataId:entry.metadataId}},majorDimension:'ROWS',values:[REFILL_FIELDS.map(()=>'')]}]});}
+
+// Read-only batched alert evaluation. Never creates sheets or changes refill rows.
+export async function readAllRefillLists(contexts){
+ actor();if(!contexts.length)return [];const epoch=getDriveSessionEpoch(),book=await medicationWorkbook([contexts[0].spreadsheetId]),linked=contexts.map(ctx=>{try{return {ctx,sheet:findSheet(book,ctx.personId)};}catch(error){return {ctx,error:error.message};}}),sheets=linked.filter(item=>item.sheet);
+ let found={},response={};if(sheets.length){found=await post(id(book.spreadsheetId)+'/developerMetadata:search',{dataFilters:[{developerMetadataLookup:{metadataKey:ROW,visibility:'DOCUMENT'}}]});response=await post(id(book.spreadsheetId)+'/values:batchGetByDataFilter',{dataFilters:sheets.map(({sheet})=>({gridRange:{sheetId:sheet.properties.sheetId,startColumnIndex:0,endColumnIndex:REFILL_FIELDS.length}})),majorDimension:'ROWS',valueRenderOption:'FORMATTED_VALUE'});}
+ if(epoch!==getDriveSessionEpoch())throw new Error('Connection changed while checking refill alerts.');
+ return linked.map(({ctx,sheet,error})=>{try{if(error)throw new Error(error);if(!sheet)return {personId:ctx.personId,rows:[],timezone:book.properties.timeZone};const markers=new Map();for(const {developerMetadata:m} of found.matchedDeveloperMetadata||[]){const r=m?.location?.dimensionRange;if(r?.sheetId!==sheet.properties.sheetId)continue;if(r.dimension!=='ROWS'||r.endIndex-r.startIndex!==1||markers.has(m.metadataValue)||!Number.isInteger(m.metadataId))throw new Error('Invalid refill row markers.');markers.set(m.metadataValue,m.metadataId);}const matches=(response.valueRanges||[]).filter(range=>range.dataFilters?.some(filter=>filter.gridRange?.sheetId===sheet.properties.sheetId));if(matches.length!==1)throw new Error('Refill sheet could not be read unambiguously.');return {personId:ctx.personId,rows:parseRefills(matches[0].valueRange?.values||[],markers),timezone:book.properties.timeZone};}catch(error){return {personId:ctx.personId,error:error.message};}});
+}

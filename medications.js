@@ -1,10 +1,10 @@
-import {compareDirectoryPeople} from './model.js?v=0.24.1';
-import {initRefills,refillsSession,openRefills} from './refills.js?v=0.24.1';
-import {printDocument,clearPrint} from './printing.js?v=0.24.1';
-import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.24.1';
-import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.24.1';
-import {isPrnMedication,compareMedications,EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.24.1';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.24.1';
+import {compareDirectoryPeople} from './model.js?v=0.25.0';
+import {initRefills,refillsSession,openRefills} from './refills.js?v=0.25.0';
+import {printDocument,clearPrint} from './printing.js?v=0.25.0';
+import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.25.0';
+import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.25.0';
+import {isPrnMedication,compareMedications,EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.25.0';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.25.0';
 const $=selector=>document.querySelector(selector),dialog=$('#medications-dialog'),formDialog=$('#medication-form-dialog'),actionDialog=$('#medication-action-dialog');
 let hooks,active=false,epoch=0,queue=Promise.resolve(),pending=0,currentPerson=null,context=null,tab='Active',formState=null,actionState=null,formDirty=false,refillsBusy=false;
 const node=(tag,text,cls)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;};
@@ -31,7 +31,7 @@ async function load(personId,stamp){
  alive(stamp);if(currentPerson!==personId)return;loaded.retrievedAt=new Date().toISOString();context=loaded;render();status(result.pending.length?'Scheduled end passed—update pending. '+result.pending[0].error:result.completed.length?'Scheduled course completed. See Discontinued.':'');return result.pending.length===0;
 }
 export function initMedications(options){
- hooks=options;$('#medications-icon').ondblclick=()=>openMedications();$('#medications-icon').onkeydown=event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();openMedications();}};$('#med-person').onchange=()=>{if(pending||refillsBusy||formDirty){$('#med-person').value=currentPerson||'';if(formDirty)showWindow(formDialog);return;}openMedications($('#med-person').value||null);};initRefills({person:personById,personName:options.personName,activity:options.activity,busy:value=>{refillsBusy=value;hooks.busy(value||pending>0);controls();},medications:id=>readMedicationList(personById(id),knownIds())});$('#med-refills').onclick=()=>{if(!pending&&!refillsBusy&&context&&!context.missing)openRefills(currentPerson);};$('#med-print').onclick=printMedications;$('#med-refresh').onclick=()=>openMedications(currentPerson,true);
+ hooks=options;$('#medications-icon').ondblclick=()=>openMedications();$('#medications-icon').onkeydown=event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();openMedications();}};$('#med-person').onchange=()=>{if(pending||refillsBusy||formDirty){$('#med-person').value=currentPerson||'';if(formDirty)showWindow(formDialog);return;}openMedications($('#med-person').value||null);};initRefills({alertSettings:options.alertSettings,person:personById,personName:options.personName,activity:options.activity,busy:value=>{refillsBusy=value;hooks.busy(value||pending>0);controls();},medications:id=>readMedicationList(personById(id),knownIds())});$('#med-refills').onclick=()=>{if(!pending&&!refillsBusy&&context&&!context.missing)openRefills(currentPerson);};$('#med-print').onclick=printMedications;$('#med-refresh').onclick=()=>openMedications(currentPerson,true);
  $('#med-active').onclick=()=>{tab='Active';render();};$('#med-discontinued').onclick=()=>{tab='Discontinued';render();};$('#med-add').onclick=()=>openForm();
  $('#med-short-course').onchange=endFields;
  $('#medication-form').addEventListener('input',()=>formDirty=true);

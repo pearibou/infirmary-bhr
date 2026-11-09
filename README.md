@@ -50,6 +50,18 @@ Observations appear newest first by measurement time. Backdated entries are supp
 
 The app creates/reuses the private **Vital Signs (BHR)** workbook in **Infirmary-BHR**, with surname/initial tabs created only when first saving. No measurements or comments are persisted in browser/PWA storage or the repository. Only stable sheet links are saved with the directory. Save failures retain drafts; logout/disconnect clears them and all measurement displays. See [the Vital Signs implementation notes](docs/vital-signs-design.md) for storage, permissions, validation and concurrency details.
 
+## In-app medication refill alerts
+
+The top-bar medicine bottle/exclamation icon opens alerts grouped by person. Its count is the number of active medications needing review for living patients. New/unacknowledged conditions pulse gently; Acknowledge records the staff identity/time and stops attention while keeping unresolved alerts visible. Reduced-motion mode uses a steady cue. A failed scan shows **? / check incomplete**, never a false all-clear.
+
+Default thresholds are **7 days' estimated supply**, **prescription expiration within 30 days**, and **no refills remaining**. Change the shared defaults in **Mepkin Abbey Infirmary → Preferences… → Medication alerts**, or **Settings…** in the alert window. The refill history warning labels use these same settings. Missing information stays unknown. PRN estimates continue to use the pharmacy's days supply and manual adjustments.
+
+**Refill requested…** records a request you made separately to the pharmacy, optionally with a comment; it does not send a request or add medication supply. The pending request is shared to avoid duplicate work and can be canceled. **Remind team on…** defers attention until that date in the workbook's timezone. Record actual dispensing through the existing refill history. Requests and acknowledgments do not alter clinical medication status, dispensing records or printed lists.
+
+Scans run at connection, opening/refreshing alerts, returning to the tab and after relevant local medication/refill changes; cached conditions recalculate as calendar dates change. Reads batch existing Sheets data without creating or modifying medication/refill sheets. New fills, a more urgent warning stage, relevant corrected data or changed thresholds can produce fresh attention; a daily countdown/rename does not repeatedly re-arm acknowledgment.
+
+Shared settings and follow-up are append-only `refillAlertEvents` in private `people_directory.json`, merged by stable event IDs with actor/time attribution and metadata-only Event Log entries. Raw pharmacy/Rx/date/supply details are not copied into issue keys; stable identifiers use deterministic change tokens. This does not provide server-enforced staff roles or fully transactional multi-user writes: directory sync uses merge/retry and fresh checks. Existing records need no migration or re-entry. Save open forms, then reload all BHR clients when deploying this version so older clients cannot drop the new optional directory state. Logout clears alert displays, drafts and protected browser data. There are no external notifications.
+
 ## Medication refill tracking
 
 In Medications, choose **Refill tracking…** for the person's overview, or **Refills…** on a medication. Existing medication entries work immediately; no re-entry or deletion is needed. **Record refill** saves dispensing date, pharmacy-assigned days supply, Rx number, remaining refills, prescription expiration and dispensing pharmacy. Fields may be left unknown; zero refills is distinct from blank. Each refill is retained in history with Edit/Delete actions, and only the previous dispensing pharmacy is prefilled.
