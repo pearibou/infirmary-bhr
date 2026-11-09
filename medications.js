@@ -1,9 +1,10 @@
-import {initRefills,refillsSession,openRefills} from './refills.js?v=0.21.0';
-import {printDocument,clearPrint} from './printing.js?v=0.21.0';
-import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.21.0';
-import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.21.0';
-import {isPrnMedication,compareMedications,EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.21.0';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.21.0';
+import {compareDirectoryPeople} from './model.js?v=0.23.0';
+import {initRefills,refillsSession,openRefills} from './refills.js?v=0.23.0';
+import {printDocument,clearPrint} from './printing.js?v=0.23.0';
+import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.23.0';
+import {readMedicationList,readAllMedicationLists,createMedicationList,addMedication,updateMedication,deleteMedication,completeScheduledCourses,resetMedicationSource} from './medications-api.js?v=0.23.0';
+import {isPrnMedication,compareMedications,EDITABLE_MED_FIELDS,newMedication,reviseMedication,medicationDue,localMedicationTime} from './medications-model.js?v=0.23.0';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.23.0';
 const $=selector=>document.querySelector(selector),dialog=$('#medications-dialog'),formDialog=$('#medication-form-dialog'),actionDialog=$('#medication-action-dialog');
 let hooks,active=false,epoch=0,queue=Promise.resolve(),pending=0,currentPerson=null,context=null,tab='Active',formState=null,actionState=null,formDirty=false,refillsBusy=false;
 const node=(tag,text,cls)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;};
@@ -15,7 +16,7 @@ function run(work){
  const next=queue.catch(()=>{}).then(()=>{alive(stamp);return work(stamp);});queue=next;
  return next.finally(()=>{if(stamp===epoch){pending=Math.max(0,pending-1);hooks.busy(pending>0||refillsBusy);controls();}});
 }
-function controls(){for(const id of ['med-add','med-refresh','med-active','med-discontinued','med-print','med-print-history','med-refills'])$('#'+id).disabled=pending>0||refillsBusy;for(const button of document.querySelectorAll('.med-entry-actions button'))button.disabled=pending>0||refillsBusy;}
+function controls(){$('#med-person').disabled=pending>0||refillsBusy;for(const id of ['med-add','med-refresh','med-active','med-discontinued','med-print','med-print-history','med-refills'])$('#'+id).disabled=pending>0||refillsBusy||!currentPerson||!context||context.missing;for(const button of document.querySelectorAll('.med-entry-actions button'))button.disabled=pending>0||refillsBusy;}
 function status(text){$('#med-status').textContent=text;}
 function audit(action,entryId,personId,automatic=false){hooks.activity('medication.'+action,'medication',entryId,'Medication '+action.replaceAll('_',' '),personId,automatic?{id:getCurrentUser()?.id,name:`Automatic (checked by ${getCurrentUser()?.name||'connected staff'})`}:getCurrentUser());}
 function failure(error,prefix=''){
@@ -30,7 +31,7 @@ async function load(personId,stamp){
  alive(stamp);if(currentPerson!==personId)return;loaded.retrievedAt=new Date().toISOString();context=loaded;render();status(result.pending.length?'Scheduled end passed—update pending. '+result.pending[0].error:result.completed.length?'Scheduled course completed. See Discontinued.':'');return result.pending.length===0;
 }
 export function initMedications(options){
- hooks=options;initRefills({person:personById,personName:options.personName,activity:options.activity,busy:value=>{refillsBusy=value;hooks.busy(value||pending>0);controls();},medications:id=>readMedicationList(personById(id),knownIds())});$('#med-refills').onclick=()=>{if(!pending&&!refillsBusy&&context&&!context.missing)openRefills(currentPerson);};$('#med-print').onclick=printMedications;$('#med-refresh').onclick=()=>openMedications(currentPerson,true);
+ hooks=options;$('#medications-icon').ondblclick=()=>openMedications();$('#medications-icon').onkeydown=event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();openMedications();}};$('#med-person').onchange=()=>{if(pending||refillsBusy||formDirty){$('#med-person').value=currentPerson||'';if(formDirty)showWindow(formDialog);return;}openMedications($('#med-person').value||null);};initRefills({person:personById,personName:options.personName,activity:options.activity,busy:value=>{refillsBusy=value;hooks.busy(value||pending>0);controls();},medications:id=>readMedicationList(personById(id),knownIds())});$('#med-refills').onclick=()=>{if(!pending&&!refillsBusy&&context&&!context.missing)openRefills(currentPerson);};$('#med-print').onclick=printMedications;$('#med-refresh').onclick=()=>openMedications(currentPerson,true);
  $('#med-active').onclick=()=>{tab='Active';render();};$('#med-discontinued').onclick=()=>{tab='Discontinued';render();};$('#med-add').onclick=()=>openForm();
  $('#med-short-course').onchange=endFields;
  $('#medication-form').addEventListener('input',()=>formDirty=true);
@@ -45,7 +46,7 @@ export function medicationsSession(ready){
  if(ready){refillsSession(true);if(!active){active=true;epoch++;startupCheck();}return;}
  refillsSession(false);if(!active)return;active=false;epoch++;pending=0;queue=Promise.resolve();resetMedicationSource();clearPrint();$('#med-print-history').checked=false;context=null;currentPerson=null;formState=null;actionState=null;formDirty=false;
  hooks.busy(false);for(const win of [dialog,formDialog,actionDialog]){if(win.open)win.close();document.querySelector(`#window-dock [data-window="${win.id}"]`)?.remove();}
- $('#med-content').replaceChildren();$('#medications-title').textContent='Medications';$('#med-form-title').textContent='Add medication';$('#medication-form').reset();$('#medication-action-form').reset();
+ $('#med-person').replaceChildren();$('#med-content').replaceChildren();$('#medications-title').textContent='Medications';$('#med-form-title').textContent='Add medication';$('#medication-form').reset();$('#medication-action-form').reset();
  formDisabled(false);actionDialog.querySelectorAll('button').forEach(button=>button.disabled=false);
  for(const id of ['med-status','med-retrieved','med-form-error','med-action-error','med-action-subject','med-end-help','med-action-help'])$('#'+id).textContent='';
 }
@@ -54,9 +55,10 @@ function startupCheck(){
   for(const ctx of lists){if(ctx.error){const name=personById(ctx.personId);hooks.notice('Medication startup check could not finish for '+(name?hooks.personName(name):'a removed person')+': '+ctx.error+' Open this person’s Medications and refresh.');continue;}await rememberLink(ctx,stamp);const result=await completeScheduledCourses(ctx,getCurrentUser());alive(stamp);for(const id of result.completed)audit('scheduled_course_completed',id,ctx.personId,true);if(result.pending.length)hooks.notice('Scheduled medication updates are pending. Open Medications and Retry.');}
  }).catch(error=>{if(active)hooks.notice('Medication check: '+error.message);});
 }
-export function openMedications(personId,preserveTab=false){
- if(!active)return;const person=personById(personId);if(!person)return;
- if(!preserveTab||currentPerson!==personId)tab='Active';currentPerson=personId;context=null;$('#medications-title').textContent='Medications — '+hooks.personName(person);updateWindowTitle(dialog);$('#med-controls').hidden=true;$('#med-content').replaceChildren(node('p','Retrieving medication list…','small'));status('');showWindow(dialog);
+export function openMedications(personId=null,preserveTab=false){
+ if(!active||refillsBusy)return;if(formDirty){showWindow(formDialog);return;}const person=personId?personById(personId):null;if(personId&&!person)return;
+ if(!person){currentPerson=null;context=null;tab='Active';updateMedicationPicker();$('#medications-title').textContent='Medications';updateWindowTitle(dialog);$('#med-controls').hidden=true;$('#med-retrieved').textContent='';$('#med-content').replaceChildren(node('p',people().length?'Choose a person to view their medication list.':'No people in the directory yet.','empty'));status('');controls();showWindow(dialog);return;}
+ if(!preserveTab||currentPerson!==personId)tab='Active';currentPerson=personId;context=null;updateMedicationPicker();$('#medications-title').textContent='Medications — '+hooks.personName(person);updateWindowTitle(dialog);$('#med-controls').hidden=true;$('#med-content').replaceChildren(node('p','Retrieving medication list…','small'));status('');showWindow(dialog);
  run(stamp=>load(personId,stamp)).catch(error=>{if(active&&currentPerson===personId)failure(error);});
 }
 function render(){
@@ -126,3 +128,5 @@ function printMedications(){
   status('Opening print dialog…');await printDocument({title:'Medication List',person:structuredClone(person),sections,retrievedAt:snapshot.retrievedAt});alive(stamp);audit('print_requested',String(snapshot.sheetId),personId);status('Print dialog requested.');
  }).catch(error=>{if(active)status('Could not print: '+error.message);});
 }
+
+function updateMedicationPicker(){const picker=$('#med-person');picker.replaceChildren();const placeholder=node('option','Choose a person…');placeholder.value='';picker.append(placeholder);for(const deceased of [false,true]){const list=[...people()].filter(person=>Boolean(person.deceased)===deceased).sort(compareDirectoryPeople);if(!list.length)continue;const group=node('optgroup');group.label=deceased?'Deceased':'Living';for(const person of list){const option=node('option',hooks.personName(person)+(deceased?' (Deceased)':''));option.value=person.id;group.append(option);}picker.append(group);}picker.value=currentPerson||'';controls();}

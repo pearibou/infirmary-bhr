@@ -8,7 +8,7 @@ Implemented in **0.19.0**. All actual measurements are protected runtime informa
 - The patient's navigation row also has **Vital Signs**, with a small stethoscope icon, and opens the same window with that person selected.
 - Observations appear newest first by measurement time, with entry time/ID as a deterministic tie-breaker.
 - Any currently connected user with the workbook's Drive/Sheets permissions can add, edit or delete observations, consistent with medication/history maintenance. Original author and entry time are retained; edits identify their editor/time. Future staff roles still require backend authorization.
-- A standalone medication-list desktop icon was noted for later work and is not added here. No clinical severity alerts, trend charts or vital-sign print view are included in this release.
+- A standalone Medications desktop app was subsequently added in 0.22.0. No clinical severity alerts, trend charts or vital-sign print view are included in this release.
 
 ## Observation fields
 
@@ -59,3 +59,7 @@ Store `gcsEye`, `gcsVerbal`, `gcsMotor` as optional string fields in three appen
 Read legacy 22-column tabs without changing them. Before a write, validate existing headers/rows and append only missing GCS headers, increasing grid column count if required. Unexpected data in the appended columns stops the upgrade. Existing observations, author IDs, revision fields and row metadata retain their positions. Original schemas still use their existing workbook marker; all clients must update together because earlier frontends do not interpret or validate the new fields.
 
 Descriptions use the adult eye/verbal/motor responses. A component that cannot be assessed should remain unsubmitted; this version does not invent a numeric value for untestable responses. The brief total interpretation describes a score range, not a diagnosis.
+
+## Fresh GCS forms (0.22.0)
+
+Hidden input values reflect back to their HTML value attributes, so `form.reset()` alone retains previously selected GCS values. Reset all three values/defaults explicitly when creating a new observation and on save/cancel/session cleanup. Populate GCS only from the specific observation opened for editing. Regression coverage creates fresh entries for both the same patient and a second patient after a GCS save, then reopens the original observation to verify its stored scores are intact.

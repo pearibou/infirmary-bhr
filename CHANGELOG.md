@@ -1,5 +1,24 @@
 # Version history
 
+## 0.23.0 — 2026-11-09
+
+- Click a patient profile photo, or focus it and press Enter, to open a simple full-image viewer with an uncropped, proportional image and Close/Escape support.
+- Reuse authenticated in-memory photo blobs; explain inaccessible Drive photos and clear the viewer on close, disconnect or logout.
+
+
+## 0.22.1 — 2026-11-09
+
+- Restyle patient chart sections as compact rounded rectangle buttons, with the medical document, stethoscope, pills and double-helix symbols beside their labels.
+- Retain the desktop single-row layout and allow wrapping on narrow screens.
+
+
+## 0.22.0 — 2026-11-09
+
+- Fix GCS responses carrying into new vital-sign entries: explicitly clear hidden values/defaults and selection states for every fresh form, preserving saved scores when editing.
+- Add a Medications desktop app with a crisp retro bottle-and-tablets icon and an alphabetized living/deceased patient picker, using existing medication lists, refill tracking and print actions.
+- Clear the medication picker on logout and protect unsaved medication drafts when changing patient or reopening the app.
+
+
 ## 0.21.0 — 2026-11-09
 
 - Make the connected Drive dialog glow bright neon green with a much broader halo.

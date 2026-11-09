@@ -1,4 +1,4 @@
-import {validMedDate,localMedicationTime} from './medications-model.js?v=0.21.0';
+import {validMedDate,localMedicationTime} from './medications-model.js?v=0.23.0';
 export const REFILL_FIELDS=['id','medicationId','medicationName','lastFilled','daysSupply','rxNumber','refillsRemaining','expires','pharmacy','adjustmentDays','adjustmentReason','enteredBy','enteredById','enteredAt','updatedBy','updatedById','updatedAt','revision'];
 export const REFILL_HEADERS=['Refill ID','Medication ID','Medication at entry','Last filled','Days supply','Rx number','Refills remaining','Prescription expires','Dispensing pharmacy','Adjustment days','Adjustment reason','Entered by','Entered by ID','Entered at','Updated by','Updated by ID','Updated at','Revision'];
 export const REFILL_EDITABLE=['lastFilled','daysSupply','rxNumber','refillsRemaining','expires','pharmacy','adjustmentDays','adjustmentReason'];

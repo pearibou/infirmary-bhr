@@ -32,6 +32,7 @@ with sync_playwright() as p:
     page=browser.new_page(viewport={'width':1440,'height':1000},service_workers='block');prepare_test_page(page)
     errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
     seed={'version':1,'people':[{'id':'person-a','name':'Synthetic John','firstName':'John','lastName':'Smith','preferredName':'Synthetic John','info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]},{'id':'person-b','name':'Synthetic James','firstName':'James','lastName':'Smith','preferredName':'Synthetic James','info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]}]}
+    seed['people'].append({'id':'departed','name':'Synthetic Departed','preferredName':'Synthetic Departed','lastName':'Zulu','deceased':True,'deathDate':{'year':'2020'},'info':'','notes':[],'updatedAt':'2026-01-01T00:00:00Z'})
     page.add_init_script("if(!localStorage.getItem('infirmary.directory.v1'))localStorage.setItem('infirmary.directory.v1',"+json.dumps(json.dumps(seed))+");")
     directory=[seed];book={'spreadsheetId':'workbook','properties':{'timeZone':'Etc/UTC'},'sheets':[{'properties':{'sheetId':0,'title':'Sheet1','gridProperties':{'rowCount':1000,'columnCount':26}},'developerMetadata':[]}],'developerMetadata':[]};grids={0:[]};serial=[1];batches=[];lost_add=[False];fail_updates=[False];disabled_api=[False]
     def sheet(id):return next(item for item in book['sheets'] if item['properties']['sheetId']==id)
@@ -101,16 +102,30 @@ with sync_playwright() as p:
         if '/userinfo' in url.path:route.fulfill(json={'sub':'synthetic-staff','name':'Synthetic Staff'});return
         if url.path.endswith('/root'):route.fulfill(json={'id':'root','name':'Infirmary-BHR','mimeType':'application/vnd.google-apps.folder','appProperties':{'bhrWorkspace':'1'},'capabilities':{'canAddChildren':True}});return
         if url.path.endswith('/workbook'):route.fulfill(json={'id':'workbook','name':'Medication Lists (BHR)','mimeType':'application/vnd.google-apps.spreadsheet','parents':['root']});return
+        if url.path.endswith('/staff-profile'):route.fulfill(json={'version':1,'issuer':'https://accounts.google.com','subject':'synthetic-staff','displayName':'Synthetic Staff'});return
         if url.path.endswith('/files') and req.method=='GET':
             q=params.get('q',[''])[0]
+            if 'staff_profile_' in q:route.fulfill(json={'files':[{'id':'staff-profile'}]});return
             route.fulfill(json={'files':[{'id':'workbook','name':'Medication Lists (BHR)','mimeType':'application/vnd.google-apps.spreadsheet','parents':['root']}] if 'Medication Lists (BHR)' in q else [{'id':'directory'}] if 'people_directory.json' in q else []});return
         if url.path.endswith('/directory'):
             if req.method=='PATCH':directory[0]=req.post_data_json
             route.fulfill(json=directory[0] if req.method=='GET' else {'id':'directory'});return
         route.fulfill(status=404,json={'error':{'message':'Unknown synthetic Drive route'}})
     page.route('https://www.googleapis.com/**',drive);ignore_event_log_projection(page);page.route('https://sheets.googleapis.com/**',sheets_api)
-    page.goto('http://127.0.0.1:8000');unlock_test_drive(page)
+    page.goto('http://127.0.0.1:8000');unlock_test_drive(page,open_records=False)
     page.wait_for_function("!document.querySelector('#logout-power').disabled")
+    assert page.locator('#records-window').is_hidden()
+    page.locator('#medications-icon').dblclick();assert page.locator('#medications-title').inner_text()=='Medications'
+    assert page.locator('#med-person').input_value()=='' and page.locator('#med-controls').is_hidden()
+    assert page.locator('#medications-icon img').evaluate('i=>i.complete&&i.naturalWidth>0')
+    assert page.locator('#med-person option').evaluate_all('nodes=>nodes.map(n=>n.value)')==['','person-b','person-a','departed']
+    assert page.locator('#med-person optgroup[label=Deceased] option').inner_text()=='Synthetic Departed (Deceased)'
+    page.locator('#med-person').select_option('departed');page.get_by_role('button',name='+ Add medication list',exact=True).wait_for();assert len(book['sheets'])==1
+    page.locator('#medications-dialog [data-close]').click();page.locator('#medications-icon').focus();page.keyboard.press('Enter');assert page.locator('#med-person').input_value()==''
+    page.locator('#medications-dialog [data-close]').click();page.screenshot(path='/tmp/bhr-medications-desktop.png');page.locator('#medications-icon').screenshot(path='/tmp/bhr-medications-icon.png');page.locator('#medications-icon').dblclick()
+    page.locator('#med-person').select_option('person-a');page.get_by_role('button',name='+ Add medication list',exact=True).wait_for()
+    assert len(book['sheets'])==1 and grids[0]==[]
+    page.locator('#medications-dialog [data-close]').click();open_bhr(page)
     page.locator('.person strong').filter(has_text='Synthetic John').click()
     nav=page.locator('.chart-navigation');assert nav.get_by_role('button').all_text_contents()==['Demographics','Vital Signs','Medications','Medical History']
     nav.get_by_role('button',name='Medications',exact=True).click();page.get_by_role('button',name='+ Add medication list',exact=True).wait_for()
@@ -180,9 +195,9 @@ with sync_playwright() as p:
     assert next(row for row in entry_rows(sid) if row[1]=='Synthetic pending course')[9]=='Discontinued' and len(book['sheets'])==2
     print_body=print_current(True);assert 'Discontinued medications' in print_body and 'Synthetic completed course' in print_body
     sheet(sid)['properties']['title']='Smith J'
-    page.locator('#medications-dialog [data-close]').click();page.locator('.person strong').filter(has_text='Synthetic James').click();page.get_by_role('button',name='Medications',exact=True).click();page.get_by_role('button',name='+ Add medication list',exact=True).click();page.wait_for_function("!document.querySelector('#med-add').disabled")
+    page.locator('#med-person').select_option('person-b');page.get_by_role('button',name='+ Add medication list',exact=True).click();page.wait_for_function("!document.querySelector('#med-add').disabled")
     assert any(s['properties']['title']=='Smith J (2)' for s in book['sheets'])
-    page.locator('#medications-dialog [data-close]').click();disabled_api[0]=True;page.get_by_role('button',name='Medications',exact=True).click();page.get_by_role('button',name='Retry',exact=True).wait_for();assert page.get_by_role('button',name='+ Add medication list',exact=True).count()==0
+    page.locator('#medications-dialog [data-close]').click();disabled_api[0]=True;page.locator('.chart-navigation').get_by_role('button',name='Medications',exact=True).click();page.get_by_role('button',name='Retry',exact=True).wait_for();assert page.get_by_role('button',name='+ Add medication list',exact=True).count()==0
     disabled_api[0]=False;page.get_by_role('button',name='Retry',exact=True).click();page.wait_for_function("!document.querySelector('#med-add').disabled")
     page.locator('#medications-dialog [data-close]').click()
     startup=entry_rows(sid)[0];startup_id=startup[0];startup[9]='Active';startup[11]='';startup[12]='';startup[19]='';startup[20]=str(int(startup[20])+1)
@@ -201,7 +216,7 @@ with sync_playwright() as p:
     page.reload();page.wait_for_function("window.google?.accounts?.oauth2 && !document.querySelector('#drive-status').textContent.startsWith('Preparing')");page.locator('#google-connect').click()
     page.wait_for_function("!document.body.classList.contains('drive-locked') && !document.querySelector('#logout-power').disabled")
 
-    page.locator('#drive-dialog [data-close]').click();open_bhr(page);page.get_by_role('button',name='Medications',exact=True).click();page.wait_for_function("!document.querySelector('#med-add').disabled")
+    page.locator('#drive-dialog [data-close]').click();open_bhr(page);page.locator('.chart-navigation').get_by_role('button',name='Medications',exact=True).click();page.wait_for_function("!document.querySelector('#med-add').disabled")
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     page.locator('#med-add').click();form.get_by_label('Medication name',exact=True).fill('Synthetic unsaved private medication');page.locator('#medication-form-dialog .window-control').click();page.locator('#medications-dialog [data-close]').click()
     page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
