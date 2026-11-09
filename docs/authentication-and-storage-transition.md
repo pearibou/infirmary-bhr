@@ -1,12 +1,12 @@
 # Individual Google access and a later central backend
 
-Status: discussion/design only. No login or storage behavior is changed by this document.
+Status: near-term individual Google/shared-folder access implemented in 0.20.0. Central backend and portable storage sections remain future design.
 
 ## Near-term direction
 
 Use individual staff Google accounts with explicitly shared access to the private Infirmary-BHR Drive folder. The central account keeps ownership. Staff authenticate with their own Google credentials and two-factor verification, without sharing the central account password or requiring its owner's approval for each sign-in.
 
-Adapt and test folder selection, Drive/Sheets scopes and cross-user access. A shared-folder permission does not automatically establish that every API operation currently using drive.file will work for another staff member. Picker authorization and access to existing spreadsheet/document files need explicit verification before release.
+The current app requests full Drive access plus openid/email/profile, including access needed for Sheets; it does not use drive.file. Staff explicitly open the existing shared workspace; the app validates folder write access and the existing directory. First-use and returning-account flows are covered with synthetic Google API browser tests. Real Google consent and sharing settings still need the administrator’s pilot check.
 
 Google's file permissions enforce storage access. BHR's interface can apply creator-only rules, but users with direct Drive editing permission can bypass those interface rules and alter the files themselves. This approach is not a server-enforced BHR permission system.
 

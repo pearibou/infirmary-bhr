@@ -1,5 +1,13 @@
 # Version history
 
+## 0.20.0 — 2026-11-09
+
+- Individual Google account selection, explicit existing shared-folder setup and mandatory authenticated attribution before opening the desktop.
+- Persistent private per-account display-name preferences, with a change-name control in the Drive dialog. Original Google subject IDs continue to enforce note ownership; historical labels remain unchanged.
+- Staff shared-folder selection validates an existing writable directory without creating or migrating a workspace. Owner-only workspace creation remains a separate explicit option.
+- Block switching a populated browser directory into another workspace without logging out first. Profiles and account details are cleared from the session on disconnect/logout.
+
+
 ## 0.19.0 — 2026-11-09
 
 - Add Vital Signs from patient navigation and a retro sphygmomanometer desktop icon, with a living/deceased person picker.
