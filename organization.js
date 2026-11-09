@@ -1,9 +1,9 @@
-import {DEFAULT_ORGANIZATION_NAME,validateOrganization,organizationVersion} from './organization-model.js?v=0.27.0';
-import {getCurrentUser,getWorkspaceFolder,readPersonPhoto,uploadPersonFile,hasDriveAccess} from './drive.js?v=0.27.0';
-import {validatePhoto} from './photos.js?v=0.27.0';
+import {DEFAULT_ORGANIZATION_NAME,validateOrganization,organizationVersion} from './organization-model.js?v=0.27.1';
+import {getCurrentUser,getWorkspaceFolder,readPersonPhoto,uploadPersonFile,hasDriveAccess} from './drive.js?v=0.27.1';
+import {validatePhoto} from './photos.js?v=0.27.1';
 const $=s=>document.querySelector(s),fallback=new URL('./icons/icon.svg',import.meta.url).href,printFallback=new URL('./icons/icon-512.png',import.meta.url).href;
 let hooks,current,generation=0,logoPromise,logoUrl,previewUrl,busy=false,baseline='',openGeneration=0;
-function logoTargets(){return [$('.abbey-mark'),$('#about-dialog .about-brand img'),$('#organization-logo-preview')];}
+function logoTargets(){return [$('.abbey-mark'),$('#organization-logo-preview')];}
 function paint(){const name=current?.name||DEFAULT_ORGANIZATION_NAME;$('#app-menu-toggle strong').textContent=name;$('#app-menu').setAttribute('aria-label',name+' menu');$('#workspace-organization').textContent=name;for(const image of logoTargets()){image.src=fallback;image.alt=current?.name?current.name+' logo':'BHR icon';}if(current?.logo){const stamp=generation;loadLogo().then(url=>{if(stamp===generation)for(const image of logoTargets())if(image.id!=='organization-logo-preview'||!previewUrl&&!$('#organization-remove-logo').checked)image.src=url;}).catch(()=>{if(stamp===generation)$('#organization-logo-status').textContent='Saved logo unavailable. Check Google Drive access or choose a replacement.';});}}
 function loadLogo(){if(!current?.logo)return Promise.resolve(printFallback);if(!logoPromise){const stamp=generation;logoPromise=readPersonPhoto(current.logo.fileId).then(blob=>{if(stamp!==generation)throw new Error('Organization connection changed.');logoUrl=URL.createObjectURL(blob);return logoUrl;}).catch(error=>{if(stamp===generation)logoPromise=null;throw error;});}return logoPromise;}
 export function setOrganization(value){validateOrganization(value);if(organizationVersion(value)===organizationVersion(current))return;generation++;if(logoUrl)URL.revokeObjectURL(logoUrl);logoUrl=null;logoPromise=null;current=value?structuredClone(value):undefined;paint();}

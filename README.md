@@ -8,7 +8,7 @@ From this repository, run `npm start` (Node/npm and Python 3 required), then ope
 
 After connecting, the desktop opens with the main record window closed. Double-click **The BHR** at the top right (or focus its icon and press Enter) to open records. Use **+ New** to create a person, select them in the directory, and enter notes with Enter or Add. Notes appear newest first, with timestamps displayed in the device's timezone. **Export JSON** downloads a backup. No sample health records are included.
 
-The application's last menu item, **About…**, displays the configured organization logo (or the generic BHR icon), Brother Health Records System name, current release version and copyright. Its Close button or Escape returns to the menu. Native browser printing while About is open prints only this branding card.
+The application's last menu item, **About…**, displays the fixed pixel-art BHR abbey emblem with a subtle classic arrow cursor, Brother Health Records System name, current release version and copyright. Its Close button or Escape returns to the menu. Native browser printing while About is open prints only this branding card.
 
 ## Required connection and desktop handoff notes
 
@@ -34,7 +34,7 @@ Right-click a sticky to **Minimize note** or **Trash (delete) note…**. Minimiz
 
 A new or upgraded workspace defaults to **Brother Health Records** and the generic box-and-cross icon until a user saves organization info. This release does not seed Mepkin branding into new backend directories. For the original installation, enter **Mepkin Abbey Infirmary** and upload the recovered high-resolution PNG supplied with the release. Organization logos accept PNG/JPEG/WebP/GIF up to 10 MB; transparent PNG is recommended. Replacing/removing a logo does not delete old Drive files automatically.
 
-The configured branding appears in the menu bar, record toolbar, About image and document/calendar print headers. The app's generic favicon/PWA identity and existing system copyright attribution remain product metadata. Settings use timestamped shared-directory merge semantics and fresh checks before/after uploads; conflicting concurrent edits require review. Direct Drive editors can change shared settings; there is no separate enforceable administrator role. A failed configured-logo read blocks printing rather than silently substituting a different logo.
+The configured organization branding appears in the menu bar, record toolbar and document/calendar print headers. About always uses the fixed BHR product emblem, independently of the organization logo. The app's generic favicon/PWA identity and existing system copyright attribution remain product metadata. Settings use timestamped shared-directory merge semantics and fresh checks before/after uploads; conflicting concurrent edits require review. Direct Drive editors can change shared settings; there is no separate enforceable administrator role. A failed configured-logo read blocks printing rather than silently substituting a different logo.
 
 ## Your account
 

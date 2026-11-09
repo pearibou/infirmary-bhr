@@ -1,9 +1,9 @@
-import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.27.0';
-import {readVitalList,createVitalList,addVital,updateVital,deleteVital,resetVitalsSource} from './vitals-api.js?v=0.27.0';
-import {GCS_OPTIONS,gcsTotal,gcsMeaning,EDITABLE_VITAL_FIELDS,newVital,reviseVital,compareVitals,latestDimensions,heightText,weightText,vitalDetails,localVitalInput,vitalInputUtc} from './vitals-model.js?v=0.27.0';
-import {compareDirectoryPeople} from './model.js?v=0.27.0';
-import {smallIcon} from './icons-ui.js?v=0.27.0';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.27.0';
+import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.27.1';
+import {readVitalList,createVitalList,addVital,updateVital,deleteVital,resetVitalsSource} from './vitals-api.js?v=0.27.1';
+import {GCS_OPTIONS,gcsTotal,gcsMeaning,EDITABLE_VITAL_FIELDS,newVital,reviseVital,compareVitals,latestDimensions,heightText,weightText,vitalDetails,localVitalInput,vitalInputUtc} from './vitals-model.js?v=0.27.1';
+import {compareDirectoryPeople} from './model.js?v=0.27.1';
+import {smallIcon} from './icons-ui.js?v=0.27.1';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.27.1';
 const $=s=>document.querySelector(s),node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 let hooks,active=false,epoch=0,busy=false,current=null,context=null,draft=null,dirty=false,deleting=null;
 const cache=new Map(),requests=new Map(),targets=new Set();
