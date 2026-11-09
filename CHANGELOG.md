@@ -1,5 +1,12 @@
 # Version history
 
+## 0.13.0 — 2026-11-09
+
+- Add Calendar Maker beside Event Log, with weekly appointment editing and a saved-calendar archive in the private Infirmary-BHR Drive folder.
+- Separate public and administrator appointment fields; independent weekend print toggles retain all saved entries.
+- Save before native browser printing; fit public portrait and administrator landscape reports to one Letter page, refusing unreadably dense calendars instead of clipping.
+- Protect drafts on save failures, reject stale overwrites, avoid duplicate files on retry, and clear calendar content on logout.
+
 ## 0.12.4
 
 - Remove the scheduling/timezone explanation from the medication print report.
