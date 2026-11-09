@@ -2,7 +2,7 @@
 import copy,json,urllib.parse,os
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from browser_helpers import prepare_test_page,unlock_test_drive,ignore_event_log_projection
+from browser_helpers import open_bhr,prepare_test_page,unlock_test_drive,ignore_event_log_projection
 # Selected public Google discovery schemas, including their transitive types.
 SCHEMAS=json.loads(Path(__file__).with_name('sheets-request-schema.json').read_text())['schemas']
 def validate_request(value,schema,path='request'):

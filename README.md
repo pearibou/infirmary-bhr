@@ -30,6 +30,14 @@ Successful logout removes directory JSON (including notes, sticky notes, photos'
 
 Saved clinical note files open in **viewing mode**, with a readable title, date/creation/edit timestamps, attribution and formatted text. Editing fields and formatting buttons are hidden. The creator sees a pencil **Edit note** button; other connected users can read and print but cannot edit or delete the file through BHR. **New Blank Note** and chart **New note** begin in the editor; Save switches to viewing mode. Resuming an unsaved draft returns its creator to editing mode. Shared sticky-note editing permissions are unchanged.
 
+## Vital Signs
+
+Double-click **Vital Signs** on the desktop and choose a person, or use **Vital Signs** in their chart navigation. **+ Add vital signs** opens a dated observation form. Record any subset of blood pressure, pulse, respirations, temperature, oxygen saturation, height and weight, with an optional comment. Oxygen delivery defaults to **RA** (room air); enter another method and flow rate as needed. Temperature supports °F/°C, height total inches/cm, and weight lb/kg.
+
+Observations appear newest first by measurement time. Backdated entries are supported; the editor labels its device timezone and stores times in UTC. History entries offer Edit and confirmed Delete. The main chart shows the latest height and weight independently, each with its measurement date; missing values stay hidden. A blood-pressure-only entry does not replace prior dimensions.
+
+The app creates/reuses the private **Vital Signs (BHR)** workbook in **Infirmary-BHR**, with surname/initial tabs created only when first saving. No measurements or comments are persisted in browser/PWA storage or the repository. Only stable sheet links are saved with the directory. Save failures retain drafts; logout/disconnect clears them and all measurement displays. See [the Vital Signs implementation notes](docs/vital-signs-design.md) for storage, permissions, validation and concurrency details.
+
 ## Medication refill tracking
 
 In Medications, choose **Refill tracking…** for the person's overview, or **Refills…** on a medication. Existing medication entries work immediately; no re-entry or deletion is needed. **Record refill** saves dispensing date, pharmacy-assigned days supply, Rx number, remaining refills, prescription expiration and dispensing pharmacy. Fields may be left unknown; zero refills is distinct from blank. Each refill is retained in history with Edit/Delete actions, and only the previous dispensing pharmacy is prefilled.

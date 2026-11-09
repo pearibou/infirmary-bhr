@@ -2,7 +2,7 @@
 import copy,json,urllib.parse
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-from browser_helpers import prepare_test_page,unlock_test_drive,ignore_event_log_projection
+from browser_helpers import open_bhr,prepare_test_page,unlock_test_drive,ignore_event_log_projection
 # Selected public Google discovery schemas, including their transitive types.
 SCHEMAS=json.loads(Path(__file__).with_name('sheets-request-schema.json').read_text())['schemas']
 def validate_request(value,schema,path='request'):
@@ -112,7 +112,7 @@ with sync_playwright() as p:
     page.goto('http://127.0.0.1:8000');unlock_test_drive(page)
     page.wait_for_function("!document.querySelector('#logout-power').disabled")
     page.locator('.person strong').filter(has_text='Synthetic John').click()
-    nav=page.locator('.chart-navigation');assert nav.get_by_role('button').all_text_contents()==['Demographics','Medications','Medical History']
+    nav=page.locator('.chart-navigation');assert nav.get_by_role('button').all_text_contents()==['Demographics','Vital Signs','Medications','Medical History']
     nav.get_by_role('button',name='Medications',exact=True).click();page.get_by_role('button',name='+ Add medication list',exact=True).wait_for()
     assert len(book['sheets'])==1 and grids[0]==[] and page.locator('#med-controls').is_hidden()
     grids[0]=[['Synthetic existing content']]
@@ -201,7 +201,7 @@ with sync_playwright() as p:
     page.reload();page.wait_for_function("window.google?.accounts?.oauth2 && !document.querySelector('#drive-status').textContent.startsWith('Preparing')");page.locator('#google-connect').click()
     page.wait_for_function("!document.body.classList.contains('drive-locked') && !document.querySelector('#logout-power').disabled")
 
-    page.locator('#drive-dialog [data-close]').click();page.get_by_role('button',name='Medications',exact=True).click();page.wait_for_function("!document.querySelector('#med-add').disabled")
+    page.locator('#drive-dialog [data-close]').click();open_bhr(page);page.get_by_role('button',name='Medications',exact=True).click();page.wait_for_function("!document.querySelector('#med-add').disabled")
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     page.locator('#med-add').click();form.get_by_label('Medication name',exact=True).fill('Synthetic unsaved private medication');page.locator('#medication-form-dialog .window-control').click();page.locator('#medications-dialog [data-close]').click()
     page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
