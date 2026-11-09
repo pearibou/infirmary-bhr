@@ -43,19 +43,19 @@ with sync_playwright() as p:
     except Exception:
         print({'errors':errors,'drive':page.locator('#drive-status').inner_text(),'connection':page.locator('#connection').inner_text()});raise
     icon=page.locator('#calendar-maker-icon');event=page.locator('#event-log-icon');assert icon.bounding_box()['x']<event.bounding_box()['x'] and abs(icon.bounding_box()['y']-event.bounding_box()['y'])<2
-    icon.dblclick();page.locator('#calendar-new').click();page.locator('#calendar-week').fill('2026-11-10');page.locator('#calendar-week').press('Tab');assert page.locator('#calendar-week').input_value()=='2026-11-09'
+    icon.dblclick();page.locator('#calendar-new').click();page.locator('#calendar-week').fill('2026-11-10');page.locator('#calendar-week').press('Tab');assert page.locator('#calendar-week').input_value()=='2026-11-08'
     page.locator('#calendar-name').fill('Synthetic appointments')
     def add(day,name='Synthetic public name',private=True):
         section=page.locator(f'.calendar-day[data-day="{day}"]');section.get_by_role('button',name='+ Add appointment',exact=True).click();row=section.locator('.calendar-appointment').last
         if row.count()==0:print({'errors':errors,'status':page.locator('#calendar-status').inner_text(),'day':section.inner_html()[:1000]})
         for field,value in [('name',name),('leaving','8:30 AM'),('returning','11:00 AM'),('area','Synthetic town'),('appointmentTime','PRIVATE APPT TOKEN' if private else ''),('reason','PRIVATE REASON TOKEN' if private else ''),('address','PRIVATE ADDRESS TOKEN\n555 0100' if private else '')]:row.locator(f'[data-field="{field}"]').fill(value)
         return row
-    add(0);add(2,'Synthetic Wednesday');add(5,'Synthetic Saturday');add(6,'Synthetic Sunday')
+    add(1);add(3,'Synthetic Wednesday');add(6,'Synthetic Saturday');add(0,'Synthetic Sunday')
     assert '2 appointment(s)' in page.locator('#calendar-weekend-note').inner_text()
     fail[0]=True;page.locator('#calendar-save').click();page.wait_for_function("!document.querySelector('#calendar-save').disabled");assert 'failed' in page.locator('#calendar-status').inner_text(),page.locator('#calendar-status').inner_text();assert len(files)==0 and page.locator('[data-field=reason]').first.input_value()=='PRIVATE REASON TOKEN'
     fail[0]=False;lost[0]=True;page.locator('#calendar-save').click();page.wait_for_function("!document.querySelector('#calendar-save').disabled");assert 'failed' in page.locator('#calendar-status').inner_text(),page.locator('#calendar-status').inner_text();assert len(files)==1
     page.locator('#calendar-save').click();page.wait_for_function("document.querySelector('#calendar-status').textContent==='Calendar saved' && !document.querySelector('#calendar-save').disabled");assert len(files)==1
-    saved_id=next(iter(files));assert files[saved_id]['parents']==['root'] and contents[saved_id]['weekStart']=='2026-11-09' and len(contents[saved_id]['appointments'])==4
+    saved_id=next(iter(files));assert files[saved_id]['parents']==['root'] and contents[saved_id]['weekStart']=='2026-11-08' and len(contents[saved_id]['appointments'])==4
     assert 'PRIVATE REASON' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     def print_mode(mode):
         page.locator('#calendar-print-'+('full' if mode=='administrator' else 'public')).click()
@@ -74,7 +74,7 @@ with sync_playwright() as p:
         if mode=='public':assert 'PRIVATE' not in text and 'Synthetic Saturday' not in text and 'Synthetic Sunday' not in text
         page.evaluate("document.querySelector('#calendar-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");assert page.locator('#calendar-print-frame').count()==0
         return text
-    print_mode('public');page.locator('#calendar-saturday').check();page.locator('#calendar-sunday').check();text=print_mode('administrator');assert 'Synthetic Saturday' in text and 'Synthetic Sunday' in text
+    print_mode('public');page.locator('#calendar-saturday').check();page.locator('#calendar-sunday').check();text=print_mode('administrator');assert 'Synthetic Saturday' in text and 'Synthetic Sunday' in text;assert text.index('Synthetic Sunday')<text.index('Synthetic public name')<text.index('Synthetic Saturday')
     # A conflicting calendar must retain the working draft and refuse overwrite.
     files[saved_id]['modifiedTime']='2099-01-01T00:00:00Z';page.locator('#calendar-name').fill('Synthetic retained draft');page.locator('#calendar-save').click();page.wait_for_function("document.querySelector('#calendar-status').textContent.includes('changed in Drive')");assert page.locator('#calendar-name').input_value()=='Synthetic retained draft'
     page.locator('#calendar-new').click();page.locator('#calendar-switch-discard').click();assert page.locator('#calendar-name').input_value()=='Outgoing Medical Appts'
@@ -88,4 +88,4 @@ with sync_playwright() as p:
     assert 'PRIVATE' not in page.locator('body').text_content() and len(contents)==1
     assert not errors,errors
     browser.close()
-print('PASS: icon grid; Monday week; day entries; optional weekends; protected Drive save/archive; failure/idempotent retry; public projection; Letter portrait/landscape one-page PDFs; stale-edit denial; retained draft; mobile; logout')
+print('PASS: icon grid; Sunday week; day entries; optional weekends; protected Drive save/archive; failure/idempotent retry; public projection; Letter portrait/landscape one-page PDFs; stale-edit denial; retained draft; mobile; logout')

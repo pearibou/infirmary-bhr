@@ -1,4 +1,4 @@
-import {printableCalendar,DAY_NAMES,dayDate,dateLabel} from './calendar-model.js?v=0.13.0';
+import {printableCalendar,dayNames,dayIncluded,dayDate,dateLabel} from './calendar-model.js?v=0.13.1';
 let frame=null,generation=0;
 export function clearCalendarPrint(){generation++;frame?.remove();frame=null;}
 const node=(doc,tag,text)=>{const e=doc.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
@@ -13,8 +13,8 @@ export async function printCalendar(calendar,mode){
  const columns=full?['Name','Leaving by','Returning around','Area','Appt time','Reason','Address / phone']:['Name','Leaving by','Returning around','Area'],widths=full?[29,10,11,15,8,13,14]:[36,18,21,25],keys=['name','leaving','returning','area','appointmentTime','reason','address'];
  const table=node(doc,'table'),cols=node(doc,'colgroup'),head=node(doc,'thead'),labels=node(doc,'tr');for(const [i,title] of columns.entries()){const col=node(doc,'col');col.style.width=widths[i]+'%';cols.append(col);const th=node(doc,'th',title);if(full&&i===4)th.className='private-start';labels.append(th);}head.append(labels);table.append(cols,head);content.append(table);
  for(let day=0;day<7;day++){
-  if(day===5&&!data.includeSaturday||day===6&&!data.includeSunday)continue;
-  const group=node(doc,'tbody'),heading=node(doc,'tr');heading.className='day-heading';const date=node(doc,'th');date.colSpan=4;date.append(doc.createTextNode(DAY_NAMES[day].slice(0,3)),node(doc,'span',dateLabel(dayDate(data.weekStart,day))));date.querySelector('span').className='date';heading.append(date);if(full){const privateHead=node(doc,'th');privateHead.colSpan=3;privateHead.className='private-start';heading.append(privateHead);}group.append(heading);
+  if(!dayIncluded(data,day))continue;
+  const group=node(doc,'tbody'),heading=node(doc,'tr');heading.className='day-heading';const date=node(doc,'th');date.colSpan=4;date.append(doc.createTextNode(dayNames(data)[day].slice(0,3)),node(doc,'span',dateLabel(dayDate(data.weekStart,day))));date.querySelector('span').className='date';heading.append(date);if(full){const privateHead=node(doc,'th');privateHead.colSpan=3;privateHead.className='private-start';heading.append(privateHead);}group.append(heading);
   const entries=data.appointments.filter(row=>row.day===day);for(const row of entries.length?entries:[null]){const tr=node(doc,'tr');tr.className='appointment-row'+(!row?' empty-row':'');for(const [i,key] of keys.slice(0,columns.length).entries()){const td=node(doc,'td',row?.[key]||'');if(i===0)td.className='name';if(full&&i>=4)td.classList.add('private-cell');if(full&&i===4)td.classList.add('private-start');tr.append(td);}group.append(tr);}table.append(group);
  }
  try{
