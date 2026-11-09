@@ -1,5 +1,20 @@
 # Version history
 
+## 0.14.1 — 2026-11-09
+
+- Rename Calendar Maker to Weekly Appts on the desktop, window titles, accessibility labels and connection message.
+
+## 0.14.0 — 2026-11-09
+
+- Open saved appointment calendars in a readable day-by-day view with compact appointment cards and separated administrator details.
+- Add pencil Edit calendar and View calendar controls; saving returns to reading mode and switching protects unsaved drafts.
+- Keep print layouts unchanged; printing a saved reading view does not rewrite the calendar. Clear reading content on logout.
+
+## 0.13.6 — 2026-11-09
+
+- Rename the medication editor field to Medication name and align its help/validation wording.
+- Expand refill-tracking discussion notes with compact layout, overdue estimates, unknown-versus-zero values and prescription identifier handling.
+
 ## 0.13.5 — 2026-11-09
 
 - Use the standard arrow over clinical quick notes instead of the platform-dependent grab cursor, preserving author-only drag-to-trash and edit-button pointers.

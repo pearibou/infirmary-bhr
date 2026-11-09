@@ -74,17 +74,27 @@ with sync_playwright() as p:
         if mode=='public':assert 'PRIVATE' not in text and 'Synthetic Saturday' not in text and 'Synthetic Sunday' not in text
         page.evaluate("document.querySelector('#calendar-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");assert page.locator('#calendar-print-frame').count()==0
         return text
-    print_mode('public');page.locator('#calendar-saturday').check();page.locator('#calendar-sunday').check();text=print_mode('administrator');assert 'Synthetic Saturday' in text and 'Synthetic Sunday' in text;assert text.index('Synthetic Sunday')<text.index('Synthetic public name')<text.index('Synthetic Saturday')
+    assert page.locator('#calendar-reading').is_visible() and page.locator('#calendar-editor').is_hidden()
+    assert 'Synthetic public name' in page.locator('#calendar-reading').inner_text() and page.locator('#calendar-edit svg').count()==1
+    before_print=contents[saved_id]['updatedAt'];print_mode('public');assert contents[saved_id]['updatedAt']==before_print
+    page.locator('#calendar-dialog').screenshot(path='/tmp/bhr-calendar-reading.png')
+    page.locator('#calendar-edit').click();page.locator('#calendar-saturday').check();page.locator('#calendar-sunday').check();text=print_mode('administrator');assert 'Synthetic Saturday' in text and 'Synthetic Sunday' in text;assert text.index('Synthetic Sunday')<text.index('Synthetic public name')<text.index('Synthetic Saturday')
     # A conflicting calendar must retain the working draft and refuse overwrite.
-    files[saved_id]['modifiedTime']='2099-01-01T00:00:00Z';page.locator('#calendar-name').fill('Synthetic retained draft');page.locator('#calendar-save').click();page.wait_for_function("document.querySelector('#calendar-status').textContent.includes('changed in Drive')");assert page.locator('#calendar-name').input_value()=='Synthetic retained draft'
+    files[saved_id]['modifiedTime']='2099-01-01T00:00:00Z';page.locator('#calendar-edit').click();page.locator('#calendar-name').fill('Synthetic retained draft');page.locator('#calendar-save').click();page.wait_for_function("document.querySelector('#calendar-status').textContent.includes('changed in Drive')");assert page.locator('#calendar-name').input_value()=='Synthetic retained draft'
     page.locator('#calendar-new').click();page.locator('#calendar-switch-discard').click();assert page.locator('#calendar-name').input_value()=='Outgoing Medical Appts'
     page.locator('#calendar-archive button').first.click();page.wait_for_function("document.querySelector('#calendar-name').value==='Synthetic appointments'")
     assert page.locator('[data-field=reason]').first.input_value()=='PRIVATE REASON TOKEN'
+    assert page.locator('#calendar-reading').is_visible() and page.locator('#calendar-editor').is_hidden()
+    page.locator('#calendar-edit').click();page.locator('#calendar-name').fill('Synthetic discard preview')
+    page.locator('#calendar-view-button').click();page.locator('#calendar-switch-dialog [data-close]').click();assert page.locator('#calendar-name').input_value()=='Synthetic discard preview'
+    page.locator('#calendar-view-button').click();page.locator('#calendar-switch-discard').click();assert page.locator('#calendar-reading').is_visible() and 'Synthetic discard preview' not in page.locator('#calendar-reading').inner_text()
+    page.locator('#calendar-edit').click()
     page.locator('#calendar-name').fill('Synthetic pending');page.locator('#calendar-new').click();page.locator('#calendar-switch-dialog [data-close]').click();assert page.locator('#calendar-name').input_value()=='Synthetic pending'
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     page.locator('#calendar-dialog [data-close]').click();icon.dblclick();assert page.locator('#calendar-name').input_value()=='Synthetic pending'
     page.locator('#calendar-dialog [data-close]').click();page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
     assert page.locator('#calendar-days').text_content()=='' and page.locator('#calendar-archive').text_content()=='' and page.locator('#calendar-name').input_value()==''
+    assert page.locator('#calendar-reading').text_content()==''
     assert 'PRIVATE' not in page.locator('body').text_content() and len(contents)==1
     assert not errors,errors
     browser.close()

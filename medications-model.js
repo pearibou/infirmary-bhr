@@ -9,7 +9,7 @@ export function validMedDate(value,time=false){
  return y>0&&date.getUTCFullYear()===y&&date.getUTCMonth()===mo-1&&date.getUTCDate()===d&&(!m[4]||Number(m[4])<24&&Number(m[5])<60&&(!m[6]||Number(m[6])<60));
 }
 export function validateMedication(entry){
- if(!entry||typeof entry.id!=='string'||!entry.id||!entry.medication?.trim())throw new Error('Enter a medication name and strength.');
+ if(!entry||typeof entry.id!=='string'||!entry.id||!entry.medication?.trim())throw new Error('Enter a medication name.');
  for(const key of MED_FIELDS)if(typeof entry[key]!=='string'||entry[key].length>5000)throw new Error('Invalid medication field.');
  if(!['Active','Discontinued'].includes(entry.status))throw new Error('Medication status must be Active or Discontinued.');
  if(!validMedDate(entry.startDate)||!validMedDate(entry.scheduledEnd,true)||!validMedDate(entry.discontinuedAt,true))throw new Error('Enter valid medication dates.');
