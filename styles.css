@@ -209,3 +209,5 @@
 
 #rich-note-dialog .rich-toolbar[hidden]{display:none}#rich-note-edit{display:inline-flex;align-items:center;gap:5px}#rich-note-edit[hidden]{display:none}#rich-note-edit svg{width:14px;height:14px}.note-viewing #rich-note-body{background:#fff;border:1px solid #bbb;padding:20px;line-height:1.65;min-height:240px;font-size:15px}.note-viewing #rich-note-body:empty::before{content:'This note is blank.';color:#777;font-style:italic}#rich-note-view-title{margin:14px 0 6px;font-size:20px;overflow-wrap:anywhere}#rich-note-view-time{line-height:1.5}
 #rich-note-form>label[hidden]{display:none}
+
+.calendar-symbol-picker{border:1px solid #aaa;margin:10px 0;padding:8px}.calendar-symbol-picker legend{font-size:11px}#calendar-symbols{display:flex;flex-wrap:wrap;gap:5px}#calendar-symbols button{width:42px;height:42px;min-height:0;padding:5px;display:grid;place-items:center}#calendar-symbols button[aria-pressed="true"]{background:#b4bed3;border:2px solid #111;box-shadow:inset 1px 1px #666,inset -1px -1px #fff}#calendar-symbols svg,#calendar-symbols img{width:28px;height:28px;object-fit:contain}

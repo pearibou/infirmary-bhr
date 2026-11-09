@@ -1,5 +1,15 @@
 # Version history
 
+## 0.16.2 — 2026-11-09
+
+- Add a per-calendar print symbol picker with 20 outlined medical symbols plus the existing blue Star of Life default. Preserve selection in Drive and omit captions from print.
+- Center Area over its column in both calendar print formats.
+
+## 0.16.1 — 2026-11-09
+
+- Match the reference calendar’s print-only palette: pale-yellow week heading, light-gray day headers, white rows, dotted gray rules and black administrator divider.
+- Add a compact blue Star of Life beside the calendar print disclaimer in public and administrator copies; wait for the emblem before fitting the one-page layout.
+
 ## 0.16.0 — 2026-11-09
 
 - Open saved clinical note files in a readable viewing mode with title, timestamps and formatted content; hide editing fields and toolbar.

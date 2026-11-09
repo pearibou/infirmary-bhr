@@ -59,11 +59,17 @@ with sync_playwright() as p:
     assert 'PRIVATE REASON' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     def print_mode(mode):
         page.locator('#calendar-print-'+('full' if mode=='administrator' else 'public')).click()
-        page.wait_for_function("document.querySelector('#calendar-print-frame')?.contentDocument?.querySelector('table')")
+        try:page.wait_for_function("document.querySelector('#calendar-print-frame')?.contentDocument?.querySelector('table')",timeout=10000)
+        except Exception:
+            print({'status':page.locator('#calendar-status').inner_text(),'errors':errors});raise
         # The print engine waits for fonts, providing a normal asynchronous turn.
         frame=page.frame_locator('#calendar-print-frame');page.wait_for_function("!document.querySelector('#calendar-save').disabled")
         assert page.locator('#calendar-status').inner_text().startswith('Print dialog requested'),page.locator('#calendar-status').inner_text()
         assert page.evaluate('window.calendarPrintCalls')>=1
+        assert frame.locator('.week').evaluate("e=>getComputedStyle(e).backgroundColor")=='rgb(255, 255, 179)'
+        assert frame.locator('.day-heading th').first.evaluate("e=>getComputedStyle(e).backgroundColor")=='rgb(243, 243, 243)'
+        assert frame.locator('thead th').nth(3).evaluate("e=>getComputedStyle(e).textAlign")=='center'
+        assert frame.locator('.notice-row .notice-mark').evaluate("e=>e.tagName.toLowerCase()==='svg'||(e.complete&&e.naturalWidth>0)")
         html=page.locator('#calendar-print-frame').evaluate('frame=>frame.contentDocument.documentElement.outerHTML')
         if mode=='public':assert 'PRIVATE' not in html and 'Reason' not in html and 'Address / phone' not in html and 'appointmentTime' not in html
         else:assert 'PRIVATE REASON TOKEN' in html and 'PRIVATE ADDRESS TOKEN' in html and frame.locator('.private-start').count()>0
@@ -78,11 +84,13 @@ with sync_playwright() as p:
     assert 'Synthetic public name' in page.locator('#calendar-reading').inner_text() and page.locator('#calendar-edit svg').count()==1
     before_print=contents[saved_id]['updatedAt'];print_mode('public');assert contents[saved_id]['updatedAt']==before_print
     page.locator('#calendar-dialog').screenshot(path='/tmp/bhr-calendar-reading.png')
-    page.locator('#calendar-edit').click();page.locator('#calendar-saturday').check();page.locator('#calendar-sunday').check();text=print_mode('administrator');assert 'Synthetic Saturday' in text and 'Synthetic Sunday' in text;assert text.index('Synthetic Sunday')<text.index('Synthetic public name')<text.index('Synthetic Saturday')
+    page.locator('#calendar-edit').click();page.locator('#calendar-saturday').check();page.locator('#calendar-sunday').check();page.locator('#calendar-symbols').get_by_role('button',name='Stethoscope',exact=True).click();page.locator('#calendar-symbols').screenshot(path='/tmp/bhr-calendar-symbols.png');text=print_mode('administrator');assert 'Synthetic Saturday' in text and 'Synthetic Sunday' in text;assert text.index('Synthetic Sunday')<text.index('Synthetic public name')<text.index('Synthetic Saturday')
     # A conflicting calendar must retain the working draft and refuse overwrite.
     files[saved_id]['modifiedTime']='2099-01-01T00:00:00Z';page.locator('#calendar-edit').click();page.locator('#calendar-name').fill('Synthetic retained draft');page.locator('#calendar-save').click();page.wait_for_function("document.querySelector('#calendar-status').textContent.includes('changed in Drive')");assert page.locator('#calendar-name').input_value()=='Synthetic retained draft'
     page.locator('#calendar-new').click();page.locator('#calendar-switch-discard').click();assert page.locator('#calendar-name').input_value()=='Outgoing Medical Appts'
     page.locator('#calendar-archive button').first.click();page.wait_for_function("document.querySelector('#calendar-name').value==='Synthetic appointments'")
+    assert contents[saved_id]['symbol']=='stethoscope'
+    assert page.locator('[data-calendar-symbol=stethoscope]').get_attribute('aria-pressed')=='true'
     assert page.locator('[data-field=reason]').first.input_value()=='PRIVATE REASON TOKEN'
     assert page.locator('#calendar-reading').is_visible() and page.locator('#calendar-editor').is_hidden()
     page.locator('#calendar-edit').click();page.locator('#calendar-name').fill('Synthetic discard preview')
