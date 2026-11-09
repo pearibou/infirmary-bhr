@@ -17,7 +17,8 @@ with sync_playwright() as p:
    if r.method=='PATCH':store[0]=r.post_data_json
    route.fulfill(json=store[0] if r.method=='GET' else {'id':'directory'});return
   route.fulfill(status=404,json={'error':{'message':'Unknown synthetic route'}})
- page.route('https://www.googleapis.com/**',api);ignore_event_log_projection(page);page.goto('http://127.0.0.1:8000');unlock_test_drive(page,open_records=False)
+ page.route('https://www.googleapis.com/**',api);ignore_event_log_projection(page);page.goto('http://127.0.0.1:8000');assert not page.locator('#drive-dialog').evaluate("e=>e.classList.contains('drive-connected')");unlock_test_drive(page,open_records=False)
+ assert page.locator('#drive-dialog').evaluate("e=>e.classList.contains('drive-connected')")
  assert page.locator('#records-window').is_hidden() and page.locator('#desktop-icons #event-log-icon').count()==0 and page.locator('.desktop-caption').count()==0
  assert page.locator('#bhr-icon img').evaluate('i=>i.complete&&i.naturalWidth>0')
  bhr=page.locator('#bhr-icon').bounding_box();calendar=page.locator('#calendar-maker-icon').bounding_box();trash=page.locator('#desktop-trash').bounding_box();assert abs(bhr['x']-trash['x'])<1 and calendar['x']<bhr['x'] and abs(calendar['y']-bhr['y'])<2
@@ -39,6 +40,7 @@ with sync_playwright() as p:
  assert any(e['action']=='folder.detached' for e in store[0].get('eventLog',[]))
  page.locator('#close-main').click();page.locator('#app-menu-toggle').click();assert page.locator('#event-log-icon svg').count()==1;page.locator('#event-log-icon').click();assert page.locator('#event-log-dialog').is_visible() and page.locator('#app-menu').is_hidden();page.locator('#event-log-dialog [data-close]').click();assert page.locator('#records-window').is_hidden()
  page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
+ assert not page.locator('#drive-dialog').evaluate("e=>e.classList.contains('drive-connected')")
  page.locator('#google-connect').click();page.locator('#use-drive-root').click();page.wait_for_function("!document.body.classList.contains('drive-locked')");page.locator('#drive-dialog [data-close]').click();assert page.locator('#records-window').is_hidden()
  page.set_viewport_size({'width':390,'height':844});page.locator('#bhr-icon').dblclick();assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.locator('#close-main').click();assert page.locator('#records-window').is_hidden()
  assert not errors,errors;b.close()

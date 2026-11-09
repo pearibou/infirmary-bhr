@@ -1,5 +1,7 @@
 """Application menu actions, keyboard navigation and mobile layout."""
 from playwright.sync_api import sync_playwright
+import json,subprocess
+from pathlib import Path
 from browser_helpers import prepare_test_page,unlock_test_drive
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
@@ -14,7 +16,7 @@ with sync_playwright() as p:
     # Provider seam accepts future shared presence, deduplicates identities and
     # ignores stale callbacks after replacing a provider.
     page.evaluate("""async()=>{
-        const presence=await import('./presence.js?v=0.18.0');
+        const presence=await import('./presence.js?v=0.18.1');
         window.presenceModule=presence;
         presence.setPresenceProvider({subscribe:cb=>{window.oldPresence=cb;cb([{id:'a',name:'Synthetic One'},{id:'a',name:'Synthetic One'},{id:'b',name:'Synthetic Two'}]);return ()=>window.presenceStopped=true;}});
     }""")
@@ -36,13 +38,30 @@ with sync_playwright() as p:
     assert not menu.is_visible()
     toggle.click();page.locator('#drive-open').click()
     assert page.locator('#drive-dialog').is_visible() and not menu.is_visible()
+    assert page.locator('#drive-dialog').evaluate("e=>e.classList.contains('drive-connected') && getComputedStyle(e).outlineWidth==='2px'")
+    assert page.locator('#drive-connection-badge').inner_text()=='● Connected to Google Drive'
     page.locator('#drive-dialog [data-close]').click()
     toggle.click();page.locator('.abbey-mark').click();assert not menu.is_visible()
+    # Larger artwork stays inside the same desktop grid cell.
+    assert page.locator('#bhr-icon').bounding_box()['width']==88
+    assert page.locator('#bhr-icon img').bounding_box()['width']==56
+    assert page.locator('#calendar-maker-icon img').bounding_box()['width']==44
+    toggle.click();assert menu.get_by_role('menuitem').last.inner_text()=='About…'
+    menu.get_by_role('menuitem').first.focus();page.keyboard.press('End');assert page.locator('#about-open').evaluate('e=>e===document.activeElement');page.keyboard.press('Enter')
+    about=page.locator('#about-dialog');assert about.is_visible() and menu.is_hidden()
+    assert 'Brother Health Records System' in about.inner_text() and '© Mepkin Abbey 2026' in about.inner_text()
+    version=json.loads(Path('package.json').read_text())['version'];assert page.locator('#about-version').inner_text()=='Version '+version
+    assert about.locator('img').get_attribute('src')==page.locator('.abbey-mark').get_attribute('src') and about.locator('img').bounding_box()['width']==120
+    about.locator('img').evaluate('i=>i.decode()');about.screenshot(path='/tmp/bhr-about.png')
+    page.pdf(path='/tmp/bhr-about.pdf',format='Letter');printed=subprocess.check_output(['pdftotext','/tmp/bhr-about.pdf','-'],text=True)
+    assert 'Brother Health Records System' in ' '.join(printed.split()) and 'Directory' not in printed and 'Google Drive' not in printed
+    about.get_by_role('button',name='Close',exact=True).click();assert about.is_hidden()
     for width in [1280,960,700,390,320]:
         page.set_viewport_size({'width':width,'height':900})
         toggle.click();assert menu.is_visible()
         box=menu.bounding_box();assert box['x']>=0 and box['x']+box['width']<=width
         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
         page.keyboard.press('Escape')
+        toggle.click();page.locator('#about-open').click();assert about.is_visible() and page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.keyboard.press('Escape');assert about.is_hidden()
     browser.close()
 print('Application menu checks passed')
