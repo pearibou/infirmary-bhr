@@ -1,5 +1,9 @@
 # Version history
 
+## 0.13.4 — 2026-11-09
+
+- Add optional Race/ethnicity and Nationality fields to Additional information, demographics display, printouts, and Drive synchronization.
+
 ## 0.13.3 — 2026-11-09
 
 - Put Include Sunday before Include Saturday in Calendar Maker.
