@@ -89,3 +89,7 @@ The previous layout uses **Last Filled, Days Supply, Days Left, Rx#, Refills, Ex
 - **Date clarity:** use explicit dates and calculate elapsed calendar days in the configured infirmary timezone, avoiding changes caused solely by a viewer's timezone or daylight saving transitions.
 
 These are design suggestions prompted by the reference, not implemented behavior or a decision to add new required fields.
+
+## Related alert discussion
+
+See [in-BHR refill alert ideas](medication-refill-alerts-design.md) for the proposed indicator, acknowledgment, refill-request workflow and configurable thresholds. These alert features are design notes only.
