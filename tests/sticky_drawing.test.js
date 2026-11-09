@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {validateStickyDrawing} from '../sticky-drawing.js';
+import {mergeDirectories,validateDirectory,emptyDirectory} from '../model.js';
+import {recordChanges} from '../events.js';
+const stamp='2026-11-09T12:00:00Z',stroke={color:'#2454a4',size:5,points:[[0,0],[.5,1]]};
+const note={id:'synthetic-sticky',text:'Synthetic original',authorName:'Synthetic creator',authorId:'creator',createdAt:stamp,updatedAt:stamp,x:10,y:20};
+const dir=n=>({...emptyDirectory(),desktopNotes:[n]});
+test('sticky drawings accept bounded strokes and reject unsafe or excessive data',()=>{assert.deepEqual(validateStickyDrawing([stroke]),[stroke]);for(const value of [[{...stroke,color:'url(bad)'}],[{...stroke,size:100}],[{...stroke,points:[[2,0]]}],Array(257).fill(stroke),[{...stroke,points:[]}],[{...stroke,points:Array(2001).fill([0,0])}]])assert.throws(()=>validateStickyDrawing(value));validateDirectory(dir({...note,text:'',drawing:[stroke]}));assert.throws(()=>validateDirectory(dir({...note,text:''})));});
+test('sticky content edits and newer positions merge independently in either direction',()=>{const edited={...note,text:'Synthetic updated',drawing:[stroke],editedAt:'2026-11-09T12:01:00Z',updatedAt:'2026-11-09T12:01:00Z',editedBy:'Synthetic second staff',editedById:'second'},moved={...note,x:90,updatedAt:'2026-11-09T12:02:00Z'};for(const [a,b] of [[edited,moved],[moved,edited]]){const merged=mergeDirectories(dir(a),dir(b)).desktopNotes[0];assert.equal(merged.text,edited.text);assert.deepEqual(merged.drawing,[stroke]);assert.equal(merged.x,90);assert.equal(merged.authorId,'creator');assert.equal(merged.editedById,'second');validateDirectory(dir(merged));}assert.throws(()=>mergeDirectories(dir(edited),dir({...edited,text:'Conflicting content'})),/Conflicting/);assert.throws(()=>mergeDirectories(dir(note),dir({...note,authorId:'changed'})),/Conflicting/);});
+test('sticky edits generate metadata-only events attributed to the current editor',()=>{const events=recordChanges(dir(note),dir({...note,text:'SYNTHETIC PRIVATE TEXT',drawing:[stroke]}),{id:'second',name:'Synthetic second staff'}).eventLog;assert.ok(events.some(e=>e.action==='sticky.edited'&&e.actorId==='second'));assert.ok(!JSON.stringify(events).includes('SYNTHETIC PRIVATE TEXT'));});

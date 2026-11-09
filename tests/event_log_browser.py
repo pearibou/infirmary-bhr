@@ -40,7 +40,7 @@ with sync_playwright() as p:
     icon.dblclick();assert a.locator('#event-log-dialog').is_visible();assert a.locator('#event-log-text').get_attribute('contenteditable') is None
     assert a.locator('#event-log-dialog textarea').count()==0
     a.locator('#event-log-dialog').get_by_role('button',name='Close',exact=True).click()
-    a.locator('#add-person').click();form=a.locator('#person-dialog');form.get_by_label('Preferred name',exact=True).fill('Synthetic Brother');form.get_by_label('Additional information').fill('SYNTHETIC PRIVATE HEALTH INFORMATION');a.locator('#person-submit').click()
+    a.locator('#add-person').click();form=a.locator('#person-dialog');form.get_by_label('Preferred name',exact=True).fill('Synthetic Brother');form.get_by_label('Other information',exact=True).fill('SYNTHETIC PRIVATE HEALTH INFORMATION');a.locator('#person-submit').click()
     a.get_by_label('New note',exact=True).fill('SYNTHETIC CLINICAL NOTE');a.get_by_label('New note',exact=True).press('Enter')
     a.locator('.note-pencil').click();a.locator('#note-edit-text').fill('SYNTHETIC CORRECTED CLINICAL NOTE');a.get_by_role('button',name='Save note edit',exact=True).click()
     a.get_by_role('button',name='Attach folder…',exact=True).click();a.get_by_label('Google Drive folder link',exact=True).fill('https://drive.google.com/drive/folders/person-docs');a.locator('#folder-dialog').get_by_role('button',name='Attach folder',exact=True).click()

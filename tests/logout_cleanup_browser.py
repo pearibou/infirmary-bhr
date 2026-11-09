@@ -6,7 +6,7 @@ from browser_helpers import prepare_test_page,unlock_test_drive
 def chunk(kind,body):return struct.pack('!I',len(body))+kind+body+struct.pack('!I',zlib.crc32(kind+body)&0xffffffff)
 png=b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('!2I5B',2,2,8,6,0,0,0))+chunk(b'IDAT',zlib.compress((b'\0'+b'\x88\x88\x88\xff'*2)*2))+chunk(b'IEND',b'')
 now='2026-01-01T00:00:00Z'
-seed={'version':1,'people':[{'id':'synthetic-person','name':'Synthetic Private Person','info':'Synthetic private details','birthDate':{'year':'1950','month':'1','day':'1'},'updatedAt':now,'notes':[{'id':'n','text':'Synthetic protected note','createdAt':now}]}],'desktopNotes':[{'id':'sticky','text':'Synthetic shared reminder','createdAt':now,'updatedAt':now,'authorName':'Synthetic Staff','x':20,'y':30}]}
+seed={'version':1,'people':[{'id':'synthetic-person','name':'Synthetic Private Person','info':'Synthetic private details','birthDate':{'year':'1950','month':'1','day':'1'},'updatedAt':now,'notes':[{'id':'n','text':'Synthetic protected note','createdAt':now}]}],'desktopNotes':[{'id':'sticky','text':'Synthetic shared reminder','drawing':[{'color':'#2454a4','size':5,'points':[[.1,.2],[.8,.7]]}],'createdAt':now,'updatedAt':now,'authorName':'Synthetic Staff','x':20,'y':30}]}
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
     page=browser.new_page(viewport={'width':1280,'height':900},service_workers='block');prepare_test_page(page)
@@ -35,7 +35,8 @@ with sync_playwright() as p:
     page.wait_for_function("document.body.classList.contains('drive-locked')")
     assert page.evaluate("localStorage.getItem('infirmary.directory.v1')") is None
     assert 'Synthetic' not in page.locator('body').text_content()
-    assert page.locator('#sticky-notes').text_content()==''
+    assert page.locator('#sticky-notes').text_content()=='' and page.locator('#sticky-dock').text_content()==''
+    assert page.locator('#sticky-canvas').evaluate("c=>!c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((n,i)=>i%4===3&&n>0)")
     assert page.locator('#note-edit-text').input_value()==''
     assert page.locator('#person-photo').input_value()==''
     assert page.locator('#person-photo-preview img').count()==0

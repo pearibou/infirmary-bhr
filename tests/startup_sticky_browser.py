@@ -53,6 +53,26 @@ with sync_playwright() as p:
     a.locator('#manual-sync').click();a.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'")
     context2,b=setup('Synthetic Staff B');b.locator('#google-connect').click();b.locator('#use-drive-root').click();b.wait_for_function("!document.body.classList.contains('drive-locked')");b.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()
     assert b.locator('.sticky-note').is_visible() and 'Synthetic Staff A' in b.locator('.sticky-note').inner_text()
+    # Any connected staff member can edit a shared sticky, draw, or minimize locally.
+    b.locator('.sticky-note .sticky-edit').click();b.locator('#sticky-text').fill('Synthetic revised handoff')
+    b.locator('#sticky-draw-toggle').click();assert b.locator('#sticky-draw-toggle').get_attribute('aria-pressed')=='true' and b.locator('#sticky-palette').is_visible()
+    b.locator('#sticky-ink').select_option('#2454a4');b.locator('#sticky-brush').select_option('5')
+    canvas=b.locator('#sticky-canvas');r=canvas.bounding_box();b.mouse.move(r['x']+20,r['y']+35);b.mouse.down();b.mouse.move(r['x']+120,r['y']+65,steps=8);b.mouse.up()
+    b.set_viewport_size({'width':390,'height':844});assert b.evaluate('document.documentElement.scrollWidth<=innerWidth');assert b.locator('#sticky-palette').bounding_box()['x']>=0
+    b.locator('#sticky-dialog').screenshot(path='/tmp/bhr-sticky-drawing-editor.png');b.set_viewport_size({'width':1280,'height':900})
+    b.locator('#sticky-submit').click();b.wait_for_function("!document.querySelector('#sticky-dialog').open && document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'")
+    saved=backend['data']['desktopNotes'][0];assert saved['text']=='Synthetic revised handoff' and saved['drawing'][0]['color']=='#2454a4' and saved['authorName']=='Synthetic Staff A' and saved['editedBy']=='Synthetic Staff B'
+    assert b.locator('.sticky-card-drawing').is_visible()
+    b.locator('.sticky-note').click(button='right');b.get_by_role('menuitem',name='Minimize note',exact=True).click()
+    assert b.locator('.sticky-note').count()==0 and b.locator('#sticky-dock button').count()==1
+    minimized=b.locator('#sticky-dock button').bounding_box();bar=b.locator('.menubar').bounding_box();assert abs(minimized['y']-(bar['y']+bar['height']))<2
+    b.locator('#manual-sync').click();b.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'");assert b.locator('.sticky-note').count()==0
+    b.locator('#sticky-dock button').click();b.locator('.sticky-note').dblclick();assert b.locator('#sticky-text').input_value()=='Synthetic revised handoff'
+    b.locator('#sticky-draw-toggle').click();b.locator('#sticky-undo').click();b.locator('#sticky-dialog [data-close]').click()
+    b.locator('.sticky-note .sticky-edit').click();assert b.locator('#sticky-canvas').evaluate("c=>c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((n,i)=>i%4===3&&n>0)")
+    b.locator('#sticky-dialog [data-close]').click()
+    a.locator('#manual-sync').click();a.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'");assert 'Synthetic revised handoff' in a.locator('.sticky-note').inner_text() and a.locator('.sticky-card-drawing').count()==1
+    b.locator('.sticky-note').click(button='right');b.get_by_role('menuitem',name='Trash (delete) note…',exact=True).click();b.locator('#trash-dialog [data-close]').click();assert b.locator('.sticky-note').count()==1
     b.locator('.sticky-note').drag_to(b.locator('#desktop-trash'));b.locator('#trash-dialog').get_by_role('button',name='Permanently delete',exact=True).click()
     assert b.locator('.sticky-note').count()==0
     b.locator('#manual-sync').click();b.wait_for_function("document.querySelector('#manual-sync').getAttribute('aria-busy')==='false'")
