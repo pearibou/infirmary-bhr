@@ -23,11 +23,13 @@ with sync_playwright() as p:
     page.locator('#detail .record-pencil').click();page.locator('#person-additional-tab').click()
     assert page.locator('#person-additional-fields').is_visible() and page.locator('#person-basic-fields').is_hidden()
     page.get_by_label('Primary care provider',exact=True).fill('Synthetic PCP');page.get_by_label('Patient e-mail address',exact=True).fill('synthetic@example.invalid');page.get_by_label('Primary language',exact=True).fill('Synthetic language');page.get_by_label('Religion',exact=True).fill('Synthetic religion');page.get_by_label('Originally from',exact=True).fill('Synthetic origin');page.get_by_label('Patient address',exact=True).fill('Synthetic private address\nSecond line');page.get_by_label('Home phone number',exact=True).fill('555 0100');page.get_by_label('Cell phone number',exact=True).fill('555 0101');page.get_by_label('Preferred pharmacy',exact=True).fill('Synthetic pharmacy');page.get_by_label('Pharmacy address',exact=True).fill('Synthetic pharmacy address\nSecond pharmacy line');page.get_by_label('Pharmacy phone number',exact=True).fill('555 0103');page.get_by_label('Pharmacy fax number',exact=True).fill('555 0104')
+    page.get_by_label('Race/ethnicity',exact=True).fill('Synthetic ethnicity');page.get_by_label('Nationality',exact=True).fill('Synthetic nationality')
     page.locator('#dem-add-contacts').click();contact=page.locator('#dem-contacts fieldset').first;contact.get_by_label('Name',exact=True).fill('Synthetic contact');contact.get_by_label('Relationship to patient').fill('Sibling');contact.get_by_label('Phone number',exact=True).fill('555 0102');contact.get_by_label('Emergency contact',exact=True).check()
     page.locator('#dem-add-contacts').click();page.locator('#dem-contacts fieldset').last.get_by_label('Name',exact=True).fill('Synthetic second contact')
     page.locator('#dem-add-policies').click();policy=page.locator('#dem-policies fieldset');policy.get_by_label('Insurance company',exact=True).fill('Synthetic insurer');policy.get_by_label('Policy / member number',exact=True).fill('Synthetic policy number')
     page.locator('#person-submit').click();page.wait_for_function("!document.querySelector('#person-dialog').open")
     saved=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')).people.find(p=>p.id==='a').demographics")
+    assert saved['raceEthnicity']=='Synthetic ethnicity' and saved['nationality']=='Synthetic nationality'
     assert saved['primaryCareProvider']=='Synthetic PCP' and saved['email']=='synthetic@example.invalid'
     assert saved['pharmacyFax']=='555 0104' and saved['pharmacyAddress']=='Synthetic pharmacy address\nSecond pharmacy line'
     assert saved['contacts'][0]['emergency'] is True and len(saved['contacts'])==2 and saved['policies'][0]['policyNumber']=='Synthetic policy number'
@@ -37,7 +39,7 @@ with sync_playwright() as p:
     page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
     page.wait_for_timeout(100);assert pending;pending.pop().fulfill(content_type='image/png',body=Path('icons/abbey-letterhead.png').read_bytes())
     page.wait_for_function('window.printCalls===1');frame=page.frame_locator('#bhr-print-frame');assert frame.locator('h1').inner_text()=='Mepkin Abbey Infirmary';assert 'Synthetic policy number' in frame.locator('body').inner_text()
-    assert frame.locator('.fields').first.locator('dt').all_text_contents()==['Primary language:','Originally from:','Religion:','Patient address:','Home phone number:','Cell phone number:','E-mail address:','Primary care provider:']
+    assert frame.locator('.fields').first.locator('dt').all_text_contents()==['Primary language:','Originally from:','Religion:','Race/ethnicity:','Nationality:','Patient address:','Home phone number:','Cell phone number:','E-mail address:','Primary care provider:']
     assert frame.locator('thead tr').count()==1 and frame.locator('.fields dd').filter(has_text='Synthetic private address').count()==1
     assert page.locator('body > img[src*="abbey-letterhead"]').count()==0
     assert frame.locator('.profile-photo').count()==1

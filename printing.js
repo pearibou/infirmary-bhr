@@ -1,7 +1,7 @@
 // Print documents live only in an ephemeral same-origin frame, never in storage.
-import {readPersonPhoto} from './drive.js?v=0.13.2';
-import {cleanNoteHtml} from './documents-model.js?v=0.13.2';
-import {personName} from './model.js?v=0.13.2';
+import {readPersonPhoto} from './drive.js?v=0.13.4';
+import {cleanNoteHtml} from './documents-model.js?v=0.13.4';
+import {personName} from './model.js?v=0.13.4';
 let frame=null,generation=0,photoUrl=null;
 export function clearPrint(){generation++;frame?.remove();frame=null;if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=null;}
 export const fullPersonName=person=>[person.firstName,person.middleName,person.lastName].filter(Boolean).join(' ')||personName(person);

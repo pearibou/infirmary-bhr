@@ -1,5 +1,18 @@
 # Version history
 
+## 0.13.5 — 2026-11-09
+
+- Use the standard arrow over clinical quick notes instead of the platform-dependent grab cursor, preserving author-only drag-to-trash and edit-button pointers.
+
+## 0.13.4 — 2026-11-09
+
+- Add optional Race/ethnicity and Nationality fields to Additional information, demographics display, printouts, and Drive synchronization.
+
+## 0.13.3 — 2026-11-09
+
+- Put Include Sunday before Include Saturday in Calendar Maker.
+- Add New note to each chart’s Clinical notes section, using the existing rich-text editor and attaching the saved note directly to that patient; keep patient-specific drafts separate.
+
 ## 0.13.2 — 2026-11-09
 
 - Simplify Calendar Maker’s desktop icon with clean outlines and restrained colors matching the other desktop icons; preserve the original pixel artwork as `icons/calendar-maker.png`.

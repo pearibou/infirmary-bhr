@@ -176,10 +176,18 @@ with sync_playwright() as p:
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert files[noteid]['appProperties']['personId']=='person'
     page.locator('.folder-window[open]').evaluate_all("windows=>windows.forEach(el=>el.querySelector('[data-field=close]').click())")
+    page.locator('.clinical-documents').get_by_role('button',name='+ New note',exact=True).click()
+    page.locator('#rich-note-name').fill('Synthetic chart-created note')
+    page.locator('#rich-note-body').fill('Synthetic chart entry text')
+    page.locator('#rich-note-save').click();page.wait_for_function("!document.querySelector('#rich-note-dialog').open")
+    chart_created=next(file for file in files.values() if file['name']=='Synthetic chart-created note')
+    assert chart_created['appProperties']['personId']=='person' and chart_created['appProperties']['authorId']=='synthetic-staff'
+    page.locator('.chart-documents button').filter(has_text='Synthetic chart-created note').wait_for()
+    files.pop(chart_created['id']);contents.pop(chart_created['id'])
     files['newest-chart-note']=json.loads(json.dumps(files[noteid]));files['newest-chart-note'].update(id='newest-chart-note',name='Synthetic newest chart entry',createdTime='2099-01-01T00:00:00Z');files['newest-chart-note']['appProperties']['createdAt']='2099-01-01T00:00:00Z';contents['newest-chart-note']={**contents[noteid],'createdAt':'2099-01-01T00:00:00Z'}
-    page.locator('.clinical-documents .notes-heading button').click();page.wait_for_function("document.querySelector('.chart-documents button')?.textContent.includes('Synthetic newest chart entry')")
+    page.locator('.clinical-documents .notes-heading').get_by_role('button',name='↻ Refresh',exact=True).click();page.wait_for_function("document.querySelector('.chart-documents button')?.textContent.includes('Synthetic newest chart entry')")
     assert page.locator('.chart-documents button').first.locator('svg').count()==1 and page.locator('.chart-document-time').first.get_attribute('datetime')=='2099-01-01T00:00:00Z'
-    files.pop('newest-chart-note');contents.pop('newest-chart-note');page.locator('.clinical-documents .notes-heading button').click();page.wait_for_function("document.querySelectorAll('.chart-documents button').length===1")
+    files.pop('newest-chart-note');contents.pop('newest-chart-note');page.locator('.clinical-documents .notes-heading').get_by_role('button',name='↻ Refresh',exact=True).click();page.wait_for_function("document.querySelectorAll('.chart-documents button').length===1")
     page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
     page.wait_for_function("document.querySelector('#rich-note-dialog').getAttribute('aria-busy')!=='true'")
     assert body.inner_text().strip()=='Synthetic clinical text'
