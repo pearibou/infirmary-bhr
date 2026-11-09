@@ -1,5 +1,9 @@
 # Version history
 
+## 0.13.2 — 2026-11-09
+
+- Simplify Calendar Maker’s desktop icon with clean outlines and restrained colors matching the other desktop icons; preserve the original pixel artwork as `icons/calendar-maker.png`.
+
 ## 0.13.1 — 2026-11-09
 
 - Start new appointment calendars on Sunday; show optional Sunday before Monday in the editor and printouts.
