@@ -1,5 +1,11 @@
 # Version history
 
+## 0.19.0 — 2026-11-09
+
+- Add Vital Signs from patient navigation and a retro sphygmomanometer desktop icon, with a living/deceased person picker.
+- Record dated blood pressure, pulse, respirations, temperature, oxygen saturation/delivery (RA default), height, weight and comments in a private on-demand Vital Signs workbook.
+- Show independently latest height/weight and measurement dates on the main chart; support units, backdating, editing/deletion, retry/conflict protection and logout cleanup.
+
 ## 0.18.1 — 2026-11-09
 
 - Enlarge The BHR desktop artwork within its unchanged grid slot.

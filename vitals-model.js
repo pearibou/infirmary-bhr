@@ -1,0 +1,36 @@
+// Protected observations live in Google Sheets. Repository data is synthetic only.
+import {validMedDate} from './medications-model.js?v=0.19.0';
+export const VITAL_FIELDS=['id','measuredAt','systolic','diastolic','pulse','respirations','temperature','temperatureUnit','oxygenSaturation','oxygenMethod','height','heightUnit','weight','weightUnit','comment','enteredBy','enteredById','enteredAt','updatedBy','updatedById','updatedAt','revision'];
+export const VITAL_HEADERS=['Observation ID','Measured at (UTC)','Systolic (mmHg)','Diastolic (mmHg)','Pulse (bpm)','Respirations (/min)','Temperature','Temperature unit','Oxygen saturation (%)','Oxygen delivery','Height','Height unit','Weight','Weight unit','Comment','Entered by','Entered by ID','Entered at (UTC)','Updated by','Updated by ID','Updated at (UTC)','Revision'];
+export const EDITABLE_VITAL_FIELDS=VITAL_FIELDS.slice(1,15);
+export const MEASUREMENTS=['systolic','diastolic','pulse','respirations','temperature','oxygenSaturation','height','weight'];
+const validStamp=value=>typeof value==='string'&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString()===value;
+export function validateVital(entry){
+ if(!entry||VITAL_FIELDS.some(k=>typeof entry[k]!=='string'||entry[k].length>5000)||!entry.id)throw new Error('Invalid vital-sign observation.');
+ if(!validStamp(entry.measuredAt)||!validStamp(entry.enteredAt)||!validStamp(entry.updatedAt))throw new Error('Enter a valid measurement date and time.');
+ if(!MEASUREMENTS.some(k=>entry[k]!==''))throw new Error('Enter at least one vital-sign measurement.');
+ if(Boolean(entry.systolic)!==Boolean(entry.diastolic))throw new Error('Enter both blood pressure numbers, or leave both blank.');
+ if(!['F','C'].includes(entry.temperatureUnit)||!['in','cm'].includes(entry.heightUnit)||!['lb','kg'].includes(entry.weightUnit))throw new Error('Choose valid measurement units.');
+ const ranges={systolic:[1,500,true],diastolic:[1,500,true],pulse:[1,400,true],respirations:[1,150,false],temperature:entry.temperatureUnit==='F'?[68,122,false]:[20,50,false],oxygenSaturation:[0,100,false],height:entry.heightUnit==='in'?[8,120,false]:[20,305,false],weight:entry.weightUnit==='lb'?[.2,1600,false]:[.1,725,false]};
+ for(const [key,[min,max,integer]] of Object.entries(ranges))if(entry[key]!==''&&(!/^\d+(?:\.\d+)?$/.test(entry[key])||!Number.isFinite(Number(entry[key]))||Number(entry[key])<min||Number(entry[key])>max||integer&&!Number.isInteger(Number(entry[key]))))throw new Error('Check '+({oxygenSaturation:'oxygen saturation',systolic:'systolic blood pressure',diastolic:'diastolic blood pressure'}[key]||key)+' and its units (allowed '+min+'–'+max+').');
+ if(!entry.oxygenMethod.trim()||entry.oxygenMethod.length>200)throw new Error('Enter an oxygen delivery method, or use RA.');
+ for(const key of ['enteredBy','enteredById','updatedBy','updatedById'])if(!entry[key].trim())throw new Error('Reconnect to identify the observation editor.');
+ if(!/^\d+$/.test(entry.revision)||!Number.isSafeInteger(Number(entry.revision))||Number(entry.revision)<1)throw new Error('Invalid observation revision.');return entry;
+}
+export const vitalToRow=entry=>VITAL_FIELDS.map(k=>entry[k]);
+export function parseVitalRows(values,markers){
+ if(!VITAL_HEADERS.every((label,i)=>values[0]?.[i]===label))throw new Error('Vital Signs sheet headings do not match the BHR template. Existing cells were left unchanged.');
+ const seen=new Set(),rows=[];for(const raw of values.slice(1)){const baseline=VITAL_FIELDS.map((_,i)=>String(raw[i]??''));if(baseline.every(v=>!v.trim()))continue;const entry=validateVital(Object.fromEntries(VITAL_FIELDS.map((k,i)=>[k,baseline[i]])));if(seen.has(entry.id)||!Number.isInteger(markers.get(entry.id)))throw new Error('An observation has a duplicate ID or missing stable row marker. Existing cells were left unchanged.');seen.add(entry.id);rows.push({...entry,baseline,metadataId:markers.get(entry.id)});}return rows;
+}
+export function newVital(fields,user,id=crypto.randomUUID(),now=new Date()){
+ const stamp=now.toISOString(),entry=Object.fromEntries(VITAL_FIELDS.map(k=>[k,'']));Object.assign(entry,{temperatureUnit:'F',heightUnit:'in',weightUnit:'lb',oxygenMethod:'RA'},Object.fromEntries(EDITABLE_VITAL_FIELDS.filter(k=>fields[k]!==undefined).map(k=>[k,String(fields[k]).trim()])),{id,enteredBy:user.name,enteredById:user.id,enteredAt:stamp,updatedBy:user.name,updatedById:user.id,updatedAt:stamp,revision:'1'});if(!entry.oxygenMethod)entry.oxygenMethod='RA';return validateVital(entry);
+}
+export function reviseVital(before,fields,user,now=new Date()){const after={...Object.fromEntries(VITAL_FIELDS.map(k=>[k,before[k]])),...Object.fromEntries(EDITABLE_VITAL_FIELDS.map(k=>[k,String(fields[k]??before[k]).trim()])),updatedBy:user.name,updatedById:user.id,updatedAt:now.toISOString(),revision:String(Number(before.revision)+1)};if(!after.oxygenMethod)after.oxygenMethod='RA';return validateVital(after);}
+export const compareVitals=(a,b)=>b.measuredAt.localeCompare(a.measuredAt)||b.enteredAt.localeCompare(a.enteredAt)||a.id.localeCompare(b.id);
+export function latestDimensions(rows){const ordered=[...rows].sort(compareVitals);return {height:ordered.find(r=>r.height!==''),weight:ordered.find(r=>r.weight!=='')};}
+const decimal=n=>String(Math.round(n*10)/10);
+export function heightText(value,unit){const inches=unit==='in'?Number(value):Number(value)/2.54,cm=unit==='cm'?Number(value):Number(value)*2.54,rounded=Math.round(inches*10)/10,feet=Math.floor(rounded/12),remainder=decimal(rounded-feet*12);return unit==='in'?`${feet}′ ${remainder}″ (${decimal(cm)} cm)`:`${decimal(cm)} cm (${feet}′ ${remainder}″)`;}
+export function weightText(value,unit){return unit==='lb'?`${value} lb (${decimal(Number(value)*.45359237)} kg)`:`${value} kg (${decimal(Number(value)/.45359237)} lb)`;}
+export function vitalDetails(entry){const rows=[];if(entry.systolic)rows.push(['Blood pressure',entry.systolic+'/'+entry.diastolic+' mmHg']);if(entry.pulse)rows.push(['Pulse',entry.pulse+' bpm']);if(entry.respirations)rows.push(['Respirations',entry.respirations+' /min']);if(entry.temperature)rows.push(['Temperature',entry.temperature+' °'+entry.temperatureUnit]);if(entry.oxygenSaturation!=='')rows.push(['Oxygen saturation',entry.oxygenSaturation+'% · '+entry.oxygenMethod]);if(entry.oxygenSaturation===''&&entry.oxygenMethod!=='RA')rows.push(['Oxygen delivery',entry.oxygenMethod]);if(entry.height)rows.push(['Height',heightText(entry.height,entry.heightUnit)]);if(entry.weight)rows.push(['Weight',weightText(entry.weight,entry.weightUnit)]);return rows;}
+export function localVitalInput(iso){const d=new Date(iso),pad=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;}
+export function vitalInputUtc(value){if(!value||!validMedDate(value,true)||!value.includes('T'))throw new Error('Enter a valid measurement date and time.');const iso=new Date(value).toISOString();if(localVitalInput(iso)!==(value.length===16?value+':00':value))throw new Error('This local time does not exist. Check the date and time.');return iso;}

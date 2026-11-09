@@ -1,6 +1,6 @@
-import {validateStickyDrawing} from './sticky-drawing.js?v=0.18.1';
-import {validateDemographics} from './demographics-model.js?v=0.18.1';
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.18.1';
+import {validateStickyDrawing} from './sticky-drawing.js?v=0.19.0';
+import {validateDemographics} from './demographics-model.js?v=0.19.0';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.19.0';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
@@ -25,6 +25,7 @@ export function validateDirectory(data) {
     if(p.demographics!==undefined)validateDemographics(p.demographics);
     if(p.medicationSheet!==undefined&&(!p.medicationSheet||typeof p.medicationSheet.spreadsheetId!=='string'||!(/^[\w-]+$/).test(p.medicationSheet.spreadsheetId)||!Number.isInteger(p.medicationSheet.sheetId)||p.medicationSheet.sheetId<0))throw new Error('Invalid medication sheet link.');
     if(p.historySheet!==undefined&&(!p.historySheet||typeof p.historySheet.spreadsheetId!=='string'||!(/^[\w-]+$/).test(p.historySheet.spreadsheetId)||!Number.isInteger(p.historySheet.sheetId)||p.historySheet.sheetId<0))throw new Error('Invalid history sheet link.');
+    if(p.vitalsSheet!==undefined&&(!p.vitalsSheet||typeof p.vitalsSheet.spreadsheetId!=='string'||!(/^[\w-]+$/).test(p.vitalsSheet.spreadsheetId)||!Number.isInteger(p.vitalsSheet.sheetId)||p.vitalsSheet.sheetId<0))throw new Error('Invalid vital signs sheet link.');
 
     if(p.birthDate!==undefined && (!p.birthDate || typeof p.birthDate!=='object' || birthDateError(p.birthDate)))throw new Error('Invalid birth date.');
     if(p.folderLinkStates!==undefined){if(!Array.isArray(p.folderLinkStates)||p.folderLinkStates.length>1000)throw new Error('Invalid folder link states.');const ids=new Set();for(const state of p.folderLinkStates){if(!state||typeof state.id!=='string'||!/^[-\w]+$/.test(state.id)||ids.has(state.id)||typeof state.attached!=='boolean'||!validDate(state.updatedAt))throw new Error('Invalid folder link state.');ids.add(state.id);}}

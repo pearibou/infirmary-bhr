@@ -114,7 +114,7 @@ with sync_playwright() as p:
     page.goto('http://127.0.0.1:8000');unlock_test_drive(page)
     page.wait_for_function("!document.querySelector('#logout-power').disabled")
     page.locator('.person strong').filter(has_text='Synthetic John').click()
-    nav=page.locator('.chart-navigation');assert nav.get_by_role('button').all_text_contents()==['Demographics','Medications','Medical History']
+    nav=page.locator('.chart-navigation');assert nav.get_by_role('button').all_text_contents()==['Demographics','Vital Signs','Medications','Medical History']
     nav.get_by_role('button',name='Medications',exact=True).click();page.get_by_role('button',name='+ Add medication list',exact=True).wait_for()
     assert len(book['sheets'])==1 and grids[0]==[] and page.locator('#med-controls').is_hidden()
     grids[0]=[['Synthetic existing content']]
