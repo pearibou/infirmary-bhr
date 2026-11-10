@@ -1,5 +1,10 @@
 # Version history
 
+## 0.28.4 — 2026-11-09
+
+- Enlarge the main BHR opening window on desktop browsers to 65% of viewport width and 84% of workspace height, matching the supplied reference proportions.
+
+
 ## 0.28.3 — 2026-11-09
 
 - Use MM/DD/YYYY for immunization date entry/display/printing, with MM/YYYY, year-only and blank values accepted for both administered and next-dose-due dates.
