@@ -1,5 +1,10 @@
 # Version history
 
+## 0.28.1 — 2026-11-09
+
+- Make unacknowledged refill alerts blink fully on/off every 0.6 seconds, preserving the clickable button/counter and reduced-motion fallback.
+
+
 ## 0.28.0 — 2026-11-09
 
 - Add chart and desktop Immunizations with individual dose histories, optional additional details, partial historical dates, edit/delete and printing. Create private Immunizations (BHR) workbook/person tabs only when first saving.
