@@ -3,7 +3,7 @@ import {readAllMedicationLists} from './medications-api.js?v=0.28.0';
 import {readAllRefillLists} from './refills-api.js?v=0.28.0';
 import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.28.0';
 import {buildRefillAlerts,alertSettings,newAlertEvent,validateAlertSettings} from './refill-alerts-model.js?v=0.28.0';
-import {showWindow} from './windows.js?v=0.28.0';
+import {showWindow} from './windows.js?v=0.28.5';
 import {openRefills} from './refills.js?v=0.28.0';
 const $=s=>document.querySelector(s),node=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
 let scanTask=null,scanAgain=false;

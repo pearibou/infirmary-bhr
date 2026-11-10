@@ -43,7 +43,7 @@ function movable(win,bar){
 }
 function minimize(win,title,icon){
   if(dock.querySelector(`[data-window="${win.id}"]`))return;
-  if(win instanceof HTMLDialogElement)win.close();else win.hidden=true;
+  if(win instanceof HTMLDialogElement){if(win.open)win.dispatchEvent(new Event('window-minimize'));win.close();}else win.hidden=true;
   const restore=document.createElement('button');restore.dataset.window=win.id;dockLabel(restore,title,icon);
   restore.onclick=()=>{if(win instanceof HTMLDialogElement)win[win.dataset.nonmodal==='true'?'show':'showModal']();else win.hidden=false;restore.remove();bringToFront(win);constrain(win);(win.querySelector('[data-restore-focus][contenteditable="true"]')||win.querySelector('.titlebar,.dialog-title'))?.focus();};dock.append(restore);restore.focus();
 }

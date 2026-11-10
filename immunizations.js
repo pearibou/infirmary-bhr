@@ -5,7 +5,7 @@ import {compareDirectoryPeople} from './model.js?v=0.28.0';
 import {calendarSymbol} from './calendar-symbols.js?v=0.28.0';
 import {smallIcon} from './icons-ui.js?v=0.28.0';
 import {printDocument,clearPrint} from './printing.js?v=0.28.0';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.28.0';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.28.5';
 const $=s=>document.querySelector(s),node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 let hooks,active=false,epoch=0,busy=false,current=null,master=false,context=null,lists=null,draft=null,dirty=false,deleting=null,retrievedAt=null;
 const person=id=>hooks.people().find(p=>p.id===id),known=()=>hooks.people().map(p=>p.immunizationSheet?.spreadsheetId).filter(Boolean);

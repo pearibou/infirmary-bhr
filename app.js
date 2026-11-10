@@ -10,7 +10,7 @@ import {trashDesktopBatch} from './documents.js?v=0.28.0';
 import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.28.0';
 import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.28.0';
 import {changeFolderLink} from './model.js?v=0.28.0';
-import {openMainWindow,closeMainWindow} from './windows.js?v=0.28.0';
+import {openMainWindow,closeMainWindow,showWindow,updateWindowTitle} from './windows.js?v=0.28.5';
 import {initCalendar,calendarSession} from './calendar.js?v=0.28.0';
 import {initBackground} from './background.js?v=0.28.0';
 import {initHistory,historySession,openHistory} from './history.js?v=0.28.0';
@@ -22,10 +22,10 @@ import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './docu
 import {updateSessionPresence} from './presence.js?v=0.28.0';
 import {closeAppMenu} from './app-menu.js?v=0.28.0';
 import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.28.0';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.28.0';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.28.5';
 import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.28.0';
 import {validatePhoto} from './photos.js?v=0.28.0';
-import './windows.js?v=0.28.0';
+import './windows.js?v=0.28.5';
 import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.28.0';
 import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.28.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
@@ -434,7 +434,7 @@ $('#drive-dialog').addEventListener('close',()=>{if(!workspaceReady&&!choosingFo
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&workspaceReady&&!hasDriveAccess()){lockWorkspace();readyGoogle();}});
 let stickyOrigin={x:24,y:24},stickyEditId=null,stickyBaseline=null;
 const stickyContent=note=>JSON.stringify([note.text,note.drawing||[]]);
-function openSticky(id=null,origin={x:24,y:24}){if(!workspaceReady)return;const note=id?data.desktopNotes?.find(n=>n.id===id):null;if(id&&!note){toast('This sticky note has been deleted.');return;}stickyEditId=id;stickyBaseline=note?stickyContent(note):null;stickyOrigin=origin;$('#sticky-form').reset();prepareStickyEditor(note);$('#sticky-error').textContent='';$('#sticky-dialog').showModal();$('#sticky-text').focus();}
+function openSticky(id=null,origin={x:24,y:24}){if(!workspaceReady)return;if(document.querySelector('#window-dock [data-window="sticky-dialog"]')){showWindow($('#sticky-dialog'));$('#sticky-text').focus();return;}const note=id?data.desktopNotes?.find(n=>n.id===id):null;if(id&&!note){toast('This sticky note has been deleted.');return;}stickyEditId=id;stickyBaseline=note?stickyContent(note):null;stickyOrigin=origin;$('#sticky-form').reset();prepareStickyEditor(note);updateWindowTitle($('#sticky-dialog'));$('#sticky-error').textContent='';showWindow($('#sticky-dialog'));$('#sticky-text').focus();}
 initDesktopNotes(origin=>openSticky(null,origin),(id,position)=>{
   if(!workspaceReady)return;const next=structuredClone(data),note=next.desktopNotes?.find(note=>note.id===id);if(!note)return;
   note.x=Math.min(position.x,Math.max(0,innerWidth-260));note.y=Math.min(position.y,Math.max(0,innerHeight-$('.menubar').getBoundingClientRect().bottom-120));note.updatedAt=new Date(Math.max(Date.now(),Date.parse(note.updatedAt)+1)).toISOString();if(save(next))renderDesktopNotes(data.desktopNotes);
