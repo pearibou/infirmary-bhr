@@ -1,4 +1,4 @@
-import {CALENDAR_SYMBOLS} from './calendar-symbols.js?v=0.27.1';
+import {CALENDAR_SYMBOLS} from './calendar-symbols.js?v=0.27.2';
 export const CALENDAR_KIND='bhr-appointment-calendar';
 export const APPOINTMENT_FIELDS={name:'Name / public label',leaving:'Leaving by',returning:'Returning around',area:'Area',appointmentTime:'Appointment time',reason:'Reason / provider',address:'Address / phone'};
 export const DAY_NAMES=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];

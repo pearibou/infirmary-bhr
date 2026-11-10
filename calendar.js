@@ -1,9 +1,9 @@
-import {CALENDAR_SYMBOLS,calendarSymbol} from './calendar-symbols.js?v=0.27.1';
-import {listAppointmentCalendars,readAppointmentCalendar,saveAppointmentCalendar,getCurrentUser,hasDriveAccess} from './drive.js?v=0.27.1';
-import {newCalendar,validateCalendar,calendarContent,weekFor,dayNames,dayIncluded,dayDate,dateLabel,DAY_NAMES,APPOINTMENT_FIELDS} from './calendar-model.js?v=0.27.1';
-import {printCalendar,clearCalendarPrint} from './calendar-print.js?v=0.27.1';
-import {smallIcon} from './icons-ui.js?v=0.27.1';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.27.1';
+import {CALENDAR_SYMBOLS,calendarSymbol} from './calendar-symbols.js?v=0.27.2';
+import {listAppointmentCalendars,readAppointmentCalendar,saveAppointmentCalendar,getCurrentUser,hasDriveAccess} from './drive.js?v=0.27.2';
+import {newCalendar,validateCalendar,calendarContent,weekFor,dayNames,dayIncluded,dayDate,dateLabel,DAY_NAMES,APPOINTMENT_FIELDS} from './calendar-model.js?v=0.27.2';
+import {printCalendar,clearCalendarPrint} from './calendar-print.js?v=0.27.2';
+import {smallIcon} from './icons-ui.js?v=0.27.2';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.27.2';
 const $=s=>document.querySelector(s),make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 let hooks,active=false,epoch=0,busy=false,dirty=false,editor=null,files=[],pendingAction=null,editing=false;
 function status(text){$('#calendar-status').textContent=text;}

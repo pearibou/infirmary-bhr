@@ -1,5 +1,10 @@
 # Version history
 
+## 0.27.2 — 2026-11-09
+
+- Add optional Sex to Additional information, with Male/Female suggestions and free-text entry; include it in viewed and printed demographics.
+
+
 ## 0.27.1 — 2026-11-09
 
 - Restore a fixed retro abbey emblem on the BHR About card, with a subtle pixelated arrow cursor as its technology detail.

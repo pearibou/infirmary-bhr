@@ -1,10 +1,10 @@
-import {openOrganizationPreferences,organizationBusy} from './organization.js?v=0.27.1';
-import {readAllMedicationLists} from './medications-api.js?v=0.27.1';
-import {readAllRefillLists} from './refills-api.js?v=0.27.1';
-import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.27.1';
-import {buildRefillAlerts,alertSettings,newAlertEvent,validateAlertSettings} from './refill-alerts-model.js?v=0.27.1';
-import {showWindow} from './windows.js?v=0.27.1';
-import {openRefills} from './refills.js?v=0.27.1';
+import {openOrganizationPreferences,organizationBusy} from './organization.js?v=0.27.2';
+import {readAllMedicationLists} from './medications-api.js?v=0.27.2';
+import {readAllRefillLists} from './refills-api.js?v=0.27.2';
+import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.27.2';
+import {buildRefillAlerts,alertSettings,newAlertEvent,validateAlertSettings} from './refill-alerts-model.js?v=0.27.2';
+import {showWindow} from './windows.js?v=0.27.2';
+import {openRefills} from './refills.js?v=0.27.2';
 const $=s=>document.querySelector(s),node=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;return n;};
 let scanTask=null,scanAgain=false;
 let hooks,active=false,epoch=0,loading=false,saving=false,acting=false,notice='',lists=[],errors=[],alerts=[],checked=0,action=null,prefsBaseline,timer;

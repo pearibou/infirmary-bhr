@@ -23,12 +23,15 @@ with sync_playwright() as p:
     page.locator('#detail .record-pencil').click();page.locator('#person-additional-tab').click()
     assert page.locator('#person-additional-fields').is_visible() and page.locator('#person-basic-fields').is_hidden()
     page.get_by_label('Primary care provider',exact=True).fill('Synthetic PCP');page.get_by_label('Patient e-mail address',exact=True).fill('synthetic@example.invalid');page.get_by_label('Primary language',exact=True).fill('Synthetic language');page.get_by_label('Religion',exact=True).fill('Synthetic religion');page.get_by_label('Originally from',exact=True).fill('Synthetic origin');page.get_by_label('Patient address',exact=True).fill('Synthetic private address\nSecond line');page.get_by_label('Home phone number',exact=True).fill('555 0100');page.get_by_label('Cell phone number',exact=True).fill('555 0101');page.get_by_label('Preferred pharmacy',exact=True).fill('Synthetic pharmacy');page.get_by_label('Pharmacy address',exact=True).fill('Synthetic pharmacy address\nSecond pharmacy line');page.get_by_label('Pharmacy phone number',exact=True).fill('555 0103');page.get_by_label('Pharmacy fax number',exact=True).fill('555 0104')
+    assert page.locator('#dem-sex-options option').evaluate_all('(items)=>items.map(item=>item.value)')==['Male','Female']
+    page.get_by_label('Sex',exact=True).fill('Custom entry')
     page.get_by_label('Race/ethnicity',exact=True).fill('Synthetic ethnicity');page.get_by_label('Nationality',exact=True).fill('Synthetic nationality')
     page.locator('#dem-add-contacts').click();contact=page.locator('#dem-contacts fieldset').first;contact.get_by_label('Name',exact=True).fill('Synthetic contact');contact.get_by_label('Relationship to patient').fill('Sibling');contact.get_by_label('Phone number',exact=True).fill('555 0102');contact.get_by_label('Emergency contact',exact=True).check()
     page.locator('#dem-add-contacts').click();page.locator('#dem-contacts fieldset').last.get_by_label('Name',exact=True).fill('Synthetic second contact')
     page.locator('#dem-add-policies').click();policy=page.locator('#dem-policies fieldset');policy.get_by_label('Insurance company',exact=True).fill('Synthetic insurer');policy.get_by_label('Policy / member number',exact=True).fill('Synthetic policy number')
     page.locator('#person-submit').click();page.wait_for_function("!document.querySelector('#person-dialog').open")
     saved=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')).people.find(p=>p.id==='a').demographics")
+    assert saved['sex']=='Custom entry'
     assert saved['raceEthnicity']=='Synthetic ethnicity' and saved['nationality']=='Synthetic nationality'
     assert saved['primaryCareProvider']=='Synthetic PCP' and saved['email']=='synthetic@example.invalid'
     assert saved['pharmacyFax']=='555 0104' and saved['pharmacyAddress']=='Synthetic pharmacy address\nSecond pharmacy line'
@@ -39,7 +42,7 @@ with sync_playwright() as p:
     page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
     page.wait_for_timeout(100);assert pending;pending.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes())
     page.wait_for_function('window.printCalls===1');frame=page.frame_locator('#bhr-print-frame');assert frame.locator('h1').inner_text()=='Brother Health Records';assert 'Synthetic policy number' in frame.locator('body').inner_text()
-    assert frame.locator('.fields').first.locator('dt').all_text_contents()==['Primary language:','Originally from:','Religion:','Race/ethnicity:','Nationality:','Patient address:','Home phone number:','Cell phone number:','E-mail address:','Primary care provider:']
+    assert frame.locator('.fields').first.locator('dt').all_text_contents()==['Sex:','Primary language:','Originally from:','Religion:','Race/ethnicity:','Nationality:','Patient address:','Home phone number:','Cell phone number:','E-mail address:','Primary care provider:']
     assert frame.locator('thead tr').count()==1 and frame.locator('.fields dd').filter(has_text='Synthetic private address').count()==1
     assert page.locator('body > img[src*="abbey-letterhead"]').count()==0
     assert frame.locator('.profile-photo').count()==1
@@ -48,7 +51,7 @@ with sync_playwright() as p:
     preview=page.context.new_page();preview.set_viewport_size({'width':816,'height':1056});preview.route('**/print-preview-test',lambda route:route.fulfill(body='<!doctype html><html><body></body></html>',content_type='text/html'));preview.goto('http://127.0.0.1:8000/print-preview-test');preview.set_content(page.locator('#bhr-print-frame').evaluate('frame=>frame.contentDocument.documentElement.outerHTML'));preview.locator('header img').evaluate('image=>image.decode()');preview.locator('.profile-photo').evaluate('image=>image.decode()');preview.screenshot(path='/tmp/bhr-demographics-print.png');preview.pdf(path='/tmp/bhr-demographics-print.pdf',format='Letter',display_header_footer=True);preview.close();assert 'Pages:           1' in subprocess.check_output(['pdfinfo','/tmp/bhr-demographics-print.pdf'],text=True)
     page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))")
     assert page.locator('#bhr-print-frame').count()==0 and photo_url in page.evaluate('window.revoked')
-    page.locator('#demographics-dialog [data-close]').click();page.locator('#detail .record-pencil').click();page.locator('#person-additional-tab').click();assert page.get_by_label('Primary language',exact=True).input_value()=='Synthetic language';page.locator('#person-dialog [data-close]').click()
+    page.locator('#demographics-dialog [data-close]').click();page.locator('#detail .record-pencil').click();page.locator('#person-additional-tab').click();assert page.get_by_label('Sex',exact=True).input_value()=='Custom entry';assert page.get_by_label('Primary language',exact=True).input_value()=='Synthetic language';page.locator('#person-dialog [data-close]').click()
     page.set_viewport_size({'width':390,'height':844});page.get_by_role('button',name='Demographics',exact=True).click();assert page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.locator('#demographics-dialog [data-close]').click()
     page.locator('.person strong').filter(has_text='Synthetic Zulu').click()
     page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")

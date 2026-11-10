@@ -1,8 +1,8 @@
-import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.27.1';
-import {readRefills,saveRefill,deleteRefill} from './refills-api.js?v=0.27.1';
-import {REFILL_EDITABLE,newRefill,reviseRefill,compareRefills,refillEstimate,refillWarnings} from './refills-model.js?v=0.27.1';
-import {localMedicationTime,compareMedications} from './medications-model.js?v=0.27.1';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.27.1';
+import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.27.2';
+import {readRefills,saveRefill,deleteRefill} from './refills-api.js?v=0.27.2';
+import {REFILL_EDITABLE,newRefill,reviseRefill,compareRefills,refillEstimate,refillWarnings} from './refills-model.js?v=0.27.2';
+import {localMedicationTime,compareMedications} from './medications-model.js?v=0.27.2';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.27.2';
 const $=s=>document.querySelector(s),node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 let hooks,active=false,epoch=0,busy=false,personId=null,medContext=null,context=null,filterId=null,draft=null,dirty=false,deleting=null;
 function alive(stamp){if(!active||stamp!==epoch||!hasDriveAccess())throw new Error('Reconnect Google Drive to use refill tracking.');}

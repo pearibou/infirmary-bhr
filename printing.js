@@ -1,8 +1,8 @@
-import {organizationBranding} from './organization.js?v=0.27.1';
+import {organizationBranding} from './organization.js?v=0.27.2';
 // Print documents live only in an ephemeral same-origin frame, never in storage.
-import {readPersonPhoto} from './drive.js?v=0.27.1';
-import {cleanNoteHtml} from './documents-model.js?v=0.27.1';
-import {personName} from './model.js?v=0.27.1';
+import {readPersonPhoto} from './drive.js?v=0.27.2';
+import {cleanNoteHtml} from './documents-model.js?v=0.27.2';
+import {personName} from './model.js?v=0.27.2';
 let frame=null,generation=0,photoUrl=null;
 export function clearPrint(){generation++;frame?.remove();frame=null;if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=null;}
 export const fullPersonName=person=>[person.firstName,person.middleName,person.lastName].filter(Boolean).join(' ')||personName(person);
