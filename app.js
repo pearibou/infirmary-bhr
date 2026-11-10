@@ -49,10 +49,19 @@ function render(){
       divider.onclick=()=>{deceasedCollapsed=!deceasedCollapsed;try{localStorage.setItem('infirmary.deceasedCollapsed',String(deceasedCollapsed));}catch{}renderKeepingDraft();$('#people .directory-divider')?.focus();};$('#people').append(divider);
     }
     if(p.deceased&&deceasedCollapsed)continue;
-    const button=element('button',undefined,'person'+(selected===p.id?' selected':''));button.type='button';button.setAttribute('aria-pressed',String(selected===p.id));button.append(element('strong',personName(p)));const fullName=[p.firstName,p.middleName,p.lastName].filter(Boolean).join(' ');if(fullName && fullName!==personName(p))button.append(element('span',fullName));button.onclick=()=>{selected=p.id;render();};makeTrashable(button,{personId:p.id});const row=element('div',undefined,'person-row'+(p.deceased?' deceased-row':'')),edit=element('button','✎','record-pencil');edit.type='button';edit.title='Edit record';edit.setAttribute('aria-label','Edit record for '+personName(p));edit.onclick=()=>openPerson(p.id);row.append(button,edit);$('#people').append(row);
+    const button=element('button',undefined,'person'+(selected===p.id?' selected':''));button.type='button';button.dataset.personId=p.id;button.setAttribute('aria-pressed',String(selected===p.id));button.append(element('strong',personName(p)));const fullName=[p.firstName,p.middleName,p.lastName].filter(Boolean).join(' ');if(fullName && fullName!==personName(p))button.append(element('span',fullName));button.onclick=()=>selectPerson(p.id);makeTrashable(button,{personId:p.id});const row=element('div',undefined,'person-row'+(p.deceased?' deceased-row':'')),edit=element('button','✎','record-pencil');edit.type='button';edit.title='Edit record';edit.setAttribute('aria-label','Edit record for '+personName(p));edit.onclick=()=>openPerson(p.id);row.append(button,edit);$('#people').append(row);
   }
   if(!people.length)$('#people').append(element('p',query?'No matching people.':'Your directory is empty.','empty'));
   $('#people-count').textContent=`${data.people.length} ${data.people.length===1?'person':'people'} in directory`;
+  renderDetail();
+}
+function selectPerson(id){
+  if(selected===id||!data.people.some(person=>person.id===id))return;
+  selected=id;clearTrashSelection();
+  for(const button of document.querySelectorAll('#people .person')){const chosen=button.dataset.personId===id;button.classList.toggle('selected',chosen);button.setAttribute('aria-pressed',String(chosen));}
+  renderDetail();
+}
+function renderDetail(){
   const panel=$('#detail');panel.replaceChildren();const person=data.people.find(p=>p.id===selected);
   if(!person){const blank=element('div',undefined,'empty');blank.append(element('div','▤','empty-icon'),element('h2','A place for everyday care'),element('p','Add a person to begin, or connect Google Drive to pull an existing directory.'));panel.append(blank);return;}
   const header=element('div',undefined,'person-header'),title=element('div'),avatar=makeAvatar(person);
@@ -410,6 +419,7 @@ $('#trash-form').onsubmit=event=>{
 $('#trash-dialog').addEventListener('close',()=>{trashTarget=undefined;$('#trash-entry-label').textContent='';});
 
 function lockWorkspace(){
+  $('#event-log-text').textContent='';document.querySelector('#window-dock [data-window="event-log-dialog"]')?.remove();
   clearOrganization();  refillAlertsSession(false);  clearDesktopSelection();bulkTargets=[];
   closeMainWindow();detachFolderTarget=null;  clearStickyState();stickyEditId=null;stickyBaseline=null;clearDemographics();vitalsSession(false);calendarSession(false);historySession(false);immunizationsSession(false);medicationsSession(false);documentsSession(false);
   if(!hasDriveAccess()){connected=false;clearPhotos();$('#current-user').textContent='';}
@@ -454,11 +464,12 @@ function appendActivity(action,type,id,summary,personId,user=getCurrentUser()){
   const next={...data,eventLog:mergeEventLogs(data.eventLog,[createEvent(user,action,type,id,summary,personId)])};
   if(!save(next,true))toast('The action completed, but its event log could not be saved. Keep this page open and resolve storage.');
 }
-function refreshEventLog(){
+function refreshEventLog(force=false){
+  if(!force&&!$('#event-log-dialog').open&&!document.querySelector('#window-dock [data-window="event-log-dialog"]'))return;
   const pre=$('#event-log-text');if(!pre)return;const scroll=pre.scrollTop;
   pre.textContent=(mergeEventLogs(data.eventLog).map(event=>`${new Date(event.createdAt).toLocaleString(undefined,{dateStyle:'medium',timeStyle:'medium'})} | ${event.actorName} | ${event.summary} | ${event.entityType}: ${event.entityId}${event.personId?' | person: '+event.personId:''}`).join('\n\n'))||'No events recorded yet.';pre.scrollTop=scroll;
 }
-function openEventLog(){document.querySelector('#window-dock [data-window="event-log-dialog"]')?.remove();if(!workspaceReady||!hasDriveAccess()){lockWorkspace();return;}refreshEventLog();if(!$('#event-log-dialog').open)$('#event-log-dialog').showModal();}
+function openEventLog(){document.querySelector('#window-dock [data-window="event-log-dialog"]')?.remove();if(!workspaceReady||!hasDriveAccess()){lockWorkspace();return;}refreshEventLog(true);if(!$('#event-log-dialog').open)$('#event-log-dialog').showModal();}
 $('#event-log-icon').onclick=openEventLog;
 function openBHR(){if(!workspaceReady||!hasDriveAccess()){lockWorkspace();return;}openMainWindow();}
 $('#bhr-icon').ondblclick=openBHR;$('#bhr-icon').onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openBHR();}};
