@@ -1,6 +1,6 @@
-import {DEFAULT_ORGANIZATION_NAME,validateOrganization,organizationVersion} from './organization-model.js?v=0.27.1';
-import {getCurrentUser,getWorkspaceFolder,readPersonPhoto,uploadPersonFile,hasDriveAccess} from './drive.js?v=0.27.1';
-import {validatePhoto} from './photos.js?v=0.27.1';
+import {DEFAULT_ORGANIZATION_NAME,validateOrganization,organizationVersion} from './organization-model.js?v=0.28.0';
+import {getCurrentUser,getWorkspaceFolder,readPersonPhoto,uploadPersonFile,hasDriveAccess} from './drive.js?v=0.28.0';
+import {validatePhoto} from './photos.js?v=0.28.0';
 const $=s=>document.querySelector(s),fallback=new URL('./icons/icon.svg',import.meta.url).href,printFallback=new URL('./icons/icon-512.png',import.meta.url).href;
 let hooks,current,generation=0,logoPromise,logoUrl,previewUrl,busy=false,baseline='',openGeneration=0;
 function logoTargets(){return [$('.abbey-mark'),$('#organization-logo-preview')];}

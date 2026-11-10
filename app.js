@@ -1,32 +1,33 @@
-import {initOrganization,setOrganization,clearOrganization} from './organization.js?v=0.27.1';
-import {loadSyncInterval,validSyncInterval,syncDescription,SYNC_PREFERENCE_KEY} from './sync-preferences.js?v=0.27.1';
-import {initRefillAlerts,refillAlertsSession,refillAlertsDirectoryChanged,refreshRefillAlerts} from './refill-alerts.js?v=0.27.1';
-import {mergeAlertEvents,alertSettings} from './refill-alerts-model.js?v=0.27.1';
-import {initAccountMenu,updateAccountMenu} from './account-menu.js?v=0.27.1';
-import {calendarSymbol} from './calendar-symbols.js?v=0.27.1';
-import {clearDesktopSelection} from './desktop-selection.js?v=0.27.1';
-import {trashDesktopBatch} from './documents.js?v=0.27.1';
-import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.27.1';
-import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.27.1';
-import {changeFolderLink} from './model.js?v=0.27.1';
-import {openMainWindow,closeMainWindow} from './windows.js?v=0.27.1';
-import {initCalendar,calendarSession} from './calendar.js?v=0.27.1';
-import {initBackground} from './background.js?v=0.27.1';
-import {initHistory,historySession,openHistory} from './history.js?v=0.27.1';
-import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.27.1';
-import {printDocument} from './printing.js?v=0.27.1';
-import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.27.1';
-import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.27.1';
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.27.1';
-import {updateSessionPresence} from './presence.js?v=0.27.1';
-import {closeAppMenu} from './app-menu.js?v=0.27.1';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.27.1';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.27.1';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.27.1';
-import {validatePhoto} from './photos.js?v=0.27.1';
-import './windows.js?v=0.27.1';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.27.1';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.27.1';
+import {initImmunizations,immunizationsSession,openImmunizations} from './immunizations.js?v=0.28.0';
+import {initOrganization,setOrganization,clearOrganization} from './organization.js?v=0.28.0';
+import {loadSyncInterval,validSyncInterval,syncDescription,SYNC_PREFERENCE_KEY} from './sync-preferences.js?v=0.28.0';
+import {initRefillAlerts,refillAlertsSession,refillAlertsDirectoryChanged,refreshRefillAlerts} from './refill-alerts.js?v=0.28.0';
+import {mergeAlertEvents,alertSettings} from './refill-alerts-model.js?v=0.28.0';
+import {initAccountMenu,updateAccountMenu} from './account-menu.js?v=0.28.0';
+import {calendarSymbol} from './calendar-symbols.js?v=0.28.0';
+import {clearDesktopSelection} from './desktop-selection.js?v=0.28.0';
+import {trashDesktopBatch} from './documents.js?v=0.28.0';
+import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.28.0';
+import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.28.0';
+import {changeFolderLink} from './model.js?v=0.28.0';
+import {openMainWindow,closeMainWindow} from './windows.js?v=0.28.0';
+import {initCalendar,calendarSession} from './calendar.js?v=0.28.0';
+import {initBackground} from './background.js?v=0.28.0';
+import {initHistory,historySession,openHistory} from './history.js?v=0.28.0';
+import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.28.0';
+import {printDocument} from './printing.js?v=0.28.0';
+import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.28.0';
+import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.28.0';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.28.0';
+import {updateSessionPresence} from './presence.js?v=0.28.0';
+import {closeAppMenu} from './app-menu.js?v=0.28.0';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.28.0';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.28.0';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.28.0';
+import {validatePhoto} from './photos.js?v=0.28.0';
+import './windows.js?v=0.28.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.28.0';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.28.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 let bulkTargets=[],bulkBusy=false;
 let data=emptyDirectory(),selected,storageFailed=false,editPersonId=null,personSaveBusy=false,photoPreviewUrl,noteEditTarget,workspaceReady=false,choosingFolder=false,deceasedCollapsed=false,sessionEpoch=0,sessionCleared=false;
@@ -60,7 +61,7 @@ function render(){
   const avatarGroup=element('div',undefined,'avatar-group');avatarGroup.append(avatar);if(person.deceased)avatarGroup.append(makeCrucifix());
   const recordActions=element('div',undefined,'record-actions'),upload=element('button','Upload file…');upload.type='button';upload.onclick=()=>openUpload(person.id);recordActions.append(editRecord,upload);header.append(avatarGroup,title,recordActions);panel.append(header);
   const navigation=element('nav',undefined,'chart-navigation');navigation.setAttribute('aria-label','Chart sections');
-  for(const section of ['Demographics','Vital Signs','Medications','Medical History']){const item=element('button',section);item.type='button';const icon=section==='Vital Signs'?smallIcon('stethoscope'):calendarSymbol(document,{'Demographics':'record','Medications':'pills','Medical History':'dna'}[section]);icon.classList.add('small-icon');if(section!=='Vital Signs')icon.classList.add('chart-symbol');item.prepend(icon);item.setAttribute('aria-haspopup','dialog');item.onclick=()=>{if(section==='Vital Signs'){openVitals(person.id);return;}if(section==='Demographics'){openDemographics(person.id);return;}if(section==='Medications'){openMedications(person.id);return;}if(section==='Medical History'){openHistory(person.id);return;}$('#chart-section-title').textContent=section;$('#chart-section-message').textContent=section+' is not available yet.';$('#chart-section-dialog').showModal();};navigation.append(item);}panel.append(navigation);
+  for(const section of ['Demographics','Vital Signs','Medications','Medical History','Immunizations']){const item=element('button',section);item.type='button';const icon=section==='Vital Signs'?smallIcon('stethoscope'):calendarSymbol(document,{'Demographics':'record','Medications':'pills','Medical History':'dna','Immunizations':'syringe'}[section]);icon.classList.add('small-icon');if(section!=='Vital Signs')icon.classList.add('chart-symbol');item.prepend(icon);item.setAttribute('aria-haspopup','dialog');item.onclick=()=>{if(section==='Vital Signs'){openVitals(person.id);return;}if(section==='Demographics'){openDemographics(person.id);return;}if(section==='Medications'){openMedications(person.id);return;}if(section==='Immunizations'){openImmunizations(person.id);return;}if(section==='Medical History'){openHistory(person.id);return;}$('#chart-section-title').textContent=section;$('#chart-section-message').textContent=section+' is not available yet.';$('#chart-section-dialog').showModal();};navigation.append(item);}panel.append(navigation);
   const overview=element('div',undefined,'person-overview'),facts=element('div',undefined,'person-facts'),dimensions=element('aside',undefined,'person-vitals-summary');dimensions.setAttribute('aria-label','Latest height and weight');overview.append(facts,dimensions);panel.append(overview);chartVitalSummary(dimensions,person.id);
   const legalName=[person.firstName,person.middleName,person.lastName].filter(Boolean).join(' ');
   if(legalName && legalName!==personName(person))facts.append(element('p',legalName,'muted legal-name'));
@@ -410,14 +411,14 @@ $('#trash-dialog').addEventListener('close',()=>{trashTarget=undefined;$('#trash
 
 function lockWorkspace(){
   clearOrganization();  refillAlertsSession(false);  clearDesktopSelection();bulkTargets=[];
-  closeMainWindow();detachFolderTarget=null;  clearStickyState();stickyEditId=null;stickyBaseline=null;clearDemographics();vitalsSession(false);calendarSession(false);historySession(false);medicationsSession(false);documentsSession(false);
+  closeMainWindow();detachFolderTarget=null;  clearStickyState();stickyEditId=null;stickyBaseline=null;clearDemographics();vitalsSession(false);calendarSession(false);historySession(false);immunizationsSession(false);medicationsSession(false);documentsSession(false);
   if(!hasDriveAccess()){connected=false;clearPhotos();$('#current-user').textContent='';}
   workspaceReady=false;document.body.classList.add('drive-locked');$('.desktop').inert=true;closeDesktopMenu();closeAppMenu();
   for(const dialog of document.querySelectorAll('dialog'))if(dialog.id!=='drive-dialog'&&dialog.open)dialog.close();
   $('#connection-required').hidden=false;$('#drive-dialog [data-close]').disabled=true;fillSettings();
   if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();
 }
-function unlockWorkspace(){const opening=!workspaceReady;workspaceReady=true;setOrganization(data.organization);document.body.classList.remove('drive-locked');$('.desktop').inert=storageFailed;$('#connection-required').hidden=true;$('#drive-dialog [data-close]').disabled=false;fillSettings();vitalsSession(true);documentsSession(true);medicationsSession(true);historySession(true);calendarSession(true);refillAlertsSession(true);if(opening)renderKeepingDraft();}
+function unlockWorkspace(){const opening=!workspaceReady;workspaceReady=true;setOrganization(data.organization);document.body.classList.remove('drive-locked');$('.desktop').inert=storageFailed;$('#connection-required').hidden=true;$('#drive-dialog [data-close]').disabled=false;fillSettings();vitalsSession(true);documentsSession(true);medicationsSession(true);historySession(true);immunizationsSession(true);calendarSession(true);refillAlertsSession(true);if(opening)renderKeepingDraft();}
 $('#drive-dialog').addEventListener('cancel',event=>{if(!workspaceReady)event.preventDefault();});
 $('#drive-dialog').addEventListener('close',()=>{if(!workspaceReady&&!choosingFolder)queueMicrotask(()=>{if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();});});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&workspaceReady&&!hasDriveAccess()){lockWorkspace();readyGoogle();}});
@@ -441,6 +442,7 @@ initDocuments({closeDesktopMenu,person:id=>data.people.find(person=>person.id===
 initDemographics({person:id=>workspaceReady?data.people.find(person=>person.id===id):null,personName,activity:(...args)=>{appendActivity(...args);runSync();}});
 initVitals({people:()=>data.people,personName,activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('vitals',value),link:(id,link)=>{const next=structuredClone(data),p=next.people.find(p=>p.id===id);if(!p)throw new Error('This person was removed.');p.vitalsSheet=link;p.updatedAt=new Date(Math.max(Date.now(),Date.parse(p.updatedAt)+1)).toISOString();if(!save(next))throw new Error('The vital signs sheet exists, but its directory link could not be saved. Retry after resolving storage.');renderKeepingDraft();runSync();}});
 initHistory({people:()=>data.people,personName,activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('history',value),notice:toast,link:(id,link)=>{const next=structuredClone(data),person=next.people.find(person=>person.id===id);if(!person)throw new Error('This person was removed.');person.historySheet=link;person.updatedAt=new Date(Math.max(Date.now(),Date.parse(person.updatedAt)+1)).toISOString();if(!save(next))throw new Error('The history sheet exists, but its directory link could not be saved. Retry after resolving storage.');renderKeepingDraft();runSync();}});
+initImmunizations({people:()=>data.people,personName,activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('immunizations',value),notice:toast,link:(id,link)=>{const next=structuredClone(data),person=next.people.find(person=>person.id===id);if(!person)throw new Error('This person was removed.');person.immunizationSheet=link;person.updatedAt=new Date(Math.max(Date.now(),Date.parse(person.updatedAt)+1)).toISOString();if(!save(next))throw new Error('The immunization sheet exists, but its directory link could not be saved. Retry after resolving storage.');renderKeepingDraft();runSync();}});
 initMedications({alertSettings:()=>alertSettings(data.refillAlertEvents),people:()=>data.people,personName,activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('medications',value),notice:toast,link:(id,link)=>{const next=structuredClone(data),person=next.people.find(person=>person.id===id);if(!person)throw new Error('This person was removed.');person.medicationSheet=link;person.updatedAt=new Date(Math.max(Date.now(),Date.parse(person.updatedAt)+1)).toISOString();if(!save(next))throw new Error('The medication sheet exists, but its directory link could not be saved. Retry after resolving storage.');renderKeepingDraft();runSync();}});
 initRefillAlerts({getSyncInterval:()=>autoSyncSeconds,setSyncInterval:saveSyncInterval,people:()=>data.people,directory:()=>data,personName,busy:value=>externalBusy('refill-alerts',value),sync:async()=>{if(!await runSync())throw new Error('Directory sync failed. Retry before changing shared alert state.');},commit:async entries=>{if(!workspaceReady||!hasDriveAccess())throw new Error('Reconnect first.');const next={...data,refillAlertEvents:mergeAlertEvents(data.refillAlertEvents,entries)};if(!save(next))throw new Error('Could not save alert state.');if(!await runSync())throw new Error('Saved locally; shared sync is pending. Retry directory sync.');}});
 initOrganization({directory:()=>data,busy:value=>externalBusy('organization',value),sync:async()=>{if(!await runSync())throw new Error('Directory sync failed. Retry before changing organization info.');},commit:async organization=>{if(!workspaceReady)throw new Error('Reconnect first.');if(!save({...data,organization}))throw new Error('Organization info could not be saved.');if(!await runSync())throw new Error('Saved in this session; Drive sync is pending. Retry sync before signing out.');}});

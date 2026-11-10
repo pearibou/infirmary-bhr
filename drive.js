@@ -1,7 +1,7 @@
-import {validateCalendar,calendarContent} from './calendar-model.js?v=0.27.1';
-import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.27.1';
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.27.1';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.27.1';
+import {validateCalendar,calendarContent} from './calendar-model.js?v=0.28.0';
+import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.28.0';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.28.0';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.28.0';
 let token,expires=0,loading,authorizedClient,currentUser,workspaceFolder,workspaceName,legacyRootId,storageEpoch=0;
 const activeRequests=new Set();
 export function disconnect(){staffProfileReady=false;staffProfileFolder=undefined;storageEpoch++;workspaceFolder=undefined;workspaceName=undefined;legacyRootId=undefined;for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
@@ -291,6 +291,16 @@ export async function findHistoryWorkbook(knownId,create=false){
  if(matches.length>1)throw new Error('Multiple Medical History (BHR) spreadsheets found. Keep one master workbook.');if(matches.length)return matches[0];
  if(!create){const error=new Error('No Medical History (BHR) workbook exists yet.');error.code='HISTORY_WORKBOOK_MISSING';throw error;}
  const file=await(await api('files?fields=id,name,mimeType,parents',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.spreadsheet',parents:[workspaceFolder],appProperties:{bhrHistory:'1'}})})).json();if(epoch!==storageEpoch)throw new Error('Connection changed.');return file;
+}
+
+export async function findImmunizationWorkbook(knownId,create=false){
+ requireFilesAccess();if(!workspaceFolder)throw new Error('Sync Infirmary-BHR first.');
+ const epoch=storageEpoch,name='Immunizations (BHR)';
+ if(knownId){const file=await(await api(`files/${safeDriveId(knownId)}?fields=id,name,mimeType,parents,trashed`)).json();if(file.trashed||file.mimeType!=='application/vnd.google-apps.spreadsheet'||!file.parents?.includes(workspaceFolder))throw new Error('The linked Immunizations workbook is missing from Infirmary-BHR. Restore it before retrying.');return file;}
+ const matches=(await storageListing(`'${workspaceFolder}' in parents and name = '${name}' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false`)).filter(file=>file.name===name&&file.mimeType==='application/vnd.google-apps.spreadsheet');
+ if(matches.length>1)throw new Error('Multiple Immunizations (BHR) spreadsheets found. Keep one master workbook.');if(matches.length)return matches[0];
+ if(!create){const error=new Error('No Immunizations (BHR) workbook exists yet.');error.code='IMMUNIZATION_WORKBOOK_MISSING';throw error;}
+ const file=await(await api('files?fields=id,name,mimeType,parents',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.spreadsheet',parents:[workspaceFolder],appProperties:{bhrImmunization:'1'}})})).json();if(epoch!==storageEpoch)throw new Error('Connection changed.');return file;
 }
 
 export async function findVitalsWorkbook(knownId,create=false){

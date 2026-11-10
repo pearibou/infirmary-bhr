@@ -1,5 +1,24 @@
 # Version history
 
+## 0.28.1 — 2026-11-09
+
+- Make unacknowledged refill alerts blink fully on/off every 0.6 seconds, preserving the clickable button/counter and reduced-motion fallback.
+
+
+## 0.28.0 — 2026-11-09
+
+- Add chart and desktop Immunizations with individual dose histories, optional additional details, partial historical dates, edit/delete and printing. Create private Immunizations (BHR) workbook/person tabs only when first saving.
+- Add searchable master immunization summary with latest dose per vaccine name and deceased persons hidden by default. Next-dose due dates are manual; no source field.
+- Show the selected calendar symbol beside its notice in reading mode.
+- Show compact legal name, middle initial and DOB beneath patient headings in refill alerts.
+- Count only refill alerts needing attention in the menu badge; group deferred reminders separately and move acknowledged items to their own list at the bottom.
+
+
+## 0.27.2 — 2026-11-09
+
+- Add optional Sex to Additional information, with Male/Female suggestions and free-text entry; include it in viewed and printed demographics.
+
+
 ## 0.27.1 — 2026-11-09
 
 - Restore a fixed retro abbey emblem on the BHR About card, with a subtle pixelated arrow cursor as its technology detail.

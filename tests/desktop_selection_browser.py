@@ -30,7 +30,7 @@ with sync_playwright() as p:
  page.route('https://www.googleapis.com/**',backend)
  page.goto('http://localhost:8000');unlock_test_drive(page,open_records=False)
  assert page.locator('#drive-dialog').is_hidden()
- page.evaluate("async()=>{await (await import('./documents.js?v=0.27.1')).refreshFiles()}")
+ page.evaluate("async()=>{await (await import('./documents.js?v=0.28.0')).refreshFiles()}")
  page.locator('#desktop-icons .drive-file').first.wait_for();assert page.locator('#desktop-icons .drive-file').count()==4
  # Minimized stickies are desktop-level; expanded stickies retain their foreground layer.
  page.locator('.sticky-note').last.click(button='right');page.locator('#sticky-menu-minimize').click()

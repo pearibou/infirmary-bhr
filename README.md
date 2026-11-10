@@ -244,7 +244,7 @@ Writes check the current Drive modification time and send If-Match when an ETag 
 
 Double-click the retro bottle-and-tablets **Medications** desktop icon (or focus it and press Enter) to open the medication window without opening The BHR. Choose a person from the alphabetized Living/Deceased groups; deceased entries are marked. Opening the desktop app starts with no person selected. The picker uses the same lists, refill tracking, editing and printing as chart access. Merely selecting someone does not create a medication list. Unsaved medication drafts are restored before allowing a person change.
 
-The person header offers compact Demographics, Vital Signs, Medications and Medical History buttons. Subtle horizontal dividers separate person details, clinical notes, quick notes and attached Drive folders. Demographics opens its information window; Medical History opens its spreadsheet-backed list. Medications opens a dedicated window backed by the private **Medication Lists (BHR)** Google spreadsheet directly inside **Infirmary-BHR**.
+The person header offers compact Demographics, Vital Signs, Medications, Medical History and Immunizations buttons. Subtle horizontal dividers separate person details, clinical notes, quick notes and attached Drive folders. Demographics opens its information window; Medical History opens its spreadsheet-backed list. Medications opens a dedicated window backed by the private **Medication Lists (BHR)** Google spreadsheet directly inside **Infirmary-BHR**.
 
 Enable [Google Sheets API](https://console.cloud.google.com/apis/library/sheets.googleapis.com) in the existing Google OAuth project. The current Drive scope also permits Sheets access. Open a person’s Medications and click **+ Add medication list** to initialize the blank spreadsheet and create a surname/first-initial tab. Tabs are created only when requested and remain linked by stable IDs after renaming. Existing unexpected cells are not overwritten.
 
@@ -287,3 +287,11 @@ Medication lists group PRN entries at the bottom, identified case-insensitively 
 
 
 Medication startup checks match each batch response to its permanent Google sheet ID, rather than its position in the returned array. Missing or ambiguous matches stop that person's check without writes. Genuine row/metadata problems identify the affected person; opening their Medications gives the detailed error and refresh action. Row IDs are not guessed or recreated automatically.
+
+## Immunizations
+
+Open **Immunizations** from a person’s chart (syringe button) or the desktop syringe icon. The individual view records one dose per entry: vaccine name is required; administered date, dose/series, administered by/location, next dose due and comments are optional. Historical dates may be a year, month/year (`YYYY-MM`), full date, or unknown. Expand **Additional details** for lot number, manufacturer, route and injection site. There is no source field. Next-dose due dates are manually entered, not calculated from vaccination schedules.
+
+**Master list** shows each person’s latest administered dose per vaccine name, with search and **Show deceased persons** off by default. Use consistent vaccine names to group doses correctly; unknown-date records appear after dated doses in individual history. People without records are explicitly shown. Individual and filtered master views support browser printing; large histories/lists may span pages.
+
+The private **Immunizations (BHR)** Google spreadsheet is created in **Infirmary-BHR** only on first save. Each person’s tab uses surname/first initial with stable person/row markers. Do not change headings, Entry IDs or row markers. Reads/master views do not create files. Sheets retain attribution/revisions and stale-edit checks; full dose details remain in session memory, not browser directory/PWA caches or the code repository. Logout clears views/drafts.
