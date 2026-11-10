@@ -290,7 +290,7 @@ Medication startup checks match each batch response to its permanent Google shee
 
 ## Immunizations
 
-Open **Immunizations** from a person’s chart (syringe button) or the desktop syringe icon. The individual view records one dose per entry: vaccine name is required; administered date, dose/series, administered by/location, next dose due and comments are optional. Historical dates may be a year, month/year (`YYYY-MM`), full date, or unknown. Expand **Additional details** for lot number, manufacturer, route and injection site. There is no source field. Next-dose due dates are manually entered, not calculated from vaccination schedules.
+Open **Immunizations** from a person’s chart (syringe button) or the desktop syringe icon. The individual view records one dose per entry: vaccine name is required; administered date, dose/series, administered by/location, next dose due and comments are optional. Both administered and next-dose-due dates accept `MM/DD/YYYY`, `MM/YYYY`, year-only, or blank. Forms, lists and printouts use this format. Existing ISO spreadsheet dates are preserved without migration. Expand **Additional details** for lot number, manufacturer, route and injection site. There is no source field. Next-dose due dates are manually entered, not calculated from vaccination schedules.
 
 **Master list** shows each person’s latest administered dose per vaccine name, with search and **Show deceased persons** off by default. Use consistent vaccine names to group doses correctly; unknown-date records appear after dated doses in individual history. People without records are explicitly shown. Individual and filtered master views support browser printing; large histories/lists may span pages.
 
