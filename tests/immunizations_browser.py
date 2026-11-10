@@ -120,7 +120,7 @@ with sync_playwright() as p:
     if os.environ.get('IMMUNIZATION_NONBLANK')!='1':assert not workbook_exists[0]
     page.locator('#immunizations-add').click();form=page.locator('#immunization-form')
     assert form.get_by_label('Vaccine / immunization name').input_value()==''
-    form.get_by_label('Vaccine / immunization name').fill('Synthetic vaccine');form.get_by_label('Date administered',exact=True).fill('2020-02');form.get_by_label('Next dose due',exact=True).fill('2027-01-01');form.get_by_label('Dose / series number').fill('1')
+    form.get_by_label('Vaccine / immunization name').fill('Synthetic vaccine');form.get_by_label('Date administered',exact=True).fill('02/2020');form.get_by_label('Next dose due',exact=True).fill('01/2027');form.get_by_label('Dose / series number').fill('1')
     form.locator('summary').click();form.get_by_label('Lot number').fill('000123');form.get_by_label('Manufacturer').fill('Synthetic manufacturer')
     form.get_by_role('button',name='Save immunization',exact=True).click()
     if os.environ.get('IMMUNIZATION_NONBLANK')=='1':
@@ -132,14 +132,20 @@ with sync_playwright() as p:
     sid=next(tab['properties']['sheetId'] for tab in book['sheets'] if tab['properties']['title']=='Smith J')
     assert grids[sid][0]==HEADERS and entry_rows(sid)[0][7]=='000123'
     assert 'Synthetic vaccine' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
+    assert entry_rows(sid)[0][2]=='2020-02' and entry_rows(sid)[0][5]=='2027-01'
+    page.locator('.immunization-entry').first.get_by_role('button',name='Edit…',exact=True).click()
+    assert form.get_by_label('Date administered',exact=True).input_value()=='02/2020' and form.get_by_label('Next dose due',exact=True).input_value()=='01/2027'
+    form.get_by_label('Comments',exact=True).fill('Synthetic date preservation check');form.get_by_role('button',name='Save immunization',exact=True).click()
+    page.wait_for_function("!document.querySelector('#immunization-form-dialog').open && !document.querySelector('#immunizations-add').disabled")
+    assert entry_rows(sid)[0][2]=='2020-02' and entry_rows(sid)[0][5]=='2027-01'
     # Retried create is idempotent, despite a response lost after Google committed it.
-    page.locator('#immunizations-add').click();form.get_by_label('Vaccine / immunization name').fill('Synthetic vaccine');form.get_by_label('Date administered',exact=True).fill('2024-05-01');form.get_by_label('Dose / series number').fill('2');lost_add[0]=True
+    page.locator('#immunizations-add').click();form.get_by_label('Vaccine / immunization name').fill('Synthetic vaccine');form.get_by_label('Date administered',exact=True).fill('05/01/2024');form.get_by_label('Dose / series number').fill('2');form.get_by_label('Next dose due',exact=True).fill('03/2028');lost_add[0]=True
     form.get_by_role('button',name='Save immunization',exact=True).click();page.wait_for_function("document.querySelector('#immunization-form-error').textContent.includes('lost')")
     assert len(entry_rows(sid))==2
     form.get_by_role('button',name='Save immunization',exact=True).click();page.wait_for_function("!document.querySelector('#immunization-form-dialog').open && !document.querySelector('#immunizations-add').disabled")
     assert len(entry_rows(sid))==2
-    card=page.locator('.immunization-entry').first;assert '2024-05-01' in card.inner_text()
-    card.get_by_role('button',name='Edit…',exact=True).click();form.get_by_label('Date administered',exact=True).fill('2021-02-29');form.get_by_role('button',name='Save immunization',exact=True).click();assert 'Date administered must' in page.locator('#immunization-form-error').inner_text()
+    card=page.locator('.immunization-entry').first;assert '05/01/2024' in card.inner_text()
+    card.get_by_role('button',name='Edit…',exact=True).click();form.get_by_label('Date administered',exact=True).fill('02/29/2021');form.get_by_role('button',name='Save immunization',exact=True).click();assert 'Date administered must' in page.locator('#immunization-form-error').inner_text()
     form.get_by_label('Date administered',exact=True).fill('2025');entry_rows(sid)[0][6]='Externally changed';form.get_by_role('button',name='Save immunization',exact=True).click();page.wait_for_function("document.querySelector('#immunization-form-error').textContent.includes('changed')")
     assert form.get_by_label('Date administered',exact=True).input_value()=='2025'
     page.locator('#immunization-cancel').click();page.locator('#immunizations-refresh').click();page.wait_for_function("!document.querySelector('#immunizations-add').disabled")
@@ -160,6 +166,7 @@ with sync_playwright() as p:
     page.evaluate("()=>{window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>{window.printCalls++};}")
     page.wait_for_timeout(100);print_routes.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes());page.wait_for_function('window.printCalls===1')
     assert page.frame_locator('#bhr-print-frame').locator('thead tr').count()==1
+    assert '03/2028' in page.frame_locator('#bhr-print-frame').locator('body').inner_text()
     assert 'Synthetic Departed' not in page.frame_locator('#bhr-print-frame').locator('body').inner_text()
     page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");page.unroute('**/icons/icon-512.png');page.wait_for_function("!document.querySelector('#immunizations-print').disabled")
     page.locator('.immunization-table button').filter(has_text='Synthetic James').click();page.wait_for_function("!document.querySelector('#immunizations-add').disabled")

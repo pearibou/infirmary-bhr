@@ -1,4 +1,4 @@
-import {initImmunizations,immunizationsSession,openImmunizations} from './immunizations.js?v=0.28.0';
+import {initImmunizations,immunizationsSession,openImmunizations} from './immunizations.js?v=0.28.3';
 import {initOrganization,setOrganization,clearOrganization} from './organization.js?v=0.28.0';
 import {loadSyncInterval,validSyncInterval,syncDescription,SYNC_PREFERENCE_KEY} from './sync-preferences.js?v=0.28.0';
 import {initRefillAlerts,refillAlertsSession,refillAlertsDirectoryChanged,refreshRefillAlerts} from './refill-alerts.js?v=0.28.0';

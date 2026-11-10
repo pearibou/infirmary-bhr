@@ -1,5 +1,11 @@
 # Version history
 
+## 0.28.3 — 2026-11-09
+
+- Use MM/DD/YYYY for immunization date entry/display/printing, with MM/YYYY, year-only and blank values accepted for both administered and next-dose-due dates.
+- Preserve existing ISO spreadsheet dates, schema and row markers without migration or loss of date precision.
+
+
 ## 0.28.2 — 2026-11-09
 
 - Make person selection update only the selected row and chart, preserving directory nodes, keyboard focus and sticky notes.
