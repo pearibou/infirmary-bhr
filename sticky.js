@@ -57,5 +57,7 @@ function initStickyEditor(){
  canvas.onpointerdown=event=>{if(!drawing||event.button!==0)return;event.preventDefault();const next={color:document.querySelector('#sticky-ink').value,size:Number(document.querySelector('#sticky-brush').value),points:[point(event)]};try{validateStickyDrawing([...strokes,next]);}catch(error){document.querySelector('#sticky-error').textContent=error.message;return;}stroke=next;strokes.push(stroke);canvas.setPointerCapture(event.pointerId);paintSticky(canvas,strokes);};
  canvas.onpointermove=event=>{if(!drawing||!stroke||!canvas.hasPointerCapture(event.pointerId))return;event.preventDefault();stroke.points.push(point(event));try{validateStickyDrawing(strokes);}catch(error){stroke.points.pop();document.querySelector('#sticky-error').textContent=error.message;stroke=null;}paintSticky(canvas,strokes);};
  const end=()=>{stroke=null;};canvas.onpointerup=end;canvas.onpointercancel=end;canvas.onlostpointercapture=end;
- document.querySelector('#sticky-dialog').addEventListener('close',()=>{prepareStickyEditor();});
+ const dialog=document.querySelector('#sticky-dialog');let minimizeCloses=0;
+ dialog.addEventListener('window-minimize',()=>minimizeCloses++);
+ dialog.addEventListener('close',()=>{if(minimizeCloses){minimizeCloses--;return;}prepareStickyEditor();});
 }

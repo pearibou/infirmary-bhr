@@ -1,5 +1,11 @@
 # Version history
 
+## 0.28.5 — 2026-11-09
+
+- Preserve sticky-note edit/create mode, text, drawing and tools while minimizing/restoring the editor; minimize no longer resets the draft.
+- Label the minimized editor with its current task and restore an existing minimized draft when reopening a sticky.
+
+
 ## 0.28.4 — 2026-11-09
 
 - Enlarge the main BHR opening window on desktop browsers to 65% of viewport width and 84% of workspace height, matching the supplied reference proportions.
