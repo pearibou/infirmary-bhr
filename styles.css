@@ -246,3 +246,12 @@
 
 .organization-logo-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}.organization-logo-row img{width:96px;height:96px;object-fit:contain;background:#fff;border:1px solid #aaa;padding:4px}.organization-logo-row label{min-width:0;flex:1 1 180px}#organization-form{margin-bottom:18px}#organization-error,#organization-logo-status{overflow-wrap:anywhere}
 .menubar .application-menu{min-width:0;flex-shrink:1}.menubar #app-menu-toggle{max-width:100%;overflow:hidden;text-overflow:ellipsis}#workspace-organization{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+#immunizations-dialog{width:min(850px,calc(100vw - 24px))}#immunizations-content{max-height:52dvh;overflow:auto}.immunization-toolbar{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.immunization-toolbar button[aria-pressed="true"]{background:#222;color:#fff;box-shadow:inset 1px 1px #000}.immunization-entry{padding:12px;background:#fff;border:1px solid #aaa;margin:10px 0}.immunization-entry h3{margin:0 0 10px}.immunization-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px}.immunization-table td,.immunization-table th{border:1px solid #aaa;text-align:left;padding:7px;overflow-wrap:anywhere}.immunization-table td button{font:inherit;max-width:100%;overflow-wrap:anywhere}.immunization-table th{background:#ddd}#immunization-form-dialog{width:min(640px,calc(100vw - 24px));max-height:85dvh;overflow:auto}#immunization-form-error,#immunization-delete-error{color:#8a1717}#immunizations-add svg{width:18px;height:18px;vertical-align:middle;margin-right:5px}#immunizations-print{display:inline-flex;align-items:center;gap:5px}.calendar-reading-notice{display:flex;align-items:center;gap:12px}.calendar-reading-notice svg,.calendar-reading-notice img{width:40px;height:40px;flex-shrink:0;object-fit:contain}.calendar-reading-notice span{white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+
+#immunizations-icon img{width:44px;height:44px;object-fit:contain}#immunizations-icon span{max-width:88px;padding:2px 3px;font-size:11px}
+
+.refill-alert-group>h2{font-size:13px;border-top:1px solid #999;padding-top:10px;margin:16px 0 8px}.refill-alert-group[data-alert-group="acknowledged"]{color:#555}.refill-alert-group[data-alert-group="acknowledged"] button{color:#111}
+#immunizations-person-label[hidden],#immunizations-master-controls[hidden],#immunizations-add[hidden]{display:none}
+
+.refill-alert-person{margin-bottom:2px}.refill-alert-identity{font-size:11px;font-weight:normal;line-height:1.35;margin:0 0 8px;color:#555}

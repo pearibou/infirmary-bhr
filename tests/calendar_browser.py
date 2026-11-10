@@ -90,6 +90,8 @@ with sync_playwright() as p:
     page.locator('#calendar-new').click();page.locator('#calendar-switch-discard').click();assert page.locator('#calendar-name').input_value()=='Outgoing Medical Appts'
     page.locator('#calendar-archive button').first.click();page.wait_for_function("document.querySelector('#calendar-name').value==='Synthetic appointments'")
     assert contents[saved_id]['symbol']=='stethoscope'
+    assert page.locator('.calendar-reading-notice svg').count()==1
+    assert page.locator('.calendar-reading-notice svg').inner_html()==page.locator('[data-calendar-symbol=stethoscope] svg').inner_html()
     assert page.locator('[data-calendar-symbol=stethoscope]').get_attribute('aria-pressed')=='true'
     assert page.locator('[data-field=reason]').first.input_value()=='PRIVATE REASON TOKEN'
     assert page.locator('#calendar-reading').is_visible() and page.locator('#calendar-editor').is_hidden()

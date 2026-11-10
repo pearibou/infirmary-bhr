@@ -74,3 +74,9 @@ Suggested acknowledgments and refill-request state are shared across the team in
 - Store immutable action/settings events in optional `refillAlertEvents` inside the private directory JSON, preserving older directory/clinical/refill schemas. No medication/refill sheet columns are changed. Merge unions events and refuses conflicting mutations of an existing ID. Existing directory write races remain reduced, not fully transactional; all clients should update together.
 - Scan medication/refill sheets in read-only batches at connection/open, relevant local changes and tab visibility; recalculate date-based conditions from session memory every minute. Failed/partial reads remain explicitly incomplete. State and comments follow existing protected browser-storage cleanup; full scanned medication/refill/pharmacy values remain memory-only.
 - Refill tracking warnings and alerts use the same settings. Printed clinical lists never include alert/request/refill fields.
+
+## Counter clarification (0.28.0)
+
+The menu badge counts medications with at least one current reason needing attention. Acknowledging all reasons or deferring them to a future reminder date reduces the count; those unresolved medications remain visible in the alert window. The badge re-arms on a due reminder or a new/escalated issue. Pending refill requests alone do not acknowledge an alert. Failed checks continue to show `?`, not zero.
+
+The alert window groups medications into Needs attention, Deferred reminders, and Acknowledged (at the bottom). A medication with any unread reason remains in Needs attention; mixed acknowledged/deferred reasons stay with Deferred reminders until they need attention again.

@@ -1,9 +1,9 @@
-import {CALENDAR_SYMBOLS,calendarSymbol} from './calendar-symbols.js?v=0.27.2';
-import {listAppointmentCalendars,readAppointmentCalendar,saveAppointmentCalendar,getCurrentUser,hasDriveAccess} from './drive.js?v=0.27.2';
-import {newCalendar,validateCalendar,calendarContent,weekFor,dayNames,dayIncluded,dayDate,dateLabel,DAY_NAMES,APPOINTMENT_FIELDS} from './calendar-model.js?v=0.27.2';
-import {printCalendar,clearCalendarPrint} from './calendar-print.js?v=0.27.2';
-import {smallIcon} from './icons-ui.js?v=0.27.2';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.27.2';
+import {CALENDAR_SYMBOLS,calendarSymbol} from './calendar-symbols.js?v=0.28.0';
+import {listAppointmentCalendars,readAppointmentCalendar,saveAppointmentCalendar,getCurrentUser,hasDriveAccess} from './drive.js?v=0.28.0';
+import {newCalendar,validateCalendar,calendarContent,weekFor,dayNames,dayIncluded,dayDate,dateLabel,DAY_NAMES,APPOINTMENT_FIELDS} from './calendar-model.js?v=0.28.0';
+import {printCalendar,clearCalendarPrint} from './calendar-print.js?v=0.28.0';
+import {smallIcon} from './icons-ui.js?v=0.28.0';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.28.0';
 const $=s=>document.querySelector(s),make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 let hooks,active=false,epoch=0,busy=false,dirty=false,editor=null,files=[],pendingAction=null,editing=false;
 function status(text){$('#calendar-status').textContent=text;}
@@ -11,7 +11,7 @@ function live(stamp){if(!active||epoch!==stamp||!hasDriveAccess())throw new Erro
 function controls(){for(const b of $('#calendar-dialog').querySelectorAll('button,input,textarea,select'))b.disabled=busy;$('#calendar-save').disabled=busy||!editor;$('#calendar-save').hidden=!editor||!editing;$('#calendar-edit').hidden=!editor||editing;$('#calendar-view-button').hidden=!editor||!editing;$('#calendar-edit').disabled=busy||!editor;for(const id of ['calendar-print-public','calendar-print-full'])$('#'+id).disabled=busy||!editor;}
 function setMode(value){editing=value;$('#calendar-editor').hidden=!editor||!editing;$('#calendar-reading').hidden=!editor||editing;if(editor&&!editing)renderReading();controls();}
 function renderReading(){
- const c=editor.calendar,root=$('#calendar-reading');root.replaceChildren();const header=make('header'),name=make('h2',c.title),week=make('p','Week of '+dateLabel(c.weekStart));header.append(name,week);root.append(header);if(c.notice){const notice=make('p',c.notice);notice.className='calendar-reading-notice';root.append(notice);}
+ const c=editor.calendar,root=$('#calendar-reading');root.replaceChildren();const header=make('header'),name=make('h2',c.title),week=make('p','Week of '+dateLabel(c.weekStart));header.append(name,week);root.append(header);if(c.notice){const notice=make('div');notice.className='calendar-reading-notice';notice.append(calendarSymbol(document,c.symbol||'star'),make('span',c.notice));root.append(notice);}
  for(let day=0;day<7;day++){
   const rows=c.appointments.filter(row=>row.day===day),included=dayIncluded(c,day);if(!included&&!rows.length)continue;
   const section=make('section');section.className='calendar-reading-day';section.dataset.day=day;const heading=make('h3',dayNames(c)[day]+' · '+dateLabel(dayDate(c.weekStart,day)));section.append(heading);if(!included){const warning=make('p','Not included in printed copies');warning.className='calendar-reading-excluded';section.append(warning);}

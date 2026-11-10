@@ -17,7 +17,7 @@ with sync_playwright() as p:
     # Provider seam accepts future shared presence, deduplicates identities and
     # ignores stale callbacks after replacing a provider.
     page.evaluate("""async()=>{
-        const presence=await import('./presence.js?v=0.27.2');
+        const presence=await import('./presence.js?v=0.28.0');
         window.presenceModule=presence;
         presence.setPresenceProvider({subscribe:cb=>{window.oldPresence=cb;cb([{id:'a',name:'Synthetic One'},{id:'a',name:'Synthetic One'},{id:'b',name:'Synthetic Two',email:'two@example.test'}]);return ()=>window.presenceStopped=true;}});
     }""")

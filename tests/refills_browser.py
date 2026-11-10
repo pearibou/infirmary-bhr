@@ -32,7 +32,7 @@ with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
     page=browser.new_page(viewport={'width':1440,'height':1000},service_workers='block');prepare_test_page(page)
     errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
-    seed={'version':1,'people':[{'id':'person-a','name':'Synthetic John','firstName':'John','lastName':'Smith','preferredName':'Synthetic John','info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]},{'id':'person-b','name':'Synthetic James','firstName':'James','lastName':'Smith','preferredName':'Synthetic James','info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]}]}
+    seed={'version':1,'people':[{'id':'person-a','name':'Synthetic John','firstName':'John','middleName':'Genoa','lastName':'Smith','birthDate':{'month':'1','day':'21','year':'1942'},'preferredName':'Synthetic John','info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]},{'id':'person-b','name':'Synthetic James','firstName':'James','lastName':'Smith','preferredName':'Synthetic James','info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]}]}
     page.add_init_script("if(!localStorage.getItem('infirmary.directory.v1'))localStorage.setItem('infirmary.directory.v1',"+json.dumps(json.dumps(seed))+");")
     directory=[seed];book={'spreadsheetId':'workbook','properties':{'timeZone':'Etc/UTC'},'sheets':[{'properties':{'sheetId':0,'title':'Sheet1','gridProperties':{'rowCount':1000,'columnCount':26}},'developerMetadata':[]}],'developerMetadata':[]};grids={0:[]};serial=[1];batches=[];lost_add=[False];fail_updates=[False];disabled_api=[False]
     def sheet(id):return next(item for item in book['sheets'] if item['properties']['sheetId']==id)
@@ -114,7 +114,7 @@ with sync_playwright() as p:
     page.goto('http://127.0.0.1:8000');unlock_test_drive(page)
     page.wait_for_function("!document.querySelector('#logout-power').disabled")
     page.locator('.person strong').filter(has_text='Synthetic John').click()
-    nav=page.locator('.chart-navigation');assert nav.get_by_role('button').all_text_contents()==['Demographics','Vital Signs','Medications','Medical History']
+    nav=page.locator('.chart-navigation');assert nav.get_by_role('button').all_text_contents()==['Demographics','Vital Signs','Medications','Medical History','Immunizations']
     nav.get_by_role('button',name='Medications',exact=True).click();page.get_by_role('button',name='+ Add medication list',exact=True).wait_for()
     assert len(book['sheets'])==1 and grids[0]==[] and page.locator('#med-controls').is_hidden()
     grids[0]=[['Synthetic existing content']]
@@ -155,20 +155,30 @@ with sync_playwright() as p:
     snapshot_alerts=copy.deepcopy(grids)
     page.locator('#refill-alert-toggle').click();page.wait_for_function("document.querySelector('#refill-alert-toggle').getAttribute('aria-busy')==='false'")
     assert page.locator('.refill-alert-card').count()==1 and page.locator('#refill-alert-count').inner_text()=='1'
+    assert page.locator('.refill-alert-identity').inner_text()=='Smith, John G. · DOB: 01/21/1942'
+    assert page.locator('.refill-alert-identity').evaluate('el=>getComputedStyle(el).fontWeight')=='400'
     assert 'No refills remaining' in page.locator('#refill-alert-content').inner_text() and 'SYNTHETIC PRIVATE PHARMACY' in page.locator('#refill-alert-content').inner_text()
     page.locator('#refill-alert-content').get_by_role('button',name='Acknowledge',exact=True).click()
     page.wait_for_function("!document.querySelector('#refill-alert-toggle').classList.contains('needs-attention') && !document.querySelector('#refill-alert-refresh').disabled")
-    assert page.locator('#refill-alert-count').inner_text()=='1' and grids==snapshot_alerts
+    assert page.locator('#refill-alert-count').inner_text()=='0' and grids==snapshot_alerts
+    assert page.locator('[data-alert-group=acknowledged] .refill-alert-card').count()==1 and page.locator('[data-alert-group=attention]').count()==0
     page.locator('#refill-alert-content').get_by_role('button',name='Refill requested…',exact=True).click();page.locator('#refill-alert-comment').fill('Synthetic pending request');page.locator('#refill-alert-action-form').get_by_role('button',name='Save',exact=True).click()
     page.wait_for_function("!document.querySelector('#refill-alert-action-dialog').open && !document.querySelector('#refill-alert-refresh').disabled")
     assert page.locator('#refill-alert-content').get_by_role('button',name='Request pending',exact=True).is_disabled() and grids==snapshot_alerts
     page.locator('#refill-alert-content').get_by_role('button',name='Remind team on…',exact=True).click();page.locator('#refill-alert-date').fill('2026-11-10');page.locator('#refill-alert-action-form').get_by_role('button',name='Save',exact=True).click()
     page.wait_for_function("!document.querySelector('#refill-alert-action-dialog').open && !document.querySelector('#refill-alert-refresh').disabled")
     assert 'Team reminder 2026-11-10' in page.locator('#refill-alert-content').inner_text()
+    assert page.locator('[data-alert-group=deferred] .refill-alert-card').count()==1
+    assert page.locator('#refill-alert-count').inner_text()=='0'
     page.locator('#alert-preferences-open').click();page.locator('#alert-low-days').fill('25');page.locator('#alert-preferences-form').get_by_role('button',name='Save shared settings',exact=True).click()
     page.wait_for_function("!document.querySelector('#alert-preferences-dialog').open && !document.querySelector('#refill-alert-refresh').disabled")
+    assert page.locator('#refill-alert-count').inner_text()=='1'
     assert {event['kind'] for event in directory[0]['refillAlertEvents']}=={'ack','request','remind','settings'}
     assert page.locator('#refill-alert-toggle').evaluate("n=>n.classList.contains('needs-attention')") and 'Low estimated supply' in page.locator('#refill-alert-content').inner_text() and grids==snapshot_alerts
+    # Deferring a newly re-armed alert must also reduce its badge count.
+    page.locator('#refill-alert-content').get_by_role('button',name='Remind team on…',exact=True).click();page.locator('#refill-alert-date').fill('2026-11-10');page.locator('#refill-alert-action-form').get_by_role('button',name='Save',exact=True).click()
+    page.wait_for_function("!document.querySelector('#refill-alert-action-dialog').open && !document.querySelector('#refill-alert-refresh').disabled")
+    assert page.locator('#refill-alert-count').inner_text()=='0' and grids==snapshot_alerts
     page.emulate_media(reduced_motion='reduce');assert page.locator('#refill-alert-toggle svg').evaluate('n=>getComputedStyle(n).animationName')=='none';page.emulate_media(reduced_motion='no-preference')
     disabled_api[0]=True;page.locator('#refill-alert-refresh').click();page.wait_for_function("document.querySelector('#refill-alert-status').textContent.includes('incomplete')");assert page.locator('#refill-alert-count').inner_text()=='?'
     disabled_api[0]=False;page.locator('#refill-alert-refresh').click();page.wait_for_function("document.querySelector('#refill-alert-toggle').getAttribute('aria-busy')==='false'");assert page.locator('.refill-alert-card').count()==1
@@ -206,7 +216,7 @@ with sync_playwright() as p:
     page.locator('#refills-dialog [data-close]').click()
     # Print only clinical fields, even with refill history present.
     pending_print=[];page.route('**/icons/icon-512.png',lambda route:pending_print.append(route));page.locator('#med-print').click();page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.querySelector('table')")
-    page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++");page.wait_for_timeout(100);pending_print.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes());page.wait_for_function('window.printCalls===1')
+    page.evaluate("()=>{window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>{window.printCalls++};}");page.wait_for_timeout(100);pending_print.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes());page.wait_for_function('window.printCalls===1')
     printed=page.frame_locator('#bhr-print-frame').locator('body').inner_text()
     for secret in ['000-SYNTHETIC-RX','SYNTHETIC PRIVATE PHARMACY','SYNTHETIC PRIVATE ADJUSTMENT','Refills left','Days supply']:assert secret not in printed
     assert 'Synthetic tablet 10 mg' in printed;page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))")

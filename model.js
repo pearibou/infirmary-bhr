@@ -1,8 +1,8 @@
-import {validateOrganization,mergeOrganization} from './organization-model.js?v=0.27.2';
-import {validateAlertEvents,mergeAlertEvents} from './refill-alerts-model.js?v=0.27.2';
-import {validateStickyDrawing} from './sticky-drawing.js?v=0.27.2';
-import {validateDemographics} from './demographics-model.js?v=0.27.2';
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.27.2';
+import {validateOrganization,mergeOrganization} from './organization-model.js?v=0.28.0';
+import {validateAlertEvents,mergeAlertEvents} from './refill-alerts-model.js?v=0.28.0';
+import {validateStickyDrawing} from './sticky-drawing.js?v=0.28.0';
+import {validateDemographics} from './demographics-model.js?v=0.28.0';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.28.0';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
@@ -29,6 +29,7 @@ export function validateDirectory(data) {
     if(p.demographics!==undefined)validateDemographics(p.demographics);
     if(p.medicationSheet!==undefined&&(!p.medicationSheet||typeof p.medicationSheet.spreadsheetId!=='string'||!(/^[\w-]+$/).test(p.medicationSheet.spreadsheetId)||!Number.isInteger(p.medicationSheet.sheetId)||p.medicationSheet.sheetId<0))throw new Error('Invalid medication sheet link.');
     if(p.historySheet!==undefined&&(!p.historySheet||typeof p.historySheet.spreadsheetId!=='string'||!(/^[\w-]+$/).test(p.historySheet.spreadsheetId)||!Number.isInteger(p.historySheet.sheetId)||p.historySheet.sheetId<0))throw new Error('Invalid history sheet link.');
+    if(p.immunizationSheet!==undefined&&(!p.immunizationSheet||typeof p.immunizationSheet.spreadsheetId!=='string'||!(/^[\w-]+$/).test(p.immunizationSheet.spreadsheetId)||!Number.isInteger(p.immunizationSheet.sheetId)||p.immunizationSheet.sheetId<0))throw new Error('Invalid immunization sheet link.');
     if(p.vitalsSheet!==undefined&&(!p.vitalsSheet||typeof p.vitalsSheet.spreadsheetId!=='string'||!(/^[\w-]+$/).test(p.vitalsSheet.spreadsheetId)||!Number.isInteger(p.vitalsSheet.sheetId)||p.vitalsSheet.sheetId<0))throw new Error('Invalid vital signs sheet link.');
 
     if(p.birthDate!==undefined && (!p.birthDate || typeof p.birthDate!=='object' || birthDateError(p.birthDate)))throw new Error('Invalid birth date.');
