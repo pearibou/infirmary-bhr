@@ -313,3 +313,5 @@ Saved rundowns open read-only until **Edit**. Select a saved document and choose
 ## Default resident upload folders
 
 New profile photos and uploaded resident files default to a person-marked folder inside Infirmary-BHR, created when first needed and linked from the chart. Upload file still permits explicitly choosing another attached folder. Existing external files/photos remain where they are; nothing is automatically moved or copied. See [resident storage](docs/resident-storage.md).
+
+Blood-pressure readings display a smaller, muted **Estimated MAP ≈ … mmHg**, calculated as (systolic + 2 × diastolic) / 3 and rounded to a whole mmHg. This estimate is calculated for display only; no spreadsheet field is added.

@@ -138,6 +138,7 @@ with sync_playwright() as p:
     first=copy.deepcopy(entry_rows(sid)[0]);assert first[1]=='2026-11-01T14:00:00.000Z' and first[9]=='RA'
     assert page.locator('#records-window').is_hidden() and '98% · RA' in page.locator('#vitals-content').inner_text()
     directory_value=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1'))");assert directory_value['people'][0]['vitalsSheet']=={'spreadsheetId':'workbook','sheetId':sid} and 'SYNTHETIC PRIVATE VITAL COMMENT' not in json.dumps(directory_value)
+    assert page.locator('.vitals-map').first.inner_text()=='Estimated MAP ≈ 93 mmHg'
     page.locator('#vitals-dialog').screenshot(path='/tmp/bhr-vitals-window.png')
     page.locator('#vitals-dialog [data-close]').click();page.locator('#bhr-icon').dblclick();page.locator('.person strong').filter(has_text='Synthetic John').click()
     summary=page.locator('.person-vitals-summary');assert summary.is_visible() and '5′ 10″' in summary.inner_text() and '180 lb' in summary.inner_text()

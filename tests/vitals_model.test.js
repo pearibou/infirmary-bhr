@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {newVital,reviseVital,latestDimensions,vitalToRow,parseVitalRows,VITAL_HEADERS,validateVital,heightText,weightText,vitalDetails} from '../vitals-model.js';
+import {newVital,reviseVital,latestDimensions,vitalToRow,parseVitalRows,VITAL_HEADERS,validateVital,heightText,weightText,vitalDetails,estimatedMap} from '../vitals-model.js';
 import {validateDirectory,mergeDirectories} from '../model.js';
 const actor={id:'synthetic-author',name:'Synthetic staff'},now=new Date('2026-11-09T12:00:00Z');
 const make=(fields={},id='synthetic-observation')=>newVital({measuredAt:'2026-11-09T10:00:00.000Z',pulse:'70',...fields},actor,id,now);
@@ -18,3 +18,5 @@ test('GCS requires three valid responses, computes every possible score and keep
  const legacy=make(),[read]=parseVitalRows([VITAL_HEADERS.slice(0,22),vitalToRow(legacy).slice(0,22)],new Map([[legacy.id,1]]));assert.equal(gcsTotal(read),null);assert.ok(!vitalDetails(read).some(([k])=>k==='GCS'));
  assert.equal(gcsMeaning(15),'Highest score');assert.match(gcsMeaning(13),/Mild/);assert.match(gcsMeaning(9),/Moderate/);assert.match(gcsMeaning(8),/Severe/);
 });
+
+test('MAP is rounded from paired BP readings and never stored',()=>{const entry=make({systolic:'120',diastolic:'73'});assert.equal(estimatedMap(entry),89);assert.equal(estimatedMap({systolic:'120',diastolic:'80'}),93);for(const fields of [{},{systolic:'120'},{systolic:'',diastolic:'80'},{systolic:'NaN',diastolic:'80'},{systolic:'70',diastolic:'80'}])assert.equal(estimatedMap(fields),null);assert.equal(Object.hasOwn(entry,'map'),false);assert.equal(vitalToRow(entry).length,VITAL_HEADERS.length);});
