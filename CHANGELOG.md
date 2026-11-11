@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show calculated age and DOB beside the resident name in the individual Immunizations window, and age directly below DOB on its printout. Incomplete dates show an unavailable age; deceased residents retain age-at-death wording.
+
 - Fix Immunizations Master List pairing returned Google Sheets grids with residents by stable sheet ID, regardless of response order. Preserve row-marker validation and reject missing or ambiguous sheet responses.
 
 ## 0.31.1 — 2026-11-10

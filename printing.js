@@ -3,14 +3,14 @@ import {organizationBranding} from './organization.js?v=0.31.1';
 // Print documents live only in an ephemeral same-origin frame, never in storage.
 import {readPersonPhoto} from './drive.js?v=0.31.1';
 import {cleanNoteHtml} from './documents-model.js?v=0.31.1';
-import {personName} from './model.js?v=0.31.1';
+import {personName,personAge} from './model.js?v=0.31.1';
 let frame=null,generation=0,photoUrl=null;
 export function clearPrint(){generation++;frame?.remove();frame=null;if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=null;}
 export const fullPersonName=person=>[person.firstName,person.middleName,person.lastName].filter(Boolean).join(' ')||personName(person);
 export function personBirthDate(person){const b=person.birthDate;return b&&Object.values(b).some(Boolean)?`${b.month||'—'} / ${b.day||'—'} / ${b.year||'—'}`:'Not recorded';}
 export const allergiesText=person=>person.noKnownAllergies?'No known allergies':person.allergies?.trim()||'Not recorded';
 const el=(doc,tag,text)=>{const node=doc.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
-export async function printDocument({title,person,sections,retrievedAt,subtitle='',layout='standard',onLayout}){
+export async function printDocument({title,person,sections,retrievedAt,subtitle='',showAge=false,layout='standard',onLayout}){
  clearPrint();const stamp=generation,branding=await organizationBranding();if(stamp!==generation)throw new Error('Printing cancelled.');frame=document.createElement('iframe');const target=frame;target.id='bhr-print-frame';target.title='Print document';target.setAttribute('aria-hidden','true');target.style.cssText='position:fixed;width:720px;height:960px;left:-10000px;border:0';document.body.append(target);
  const doc=target.contentDocument;doc.open();doc.write('<!doctype html><html><head><meta charset="utf-8"><title>Infirmary document</title></head><body></body></html>');doc.close();
  const style=el(doc,'style');style.textContent=`
@@ -38,7 +38,7 @@ export async function printDocument({title,person,sections,retrievedAt,subtitle=
  if(person){
  identity=el(doc,'div');identity.className='identity';const identityText=el(doc,'div');identityText.append(el(doc,'h2',fullPersonName(person)));identity.append(identityText);
  if(personName(person)!==fullPersonName(person))identityText.append(el(doc,'p',personName(person)));
- identityText.append(el(doc,'p','Date of birth: '+personBirthDate(person)),el(doc,'p','Allergies: '+allergiesText(person)));if(person.deceased)identityText.append(el(doc,'p','Deceased'));doc.body.append(identity);
+ identityText.append(el(doc,'p','Date of birth: '+personBirthDate(person)));if(showAge)identityText.append(el(doc,'p',(person.deceased?'Age at death: ':'Age: ')+(personAge(person)??'—')));identityText.append(el(doc,'p','Allergies: '+allergiesText(person)));if(person.deceased)identityText.append(el(doc,'p','Deceased'));doc.body.append(identity);
  }
  if(subtitle)doc.body.append(el(doc,'p',subtitle));
  const bodySections=el(doc,'div');bodySections.className='sections'+(layout==='demographics'?' demographics':'');doc.body.append(bodySections);

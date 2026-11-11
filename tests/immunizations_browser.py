@@ -32,6 +32,7 @@ with sync_playwright() as p:
     page=browser.new_page(viewport={'width':1440,'height':1000},service_workers='block');prepare_test_page(page)
     errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
     seed={'version':1,'people':[{'id':'person-a','name':'Synthetic John','firstName':'John','lastName':'Smith','preferredName':'Synthetic John','info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]},{'id':'person-b','name':'Synthetic James','firstName':'James','lastName':'Smith','preferredName':'Synthetic James','info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]}]}
+    seed['people'][1]['birthDate']={'month':'1','day':'1','year':'1955'}
     seed['people'].append({'id':'departed','name':'Synthetic Departed','lastName':'Zulu','deceased':True,'info':'','notes':[],'updatedAt':'2026-01-01T00:00:00Z'})
     page.add_init_script("if(!localStorage.getItem('infirmary.directory.v1'))localStorage.setItem('infirmary.directory.v1',"+json.dumps(json.dumps(seed))+");")
     directory=[seed];book={'spreadsheetId':'workbook','properties':{'timeZone':'Etc/UTC'},'sheets':[{'properties':{'sheetId':0,'title':'Sheet1','gridProperties':{'rowCount':1000,'columnCount':26}},'developerMetadata':[]}],'developerMetadata':[]};grids={0:[]};serial=[1];batches=[];lost_add=[False];fail_updates=[False];disabled_api=[False];workbook_exists=[False]
@@ -157,6 +158,7 @@ with sync_playwright() as p:
     serial[0]+=1;book['sheets'].append(other_tab);grids[other_sid]=[copy.deepcopy(HEADERS)]
     page.locator('#immunizations-master').click();page.locator('.immunization-table').wait_for();page.wait_for_function("!document.querySelector('#immunizations-refresh').disabled")
     assert page.locator('#immunizations-person-label').is_hidden()
+    assert page.locator('#immunizations-identity').is_hidden()
     assert 'Synthetic Departed' not in page.locator('#immunizations-content').inner_text()
     rows=page.locator('.immunization-table tbody tr');assert rows.count()==2
     assert rows.filter(has_text='Synthetic vaccine').count()==1 and '2025' in rows.filter(has_text='Synthetic vaccine').inner_text()
@@ -175,6 +177,20 @@ with sync_playwright() as p:
     page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");page.unroute('**/icons/icon-512.png');page.wait_for_function("!document.querySelector('#immunizations-print').disabled")
     page.locator('.immunization-table button').filter(has_text='Synthetic James').click();page.wait_for_function("!document.querySelector('#immunizations-add').disabled")
     assert page.locator('.immunization-entry').count()==2
+    assert 'DOB: 1 / 1 / 1955' in page.locator('#immunizations-identity').inner_text()
+    expected_age=page.evaluate('new Date().getFullYear()-1955')
+    assert f'AGE: {expected_age}' in page.locator('#immunizations-identity').inner_text()
+    individual_print_routes=[];page.route('**/icons/icon-512.png',lambda route:individual_print_routes.append(route))
+    page.locator('#immunizations-print').click()
+    page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Age: ')")
+    identity=page.frame_locator('#bhr-print-frame').locator('.identity p').all_text_contents()
+    dob_index=identity.index('Date of birth: 1 / 1 / 1955')
+    assert identity[dob_index+1]==f'Age: {expected_age}'
+    page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.print=()=>{}")
+    page.wait_for_timeout(100);individual_print_routes.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes())
+    page.wait_for_function("!document.querySelector('#immunizations-print').disabled")
+    page.unroute('**/icons/icon-512.png')
+    page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))")
     page.locator('.immunization-entry').first.get_by_role('button',name='Delete entry…',exact=True).click();page.locator('#immunization-delete-dialog [data-close]').click();assert len(entry_rows(sid))==2
     page.locator('.immunization-entry').first.get_by_role('button',name='Delete entry…',exact=True).click();fail_updates[0]=True;page.locator('#immunization-delete-confirm').click();page.wait_for_function("document.querySelector('#immunization-delete-error').textContent.includes('failed')");assert len(entry_rows(sid))==2
     fail_updates[0]=False;page.locator('#immunization-delete-confirm').click();page.wait_for_function("!document.querySelector('#immunization-delete-dialog').open && !document.querySelector('#immunizations-add').disabled");assert len(entry_rows(sid))==1
