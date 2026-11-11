@@ -1,4 +1,4 @@
-import {calculateAge} from './model.js?v=0.31.1';
+import {ageAtDate} from './model.js?v=0.31.1';
 export const EDITABLE_IMMUNIZATION_FIELDS=['vaccine','administered','dose','location','nextDue','comments','lot','manufacturer','route','site'];
 export const IMMUNIZATION_FIELDS=['id',...EDITABLE_IMMUNIZATION_FIELDS,'enteredBy','enteredById','enteredAt','updatedBy','updatedById','updatedAt','revision'];
 export const IMMUNIZATION_HEADERS=['Entry ID','Vaccine','Date administered','Dose / series','Administered by / location','Next dose due','Comments','Lot number','Manufacturer','Route','Injection site','Entered by','Entered by ID','Entered at','Updated by','Updated by ID','Updated at','Revision'];
@@ -38,12 +38,11 @@ export const compareImmunizations=(a,b)=>b.administered.localeCompare(a.administ
 // Latest administered record for each vaccine name, keeping unknown dates behind known ones.
 export function latestImmunizations(rows){const latest=new Map();for(const row of [...rows].sort(compareImmunizations)){const key=row.vaccine.trim().toLocaleLowerCase();if(!latest.has(key))latest.set(key,row);}return [...latest.values()].sort((a,b)=>a.vaccine.localeCompare(b.vaccine));}
 
-// Use the administered calendar date, never today's age or a timezone-shifted ISO instant.
+// Treat partial administered dates as a calendar interval, without timezone shifts.
 export function immunizationAge(person,entry){
  const value=entry?.administered;
- if(!value||!validImmunizationDate(value,false))return null;
- const [year,month,day]=value.split('-').map(Number),date=new Date(0);
- date.setFullYear(year,month-1,day);date.setHours(0,0,0,0);
- return calculateAge(person.birthDate,date);
+ if(!value||!validImmunizationDate(value))return null;
+ const [year,month='',day='']=value.split('-');
+ return ageAtDate(person.birthDate,{year,month,day});
 }
 export const immunizationAgeText=(person,entry)=>entry?'(Age: '+(immunizationAge(person,entry)??'—')+')':'';

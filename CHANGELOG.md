@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Calculate age at partial death or immunization dates using the earliest and latest possible calendar dates. Show a single age when certain, otherwise an age range. A complete birthday and comparison year remain required; original dates stay unchanged.
+
 - Add a small parenthetical age at the administered dose date beside each resident name in the Immunizations Master List and its printout. Incomplete dates show “Age: —”; no observations are changed.
 
 - Show calculated age and DOB beside the resident name in the individual Immunizations window, and age directly below DOB on its printout. Incomplete dates show an unavailable age; deceased residents retain age-at-death wording.

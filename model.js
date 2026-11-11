@@ -120,6 +120,18 @@ export function calculateAge(birth,today=new Date()){
   return age<0?null:age;
 }
 
+// A partial comparison date represents its entire calendar month or year.
+// Keep complete birthdays required; never invent missing birth information.
+export function ageAtDate(birth,comparison){
+ if(!comparison||birthDateError(comparison)||!comparison.year||comparison.day&&!comparison.month)return null;
+ const {year,month,day}=comparison,first=new Date(0),last=new Date(0);
+ first.setFullYear(Number(year),month?Number(month)-1:0,day?Number(day):1);first.setHours(0,0,0,0);
+ last.setFullYear(Number(year),month?Number(month):12,0);last.setHours(0,0,0,0);if(day)last.setDate(Number(day));
+ const low=calculateAge(birth,first),high=calculateAge(birth,last);
+ if(low===null||high===null)return null;
+ return low===high?low:low+'–'+high;
+}
+
 export function currentNoteText(note){return note.edits?.at(-1)?.text??note.text;}
 export function currentNoteTime(note){return [...(note.edits||[])].reverse().find(edit=>edit.noteAt)?.noteAt||note.createdAt;}
 export function canEditNote(note,user){return Boolean(user?.id && note.authorId===user.id);}
@@ -170,8 +182,7 @@ export function formatDeathDate(value){
 }
 export function personAge(person,today=new Date()){
   if(!person.deceased)return calculateAge(person.birthDate,today);
-  const {year,month,day}=deathDateParts(person.deathDate);if(!year||!month||!day)return null;
-  const date=new Date(0);date.setFullYear(Number(year),Number(month)-1,Number(day));date.setHours(0,0,0,0);return calculateAge(person.birthDate,date);
+  return ageAtDate(person.birthDate,deathDateParts(person.deathDate));
 }
 
 export function personAgeLine(person,today=new Date()){
