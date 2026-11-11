@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add a small parenthetical age at the administered dose date beside each resident name in the Immunizations Master List and its printout. Incomplete dates show “Age: —”; no observations are changed.
+
 - Show calculated age and DOB beside the resident name in the individual Immunizations window, and age directly below DOB on its printout. Incomplete dates show an unavailable age; deceased residents retain age-at-death wording.
 
 - Fix Immunizations Master List pairing returned Google Sheets grids with residents by stable sheet ID, regardless of response order. Preserve row-marker validation and reject missing or ambiguous sheet responses.

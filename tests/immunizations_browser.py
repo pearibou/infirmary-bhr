@@ -152,6 +152,7 @@ with sync_playwright() as p:
     page.locator('#immunization-cancel').click();page.locator('#immunizations-refresh').click();page.wait_for_function("!document.querySelector('#immunizations-add').disabled")
     page.locator('.immunization-entry').first.get_by_role('button',name='Edit…',exact=True).click();form.get_by_label('Date administered',exact=True).fill('2025');add_blank_row(sid);form.get_by_role('button',name='Save immunization',exact=True).click();page.wait_for_function("!document.querySelector('#immunization-form-dialog').open && !document.querySelector('#immunizations-add').disabled")
     assert entry_rows(sid)[0][2]=='2025' and entry_rows(sid)[0][17]=='2'
+    entry_rows(sid)[0][2]='2025-01-01'
     # A second resident sheet makes response order different from request order.
     other_sid=max(grids)+1
     other_tab={'properties':{'sheetId':other_sid,'title':'Synthetic empty resident'},'developerMetadata':[{'metadataKey':'bhr.immunization.personId','metadataValue':'person-a','metadataId':serial[0],'location':{'sheetId':other_sid},'visibility':'DOCUMENT'}]}
@@ -161,6 +162,7 @@ with sync_playwright() as p:
     assert page.locator('#immunizations-identity').is_hidden()
     assert 'Synthetic Departed' not in page.locator('#immunizations-content').inner_text()
     rows=page.locator('.immunization-table tbody tr');assert rows.count()==2
+    assert rows.filter(has_text='Synthetic vaccine').locator('.immunization-dose-age').inner_text().strip()=='(Age: 70)'
     assert rows.filter(has_text='Synthetic vaccine').count()==1 and '2025' in rows.filter(has_text='Synthetic vaccine').inner_text()
     page.locator('#immunizations-deceased').check();assert rows.count()==3 and '(Deceased)' in page.locator('#immunizations-content').inner_text()
     page.locator('#immunizations-search').fill('vaccine');assert rows.count()==1
@@ -173,6 +175,7 @@ with sync_playwright() as p:
     page.wait_for_timeout(100);print_routes.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes());page.wait_for_function('window.printCalls===1')
     assert page.frame_locator('#bhr-print-frame').locator('thead tr').count()==1
     assert '03/2028' in page.frame_locator('#bhr-print-frame').locator('body').inner_text()
+    assert '(Age: 70)' in page.frame_locator('#bhr-print-frame').locator('tbody td small').inner_text()
     assert 'Synthetic Departed' not in page.frame_locator('#bhr-print-frame').locator('body').inner_text()
     page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))");page.unroute('**/icons/icon-512.png');page.wait_for_function("!document.querySelector('#immunizations-print').disabled")
     page.locator('.immunization-table button').filter(has_text='Synthetic James').click();page.wait_for_function("!document.querySelector('#immunizations-add').disabled")
