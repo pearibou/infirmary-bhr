@@ -67,7 +67,7 @@ with sync_playwright() as p:
             assert body=={'dataFilters':[{'developerMetadataLookup':{'metadataKey':'bhr.immunization.entryId','visibility':'DOCUMENT'}}]}
             route.fulfill(json={'matchedDeveloperMetadata':[{'developerMetadata':m} for tab in book['sheets'] for m in tab['developerMetadata'] if m['metadataKey']=='bhr.immunization.entryId']});return
         if path.endswith('/values:batchGetByDataFilter'):
-            route.fulfill(json={'valueRanges':[{'dataFilters':[f],'valueRange':{'values':filter_rows(f)}} for f in body['dataFilters']]});return
+            route.fulfill(json={'valueRanges':[{'dataFilters':[f],'valueRange':{'values':filter_rows(f)}} for f in reversed(body['dataFilters'])]});return
         if path.endswith('/values:batchUpdateByDataFilter'):
             if fail_updates[0]:route.fulfill(status=503,json={'error':{'message':'Synthetic update failed'}});return
             for change in body['data']:
@@ -151,6 +151,10 @@ with sync_playwright() as p:
     page.locator('#immunization-cancel').click();page.locator('#immunizations-refresh').click();page.wait_for_function("!document.querySelector('#immunizations-add').disabled")
     page.locator('.immunization-entry').first.get_by_role('button',name='Edit…',exact=True).click();form.get_by_label('Date administered',exact=True).fill('2025');add_blank_row(sid);form.get_by_role('button',name='Save immunization',exact=True).click();page.wait_for_function("!document.querySelector('#immunization-form-dialog').open && !document.querySelector('#immunizations-add').disabled")
     assert entry_rows(sid)[0][2]=='2025' and entry_rows(sid)[0][17]=='2'
+    # A second resident sheet makes response order different from request order.
+    other_sid=max(grids)+1
+    other_tab={'properties':{'sheetId':other_sid,'title':'Synthetic empty resident'},'developerMetadata':[{'metadataKey':'bhr.immunization.personId','metadataValue':'person-a','metadataId':serial[0],'location':{'sheetId':other_sid},'visibility':'DOCUMENT'}]}
+    serial[0]+=1;book['sheets'].append(other_tab);grids[other_sid]=[copy.deepcopy(HEADERS)]
     page.locator('#immunizations-master').click();page.locator('.immunization-table').wait_for();page.wait_for_function("!document.querySelector('#immunizations-refresh').disabled")
     assert page.locator('#immunizations-person-label').is_hidden()
     assert 'Synthetic Departed' not in page.locator('#immunizations-content').inner_text()

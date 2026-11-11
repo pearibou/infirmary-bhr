@@ -88,11 +88,18 @@ export async function deleteImmunization(ctx,entry){
  await post(id(ctx.spreadsheetId)+'/values:batchUpdateByDataFilter',{valueInputOption:'RAW',data:[{dataFilter:rowFilter(entry.metadataId),majorDimension:'ROWS',values:[IMMUNIZATION_FIELDS.map(()=>'')]}]});
 }
 
+// Match returned grids by sheet identity; Google may reorder batch results.
+function sheetValues(response,sheetId){
+ const matches=(response.valueRanges||[]).filter(range=>range.dataFilters?.some(filter=>filter.gridRange?.sheetId===sheetId));
+ if(matches.length!==1)throw new Error('Google did not return one unambiguous immunization sheet. Refresh to retry.');
+ return matches[0].valueRange?.values||[];
+}
+
 // One workbook read and one batched grid request for the master view.
 export async function readAllImmunizationLists(people,knownIds=[]){
  let book;try{book=await immunizationWorkbook(knownIds);}catch(error){if(error.code==='IMMUNIZATION_WORKBOOK_MISSING'&&!knownIds.length)return people.map(person=>({personId:person.id,rows:[],missing:true}));throw error;}
  const matched=people.map(person=>({person,sheet:findSheet(book,person)})),sheets=matched.filter(item=>item.sheet);
  const result=sheets.length?await getValues(book.spreadsheetId,sheets.map(item=>grid(item.sheet.properties.sheetId))):{};
- const loaded=new Map(sheets.map((item,i)=>[item.person.id,context(book,item.person,item.sheet,result.valueRanges?.[i]?.valueRange?.values||[])]));
+ const loaded=new Map(sheets.map(item=>[item.person.id,context(book,item.person,item.sheet,sheetValues(result,item.sheet.properties.sheetId))]));
  return matched.map(({person})=>loaded.get(person.id)||{personId:person.id,rows:[],missing:true});
 }
