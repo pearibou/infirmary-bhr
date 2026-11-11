@@ -5,7 +5,6 @@ Discussion inventory, updated 2026-11-10. These items are not implemented or app
 ## Practical additions suggested
 
 - **Person-linked follow-up tasks:** task text, optional due date, assigned person and completion checkbox, with a combined desktop to-do view.
-- **Handoff view:** recent clinical quick notes, upcoming appointments and outstanding tasks across residents for someone covering the infirmary.
 - **Practical care information:** mobility aids, hearing/vision needs, communication preferences, dietary restrictions and usual assistance needs.
 - **Resident document checklist:** availability/links and last-reviewed date for advance directives, healthcare decision-maker paperwork, insurance cards and similar documents.
 - **Combined emergency printout:** demographics, emergency contacts, allergies, active medications and medical history in a concise report. Existing separate printouts do not constitute this combined report.
@@ -20,7 +19,7 @@ Discussion inventory, updated 2026-11-10. These items are not implemented or app
 
 ## Already implemented, not pending
 
-Read-only printable vital-sign trends (0.30.0), shared Drive presence across browsers (0.29.0), individual Google sign-in, persistent staff display names, organization branding settings, medications/refill tracking and shared in-app refill alerts, medical history with local ICD-10-CM search, immunizations/master view, vital signs/GCS, weekly appointments, clinical-note viewing/editing, sticky drawing/editing and Event Log.
+Manually curated Community Rundown and default resident upload folders (0.31.0; no automatic chart aggregation), read-only printable vital-sign trends (0.30.0), shared Drive presence across browsers (0.29.0), individual Google sign-in, persistent staff display names, organization branding settings, medications/refill tracking and shared in-app refill alerts, medical history with local ICD-10-CM search, immunizations/master view, vital signs/GCS, weekly appointments, clinical-note viewing/editing, sticky drawing/editing and Event Log.
 
 ## Outside the current scope
 

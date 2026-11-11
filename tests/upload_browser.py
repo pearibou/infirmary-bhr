@@ -29,7 +29,8 @@ with sync_playwright() as p:
     page.locator('#drive-dialog').get_by_role('button',name='Close',exact=True).click()
     before=page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     page.get_by_role('button',name='Upload file…',exact=True).click()
-    assert page.locator('#upload-folder').input_value()=='assigned-folder'
+    assert page.locator('#upload-folder').input_value()=='__resident_default__'
+    page.locator('#upload-folder').select_option('assigned-folder')
     page.locator('#upload-file').set_input_files({'name':'synthetic.unrecognized','mimeType':'application/octet-stream','buffer':bytes([0,255,16,42])})
     page.locator('#upload-submit').click()
     page.wait_for_function("document.querySelector('#upload-status').textContent && !document.querySelector('#upload-status').textContent.startsWith('Uploading')")

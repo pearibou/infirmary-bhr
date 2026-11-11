@@ -1,7 +1,8 @@
-import {validateCalendar,calendarContent} from './calendar-model.js?v=0.30.0';
-import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.30.0';
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.30.0';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.30.0';
+import {validateRundown,rundownContent} from './rundown-model.js?v=0.31.0';
+import {validateCalendar,calendarContent} from './calendar-model.js?v=0.31.0';
+import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.31.0';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.31.0';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.31.0';
 let token,expires=0,loading,authorizedClient,currentUser,workspaceFolder,workspaceName,legacyRootId,storageEpoch=0;
 const activeRequests=new Set();
 export function disconnect(){staffProfileReady=false;staffProfileFolder=undefined;storageEpoch++;workspaceFolder=undefined;workspaceName=undefined;legacyRootId=undefined;for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
@@ -332,6 +333,24 @@ export async function saveAppointmentCalendar(calendar,baseline=null){
  const response=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files${baseline?'/'+safeDriveId(baseline.id):''}?uploadType=multipart&fields=${calendarFields}`,{method:baseline?'PATCH':'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`,...(file?.etag?{'If-Match':file.etag}:{})},body});if(epoch!==storageEpoch)throw new Error('Connection changed.');if(!response.ok)throw new Error(response.status===412?'This calendar changed in Drive. Reopen it before editing.':'Calendar save failed. Your draft has been kept.');return response.json();
 }
 
+const rundownFields='id,name,mimeType,parents,appProperties,createdTime,modifiedTime,trashed';
+function requireRundownAccess(){if(!hasDriveAccess()||!getCurrentUser())throw new Error('Reconnect Google Drive to identify the rundown editor.');if(!workspaceFolder)throw new Error('Sync Infirmary-BHR first.');}
+export async function listCommunityRundowns(rundownId=null){
+ requireRundownAccess();if(rundownId)safeDriveId(rundownId);
+ const files=[];let pageToken;const q=`'${workspaceFolder}' in parents and trashed = false and appProperties has { key='bhrRundown' and value='1' }`+(rundownId?` and appProperties has { key='rundownId' and value='${rundownId}' }`:'');
+ do{const params=new URLSearchParams({q,fields:`files(${rundownFields}),nextPageToken`,pageSize:'100',...(pageToken?{pageToken}:{})});const result=await(await api('files?'+params)).json();files.push(...result.files.filter(file=>file.appProperties?.bhrRundown==='1'&&(!rundownId||file.appProperties.rundownId===rundownId)));pageToken=result.nextPageToken;}while(pageToken);return files;
+}
+async function communityRundownMetadata(fileId){requireRundownAccess();const response=await api(`files/${safeDriveId(fileId)}?fields=${rundownFields}`),file=await response.json();if(file.trashed||file.appProperties?.bhrRundown!=='1'||!file.parents?.includes(workspaceFolder))throw new Error('This community rundown is unavailable in Infirmary-BHR.');return {...file,etag:response.headers.get('etag')};}
+export async function readCommunityRundown(fileId){const epoch=storageEpoch,file=await communityRundownMetadata(fileId);if(epoch!==storageEpoch)throw new Error('Connection changed.');const rundown=validateRundown(await(await api(`files/${safeDriveId(fileId)}?alt=media`)).json());if(epoch!==storageEpoch)throw new Error('Connection changed.');if(file.appProperties.rundownId!==rundown.id)throw new Error('Rundown identity does not match its Drive file.');return {file,rundown};}
+export async function saveCommunityRundown(rundown,baseline=null){
+ requireRundownAccess();validateRundown(rundown);if(rundown.updatedById!==getCurrentUser().id)throw new Error('Reconnect before saving this rundown.');const epoch=storageEpoch;
+ let file;if(baseline){const loaded=await readCommunityRundown(baseline.id);file=loaded.file;if(file.modifiedTime!==baseline.modifiedTime||file.appProperties.rundownId!==rundown.id||loaded.rundown.createdAt!==rundown.createdAt||loaded.rundown.createdById!==rundown.createdById)throw new Error('This rundown changed in Drive. Reopen it to review the latest version. Your draft has been kept.');}
+ else{const matches=await listCommunityRundowns(rundown.id);if(matches.length>1)throw new Error('Duplicate rundown IDs found in Drive. No file was overwritten.');if(matches.length){const previous=await readCommunityRundown(matches[0].id);if(JSON.stringify(rundownContent(previous.rundown))===JSON.stringify(rundownContent(rundown)))return previous.file;throw new Error('This rundown was already saved with different details. Reopen it before changing it. Your draft has been kept.');}}
+ if(epoch!==storageEpoch)throw new Error('Connection changed.');
+ const metadata={name:`Rundown ${rundown.date} — ${rundown.title}.json`,mimeType:'application/json',appProperties:{bhrRundown:'1',rundownId:rundown.id,date:rundown.date},...(!baseline?{parents:[workspaceFolder]}:{})},boundary='bhrrundown_'+crypto.randomUUID(),body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(rundown)}\r\n--${boundary}--`;
+ const response=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files${baseline?'/'+safeDriveId(baseline.id):''}?uploadType=multipart&fields=${rundownFields}`,{method:baseline?'PATCH':'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`,...(file?.etag?{'If-Match':file.etag}:{})},body});if(epoch!==storageEpoch)throw new Error('Connection changed.');if(!response.ok)throw new Error(response.status===412?'This rundown changed in Drive. Reopen it before editing.':'Rundown save failed. Your draft has been kept.');return response.json();
+}
+
 // Profiles are preferences only. Google userinfo remains the source of identity.
 // One file per subject avoids overwriting another staff member's preferences.
 let staffProfileReady=false,staffProfileFolder;
@@ -386,4 +405,11 @@ export async function uploadPresenceIdentity(fileId,metadata,identity){
  requireFilesAccess();const epoch=storageEpoch,boundary='bhr_presence_'+crypto.randomUUID(),body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(identity)}\r\n--${boundary}--`;
  const response=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files${fileId?'/'+safeDriveId(fileId):''}?uploadType=multipart&fields=id,appProperties,parents`,{method:fileId?'PATCH':'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`},body});
  if(epoch!==storageEpoch)throw new Error('Presence connection changed.');if(!response.ok){if(response.status===401)disconnect();const error=new Error('Shared presence update failed ('+response.status+').');error.status=response.status;throw error;}return response.json();
+}
+
+// Stable person marker, not a human-readable folder name, identifies the default destination.
+const residentFolderTasks=new Map();
+export async function ensureResidentFolder(person){
+ requireFilesAccess();if(!workspaceFolder)throw new Error('Connect the BHR directory first.');safeDriveId(person.id);const epoch=storageEpoch,root=workspaceFolder,key=epoch+':'+root+':'+person.id;if(residentFolderTasks.has(key))return residentFolderTasks.get(key);
+ const task=(async()=>{const q=`'${root}' in parents and mimeType = 'application/vnd.google-apps.folder' and appProperties has { key='bhrResidentFolder' and value='1' } and appProperties has { key='personId' and value='${person.id}' } and trashed = false`;let matches=(await storageListing(q)).filter(f=>f.mimeType==='application/vnd.google-apps.folder'&&f.parents?.includes(root)&&f.appProperties?.bhrResidentFolder==='1'&&f.appProperties.personId===person.id);if(epoch!==storageEpoch)throw new Error('Connection changed.');if(matches.length)return matches.sort((a,b)=>a.id.localeCompare(b.id))[0];const name=([person.lastName,[person.firstName,person.middleName].filter(Boolean).join(' ')].filter(Boolean).join(', ')||person.preferredName||person.name||'Resident').slice(0,180);const folder=await(await api('files?fields=id,name,mimeType,parents,appProperties',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[root],appProperties:{bhrResidentFolder:'1',personId:person.id}})})).json();if(epoch!==storageEpoch)throw new Error('Connection changed.');safeDriveId(folder.id);return folder;})();residentFolderTasks.set(key,task);try{return await task;}finally{residentFolderTasks.delete(key);}
 }

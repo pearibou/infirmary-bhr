@@ -1,6 +1,6 @@
-import {DEMOGRAPHIC_FIELDS,CONTACT_FIELDS,POLICY_FIELDS,validateDemographics} from './demographics-model.js?v=0.30.0';
-import {printDocument,clearPrint,fullPersonName,personBirthDate,allergiesText} from './printing.js?v=0.30.0';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.30.0';
+import {DEMOGRAPHIC_FIELDS,CONTACT_FIELDS,POLICY_FIELDS,validateDemographics} from './demographics-model.js?v=0.31.0';
+import {printDocument,clearPrint,fullPersonName,personBirthDate,allergiesText} from './printing.js?v=0.31.0';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.31.0';
 const $=s=>document.querySelector(s),make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
 let hooks,currentId=null,printing=false;
 function inputField(name,label,value='',multi=false){const wrap=make('label',label),input=make(multi?'textarea':'input');input.name=name;input.maxLength=2000;input.value=value;if(multi)input.rows=2;if(/(phone|fax)/i.test(name))input.type='tel';if(name==='dem-sex'){input.setAttribute('list','dem-sex-options');const options=make('datalist');options.id='dem-sex-options';for(const value of ['Male','Female']){const option=make('option');option.value=value;options.append(option);}wrap.append(options);}wrap.append(input);return wrap;}

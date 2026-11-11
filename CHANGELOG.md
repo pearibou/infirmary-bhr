@@ -1,5 +1,12 @@
 # Version history
 
+## 0.31.0 — 2026-11-10
+
+- Add Community Rundown: resident/general sections, rich formatting/highlighting, archive/view/edit, independent copies, full readable dates and compact internal-document printing.
+- Default new resident photos and file uploads to stable person-marked folders inside Infirmary-BHR, created on first use; preserve explicit upload overrides and existing external files.
+- Enlarge The BHR artwork to 68px while preserving its 88px desktop grid cell.
+
+
 ## 0.30.0 — 2026-11-10
 
 - Add Plot trends at the far right of Vital Signs controls, with on-demand SVG graphs, measurement/date-range selection, point details and display-only unit conversion.

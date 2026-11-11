@@ -9,7 +9,7 @@ with sync_playwright() as p:
     prepare_test_page(page)
     page.goto('http://localhost:8000')
     unlock_test_drive(page)
-    page.evaluate("async()=>{const presence=await import('./presence.js?v=0.30.0');presence.setPresenceProvider({subscribe:cb=>{cb([{id:'synthetic-staff',name:'Synthetic Staff',email:'synthetic-staff@example.test'}]);return ()=>{};}})}")
+    page.evaluate("async()=>{const presence=await import('./presence.js?v=0.31.0');presence.setPresenceProvider({subscribe:cb=>{cb([{id:'synthetic-staff',name:'Synthetic Staff',email:'synthetic-staff@example.test'}]);return ()=>{};}})}")
     presence=page.locator('#connected-users')
     assert presence.inner_text()=='Connected Users: 1'
     presence.click();assert page.locator('#connected-users-pane').is_visible()
@@ -18,7 +18,7 @@ with sync_playwright() as p:
     # Provider seam accepts shared presence, deduplicates identities and
     # ignores stale callbacks after replacing a provider.
     page.evaluate("""async()=>{
-        const presence=await import('./presence.js?v=0.30.0');
+        const presence=await import('./presence.js?v=0.31.0');
         window.presenceModule=presence;
         presence.setPresenceProvider({subscribe:cb=>{window.oldPresence=cb;cb([{id:'a',name:'Synthetic One'},{id:'a',name:'Synthetic One'},{id:'b',name:'Synthetic Two',email:'two@example.test'}]);return ()=>window.presenceStopped=true;}});
     }""")
@@ -56,7 +56,8 @@ with sync_playwright() as p:
     toggle.click();page.locator('.abbey-mark').click();assert not menu.is_visible()
     # Larger artwork stays inside the same desktop grid cell.
     assert page.locator('#bhr-icon').bounding_box()['width']==88
-    assert page.locator('#bhr-icon img').bounding_box()['width']==56
+    assert page.locator('#bhr-icon img').bounding_box()['width']==68
+    assert page.locator('#bhr-icon img').bounding_box()['height']<page.locator('#bhr-icon').bounding_box()['height']
     assert page.locator('#calendar-maker-icon img').bounding_box()['width']==44
     toggle.click();assert menu.get_by_role('menuitem').last.inner_text()=='About…'
     menu.get_by_role('menuitem').first.focus();page.keyboard.press('End');assert page.locator('#about-open').evaluate('e=>e===document.activeElement');page.keyboard.press('Enter')

@@ -1,16 +1,16 @@
-import {drawVitalTrend} from './vital-trends-chart.js?v=0.30.0';
-import {organizationBranding} from './organization.js?v=0.30.0';
+import {drawVitalTrend} from './vital-trends-chart.js?v=0.31.0';
+import {organizationBranding} from './organization.js?v=0.31.0';
 // Print documents live only in an ephemeral same-origin frame, never in storage.
-import {readPersonPhoto} from './drive.js?v=0.30.0';
-import {cleanNoteHtml} from './documents-model.js?v=0.30.0';
-import {personName} from './model.js?v=0.30.0';
+import {readPersonPhoto} from './drive.js?v=0.31.0';
+import {cleanNoteHtml} from './documents-model.js?v=0.31.0';
+import {personName} from './model.js?v=0.31.0';
 let frame=null,generation=0,photoUrl=null;
 export function clearPrint(){generation++;frame?.remove();frame=null;if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=null;}
 export const fullPersonName=person=>[person.firstName,person.middleName,person.lastName].filter(Boolean).join(' ')||personName(person);
 export function personBirthDate(person){const b=person.birthDate;return b&&Object.values(b).some(Boolean)?`${b.month||'—'} / ${b.day||'—'} / ${b.year||'—'}`:'Not recorded';}
 export const allergiesText=person=>person.noKnownAllergies?'No known allergies':person.allergies?.trim()||'Not recorded';
 const el=(doc,tag,text)=>{const node=doc.createElement(tag);if(text!==undefined)node.textContent=text;return node;};
-export async function printDocument({title,person,sections,retrievedAt,subtitle='',layout='standard'}){
+export async function printDocument({title,person,sections,retrievedAt,subtitle='',layout='standard',onLayout}){
  clearPrint();const stamp=generation,branding=await organizationBranding();if(stamp!==generation)throw new Error('Printing cancelled.');frame=document.createElement('iframe');const target=frame;target.id='bhr-print-frame';target.title='Print document';target.setAttribute('aria-hidden','true');target.style.cssText='position:fixed;width:720px;height:960px;left:-10000px;border:0';document.body.append(target);
  const doc=target.contentDocument;doc.open();doc.write('<!doctype html><html><head><meta charset="utf-8"><title>Infirmary document</title></head><body></body></html>');doc.close();
  const style=el(doc,'style');style.textContent=`
@@ -32,6 +32,7 @@ export async function printDocument({title,person,sections,retrievedAt,subtitle=
  thead{display:table-header-group}th,td{text-align:left;vertical-align:top;border:0.6pt solid #888;padding:4pt;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal}
  th{background:#eee}tr{break-inside:avoid}.stamp{font-size:7.5pt;color:#444;margin-top:8pt}
  `;doc.head.append(style);
+ if(layout==='rundown'){const compact=el(doc,'style');compact.textContent='body{font-size:9pt;line-height:1.15}header{gap:7pt;padding-bottom:4pt;margin-bottom:6pt}header img{width:27pt;height:27pt}header h1{font-size:11pt;margin:0}header p{font-size:9pt;margin:2pt 0}h2{font-size:9.5pt;margin:7pt 0 2pt}section{margin-bottom:5pt}p{margin:2pt 0}.clinical-print-text ul,.clinical-print-text ol{margin:2pt 0;padding-left:16pt}.clinical-print-text li{margin:1pt 0}.clinical-print-text [style]{print-color-adjust:exact;-webkit-print-color-adjust:exact}.stamp{font-size:7pt}';doc.head.append(compact);}
  const header=el(doc,'header'),logo=el(doc,'img');logo.src=branding.logo;logo.alt=branding.name+' logo';const heading=el(doc,'div');heading.append(el(doc,'h1',branding.name),el(doc,'p',title));header.append(logo,heading);doc.body.append(header);
  let identity;
  if(person){
@@ -50,7 +51,7 @@ export async function printDocument({title,person,sections,retrievedAt,subtitle=
    table.append(columns);
    if(person&&section.repeatIdentity!==false){const patientRow=el(doc,'tr'),patientCell=el(doc,'th',fullPersonName(person)+' · DOB: '+personBirthDate(person));patientCell.colSpan=section.columns.length;patientRow.append(patientCell);head.append(patientRow);}
    head.append(row);table.append(head);const body=el(doc,'tbody');for(const values of section.rows){const tr=el(doc,'tr');for(const [index,value] of values.entries()){const cell=el(doc,'td',String(value??''));if(section.monospaceColumns?.includes(index))cell.style.fontFamily='Courier New, Courier, monospace';tr.append(cell);}body.append(tr);}table.append(body);wrap.append(table);
-  }else if(section.html!==undefined){const rich=el(doc,'div');rich.className='clinical-print-text';rich.innerHTML=cleanNoteHtml(section.html);wrap.append(rich);}
+  }else if(section.html!==undefined){const rich=el(doc,'div');rich.className='clinical-print-text';rich.innerHTML=cleanNoteHtml(section.html,{highlight:layout==='rundown'});wrap.append(rich);}
   else if(section.fields){const fields=el(doc,'dl');fields.className='fields';for(const [label,value] of section.fields)fields.append(el(doc,'dt',label+':'),el(doc,'dd',value||'Not recorded'));wrap.append(fields);}
   else for(const line of section.lines||[])wrap.append(el(doc,'p',line));bodySections.append(wrap);
  }
@@ -59,5 +60,5 @@ export async function printDocument({title,person,sections,retrievedAt,subtitle=
   try{const blob=await readPersonPhoto(person.photo.fileId);if(stamp!==generation)return;photoUrl=URL.createObjectURL(blob);const image=el(doc,'img');image.className='profile-photo';image.alt='Profile photo';image.src=photoUrl;await image.decode();if(stamp===generation)identity.append(image);}catch{/* An unavailable optional photo must not prevent printing. */}
  })();
  doc.body.append(el(doc,'p','Printed: '+new Date().toLocaleString()+(retrievedAt?' · Last retrieved: '+new Date(retrievedAt).toLocaleString():'')));doc.body.lastChild.className='stamp';
- try{await Promise.all([logo.decode(),photoReady]);if(stamp!==generation||!target.isConnected)throw new Error('Printing cancelled.');await doc.fonts.ready;if(stamp!==generation)throw new Error('Printing cancelled.');target.contentWindow.addEventListener('afterprint',()=>{if(frame===target)clearPrint();},{once:true});target.contentWindow.focus();target.contentWindow.print();}catch(error){if(frame===target)clearPrint();throw error;}
+ try{await Promise.all([logo.decode(),photoReady]);if(stamp!==generation||!target.isConnected)throw new Error('Printing cancelled.');await doc.fonts.ready;if(stamp!==generation)throw new Error('Printing cancelled.');target.contentWindow.addEventListener('afterprint',()=>{if(frame===target)clearPrint();},{once:true});if(onLayout)onLayout({estimatedPages:Math.max(1,Math.ceil(doc.body.scrollHeight/958))});target.contentWindow.focus();target.contentWindow.print();}catch(error){if(frame===target)clearPrint();throw error;}
 }
