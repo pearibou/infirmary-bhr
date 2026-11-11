@@ -27,6 +27,8 @@ with sync_playwright() as p:
     assert page.get_by_label('New note',exact=True).input_value()=='Synthetic unsent draft'
     power.click();page.keyboard.press('Escape');assert not dialog.is_visible()
     # Failed final sync retains the authenticated session and permits retry.
+    # UI/logout fixture; real Drive presence is covered by shared_presence_browser.py.
+    page.evaluate("async()=>{const presence=await import('./presence.js?v=0.29.0');presence.setPresenceProvider({subscribe:cb=>{cb([{id:'synthetic-staff',name:'Synthetic Staff'}]);return ()=>{};}})}")
     assert page.locator('#connected-users').inner_text()=='Connected Users: 1'
     page.locator('#connected-users').click()
     assert page.locator('#connected-users-list').inner_text()=='Synthetic Staff'
