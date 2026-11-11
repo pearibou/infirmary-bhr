@@ -1,5 +1,5 @@
-import {presenceFilesRequest as request,uploadPresenceIdentity,getWorkspaceFolder,getDriveSessionEpoch} from './drive.js?v=0.29.0';
-import {validatePresenceIdentity,PRESENCE_TTL} from './presence-model.js?v=0.29.0';
+import {presenceFilesRequest as request,uploadPresenceIdentity,getWorkspaceFolder,getDriveSessionEpoch} from './drive.js?v=0.30.0';
+import {validatePresenceIdentity,PRESENCE_TTL} from './presence-model.js?v=0.30.0';
 const folderType='application/vnd.google-apps.folder',json=value=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)});
 const safe=value=>{if(typeof value!=='string'||!/^[\w-]+$/.test(value))throw new Error('Invalid presence file ID.');return value;};
 async function list(q){const files=[];let pageToken;do{const response=await request('files?'+new URLSearchParams({q,fields:'files(id,name,mimeType,parents,appProperties,modifiedTime),nextPageToken',pageSize:'100',...(pageToken?{pageToken}:{})}));if(!Array.isArray(response.files))throw new Error('Invalid shared presence listing.');files.push(...response.files);pageToken=response.nextPageToken;}while(pageToken);return files;}

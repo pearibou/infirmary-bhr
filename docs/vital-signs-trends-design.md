@@ -1,6 +1,6 @@
 # Vital-sign trends — future idea
 
-Status: discussion only, saved 2026-11-10. No chart functionality is implemented by this document.
+Status: implemented in 0.30.0 (2026-11-10). The discussion below records the original scope.
 
 ## Intended first version
 
@@ -20,4 +20,4 @@ Show measurement dates/times horizontally and the selected value/unit vertically
 
 Use JavaScript and the browser's built-in SVG capabilities for axes, labels, points and connecting lines. No Python runtime, charting library or additional installed program is necessary. SVG remains sharp when resized or printed; a print option can be considered separately.
 
-This is a proposed read-only view of the existing Vital Signs data, not an authorization to implement it yet.
+Implemented as a read-only view: Plot trends sits at the far right of the Vital Signs controls. All listed measurement choices and browser printing are available. Date boundaries use local calendar days, including DST transitions. Closed/cleared graphs leave no persistent chart files or schema changes.

@@ -295,3 +295,11 @@ Open **Immunizations** from a person’s chart (syringe button) or the desktop s
 **Master list** shows each person’s latest administered dose per vaccine name, with search and **Show deceased persons** off by default. Use consistent vaccine names to group doses correctly; unknown-date records appear after dated doses in individual history. People without records are explicitly shown. Individual and filtered master views support browser printing; large histories/lists may span pages.
 
 The private **Immunizations (BHR)** Google spreadsheet is created in **Infirmary-BHR** only on first save. Each person’s tab uses surname/first initial with stable person/row markers. Do not change headings, Entry IDs or row markers. Reads/master views do not create files. Sheets retain attribution/revisions and stale-edit checks; full dose details remain in session memory, not browser directory/PWA caches or the code repository. Logout clears views/drafts.
+
+## Vital-sign trends
+
+Use **Plot trends** at the far right of the Vital Signs controls after selecting a person. Choose pulse, blood pressure (systolic/diastolic), weight, temperature, oxygen saturation, respirations or height. Date filters include both selected local calendar dates; All entries, Past month and Past three months are shortcuts. Select a point for its measurement time, displayed value and original recorded value/unit. Oxygen points retain their delivery method in point details.
+
+Missing measurements are omitted, never treated as zero. One point can be displayed without a connecting line; an empty range explains why no graph can be printed. Lines connect recorded values and do not establish measurements between them. Graph axes scale to the selected values; the view offers no clinical interpretation.
+
+**Print…** opens browser printing with the organization header and patient identity; Save as PDF is available through the browser. The graph uses the observations already loaded in the Vital Signs reader, converted for display only. No graph files, spreadsheet changes or browser-storage copies are created. Closing the graph or logging out/disconnecting clears its session data; minimizing retains it until restored or the session ends. Refresh Vital Signs before opening a graph when newer records are needed.

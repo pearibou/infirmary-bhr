@@ -1,8 +1,9 @@
-import {organizationBranding} from './organization.js?v=0.29.0';
+import {drawVitalTrend} from './vital-trends-chart.js?v=0.30.0';
+import {organizationBranding} from './organization.js?v=0.30.0';
 // Print documents live only in an ephemeral same-origin frame, never in storage.
-import {readPersonPhoto} from './drive.js?v=0.29.0';
-import {cleanNoteHtml} from './documents-model.js?v=0.29.0';
-import {personName} from './model.js?v=0.29.0';
+import {readPersonPhoto} from './drive.js?v=0.30.0';
+import {cleanNoteHtml} from './documents-model.js?v=0.30.0';
+import {personName} from './model.js?v=0.30.0';
 let frame=null,generation=0,photoUrl=null;
 export function clearPrint(){generation++;frame?.remove();frame=null;if(photoUrl)URL.revokeObjectURL(photoUrl);photoUrl=null;}
 export const fullPersonName=person=>[person.firstName,person.middleName,person.lastName].filter(Boolean).join(' ')||personName(person);
@@ -42,7 +43,8 @@ export async function printDocument({title,person,sections,retrievedAt,subtitle=
  const bodySections=el(doc,'div');bodySections.className='sections'+(layout==='demographics'?' demographics':'');doc.body.append(bodySections);
  for(const section of sections){
   const wrap=el(doc,'section');if(section.fullWidth)wrap.className='full-width';if(section.title)wrap.append(el(doc,'h2',section.title));
-  if(section.columns){
+  if(section.chart){wrap.append(drawVitalTrend(doc,section.chart));}
+  else if(section.columns){
    const table=el(doc,'table'),columns=el(doc,'colgroup'),head=el(doc,'thead'),row=el(doc,'tr');
    for(const [i,column] of section.columns.entries()){const col=el(doc,'col');col.style.width=(section.widths?.[i]||100/section.columns.length)+'%';columns.append(col);const th=el(doc,'th',column);th.scope='col';row.append(th);}
    table.append(columns);

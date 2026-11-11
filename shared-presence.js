@@ -1,6 +1,6 @@
-import {drivePresenceTransport} from './presence-api.js?v=0.29.0';
-import {getCurrentUser} from './drive.js?v=0.29.0';
-import {recentPresenceUsers,PRESENCE_MIN_INTERVAL,PRESENCE_FALLBACK_INTERVAL,PRESENCE_TTL} from './presence-model.js?v=0.29.0';
+import {drivePresenceTransport} from './presence-api.js?v=0.30.0';
+import {getCurrentUser} from './drive.js?v=0.30.0';
+import {recentPresenceUsers,PRESENCE_MIN_INTERVAL,PRESENCE_FALLBACK_INTERVAL,PRESENCE_TTL} from './presence-model.js?v=0.30.0';
 export function createSharedPresence({transport=drivePresenceTransport,user=getCurrentUser,now=Date.now,interval=setInterval,clear=clearInterval}={}){
  let current=null;
  function publish(state,status=state.status||{}){if(current!==state||state.stopped)return;if(state.checkedAt&&now()-state.checkedAt>=PRESENCE_TTL)status={error:true,scope:'Shared presence is stale — checking again.'};state.status=status;state.emit(recentPresenceUsers(state.records,now()),status);}
