@@ -1,4 +1,4 @@
-import {trendNumber} from './vital-trends-model.js?v=0.31.0';
+import {trendNumber} from './vital-trends-model.js?v=0.31.1';
 export function drawVitalTrend(doc,plot){
  const ns='http://www.w3.org/2000/svg',make=(tag,attrs={},text)=>{const node=doc.createElementNS(ns,tag);for(const [key,value] of Object.entries(attrs))node.setAttribute(key,String(value));if(text!==undefined)node.textContent=text;return node;},svg=make('svg',{viewBox:'0 0 700 360',role:'img','aria-label':plot.label+' trend graph',class:'vital-trend-chart'});svg.style.cssText='display:block;width:100%;height:auto;background:white';svg.append(make('title',{},plot.label+' ('+plot.unit+') over measurement dates'));
  if(!plot.count){svg.append(make('text',{x:350,y:180,'text-anchor':'middle',fill:'#444','font-size':14},'No measurements in this date range.'));return svg;}

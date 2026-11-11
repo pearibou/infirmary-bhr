@@ -1,5 +1,12 @@
 # Version history
 
+## 0.31.1 — 2026-11-10
+
+- Move the optional Sex field below birth date on the primary person form while preserving its existing stored field.
+- Add optional Social Security Number under Additional information and demographics printing only; omit it from the main chart.
+- Show the compact age/sex line (for example, 71 y.o. Male.), retaining age-at-death meaning for deceased residents.
+
+
 ## 0.31.0 — 2026-11-10
 
 - Add Community Rundown: resident/general sections, rich formatting/highlighting, archive/view/edit, independent copies, full readable dates and compact internal-document printing.

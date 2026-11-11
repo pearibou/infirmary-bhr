@@ -14,3 +14,5 @@ test('demographics reject malformed contacts and policies without silently dropp
 test('default directory order is living people by surname, independent of storage order',()=>{
  const people=[person('z','Zulu'),person('dead','Aardvark',true),person('a','Alpha')];assert.equal([...people].sort(compareDirectoryPeople)[0].id,'a');assert.equal(people[0].id,'z');
 });
+
+test('compact age/sex line preserves custom values, unknown ages and age-at-death meaning',async()=>{const {personAgeLine}=await import('../model.js');const p={birthDate:{year:'1955',month:'1',day:'1'},demographics:{sex:'Male'}};assert.equal(personAgeLine(p,new Date(2026,10,10)),'71 y.o. Male.');assert.equal(personAgeLine({...p,demographics:{}},new Date(2026,10,10)),'71 y.o.');assert.equal(personAgeLine({...p,demographics:{sex:'Custom entry.'}},new Date(2026,10,10)),'71 y.o. Custom entry.');assert.equal(personAgeLine({...p,deceased:true,deathDate:{year:'2026',month:'1',day:'1'}}),'Age at death: 71 y.o. Male.');assert.ok(personAgeLine({demographics:{sex:'Female'}}).includes('Female.'));assert.doesNotThrow(()=>validateDemographics({sex:'Male',ssn:'000-00-0000'}));});

@@ -1,8 +1,8 @@
-import {TREND_TYPES,trendPreset,buildVitalTrend} from './vital-trends-model.js?v=0.31.0';
-import {drawVitalTrend} from './vital-trends-chart.js?v=0.31.0';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.31.0';
-import {printDocument,clearPrint} from './printing.js?v=0.31.0';
-import {smallIcon} from './icons-ui.js?v=0.31.0';
+import {TREND_TYPES,trendPreset,buildVitalTrend} from './vital-trends-model.js?v=0.31.1';
+import {drawVitalTrend} from './vital-trends-chart.js?v=0.31.1';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.31.1';
+import {printDocument,clearPrint} from './printing.js?v=0.31.1';
+import {smallIcon} from './icons-ui.js?v=0.31.1';
 const $=s=>document.querySelector(s);let state=null,plot=null,printing=false,epoch=0,minimizeCloses=0;
 function reset(){epoch++;state=null;plot=null;printing=false;clearPrint();$('#vital-trends-graph').replaceChildren();$('#vital-trends-point').textContent='';$('#vital-trends-status').textContent='';$('#vital-trends-title').textContent='Vital-sign trends';$('#vital-trends-form').reset();$('#vital-trends-units').replaceChildren();$('#vital-trends-print').disabled=true;for(const input of $('#vital-trends-form').elements)input.disabled=false;}
 function units(){const config=TREND_TYPES[$('#vital-trends-type').value],select=$('#vital-trends-units');select.replaceChildren();for(const unit of config.units||[config.unit]){const option=document.createElement('option');option.value=unit;option.textContent=['F','C'].includes(unit)?'°'+unit:unit;select.append(option);}$('#vital-trends-unit-label').hidden=!config.units;}
