@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Include calculated age and recorded sex directly below DOB in all individual record print headers, including repeated table headers. Preserve age-at-death ranges and unavailable-date wording.
+
 - Calculate age at partial death or immunization dates using the earliest and latest possible calendar dates. Show a single age when certain, otherwise an age range. A complete birthday and comparison year remain required; original dates stay unchanged.
 
 - Add a small parenthetical age at the administered dose date beside each resident name in the Immunizations Master List and its printout. Incomplete dates show “Age: —”; no observations are changed.
