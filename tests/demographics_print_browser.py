@@ -43,6 +43,9 @@ with sync_playwright() as p:
     page.get_by_role('button',name='Demographics',exact=True).click();assert 'Synthetic private address' in page.locator('#demographics-content').inner_text();assert '000-00-0000' in page.locator('#demographics-content').inner_text()
     pending=[];page.route('**/icons/icon-512.png',lambda route:pending.append(route));page.locator('#demographics-print').click()
     page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Synthetic private address')")
+    identity=page.frame_locator('#bhr-print-frame').locator('.identity p').all_text_contents()
+    dob_index=next(i for i,text in enumerate(identity) if text.startswith('Date of birth:'))
+    assert identity[dob_index+1]=='71 y.o. Custom entry'
     page.evaluate("()=>{window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>{window.printCalls++};}")
     page.wait_for_timeout(100);assert pending;pending.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes())
     page.wait_for_function('window.printCalls===1');frame=page.frame_locator('#bhr-print-frame');assert frame.locator('h1').inner_text()=='Brother Health Records';assert 'Synthetic policy number' in frame.locator('body').inner_text()

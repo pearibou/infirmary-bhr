@@ -185,10 +185,10 @@ with sync_playwright() as p:
     assert f'AGE: {expected_age}' in page.locator('#immunizations-identity').inner_text()
     individual_print_routes=[];page.route('**/icons/icon-512.png',lambda route:individual_print_routes.append(route))
     page.locator('#immunizations-print').click()
-    page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Age: ')")
+    page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes(' y.o.')")
     identity=page.frame_locator('#bhr-print-frame').locator('.identity p').all_text_contents()
     dob_index=identity.index('Date of birth: 6 / 15 / 1955')
-    assert identity[dob_index+1]==f'Age: {expected_age}'
+    assert identity[dob_index+1]==f'{expected_age} y.o.'
     page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.print=()=>{}")
     page.wait_for_timeout(100);individual_print_routes.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes())
     page.wait_for_function("!document.querySelector('#immunizations-print').disabled")
