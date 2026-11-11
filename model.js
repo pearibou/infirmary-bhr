@@ -1,8 +1,8 @@
-import {validateOrganization,mergeOrganization} from './organization-model.js?v=0.31.0';
-import {validateAlertEvents,mergeAlertEvents} from './refill-alerts-model.js?v=0.31.0';
-import {validateStickyDrawing} from './sticky-drawing.js?v=0.31.0';
-import {validateDemographics} from './demographics-model.js?v=0.31.0';
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.31.0';
+import {validateOrganization,mergeOrganization} from './organization-model.js?v=0.31.1';
+import {validateAlertEvents,mergeAlertEvents} from './refill-alerts-model.js?v=0.31.1';
+import {validateStickyDrawing} from './sticky-drawing.js?v=0.31.1';
+import {validateDemographics} from './demographics-model.js?v=0.31.1';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.31.1';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
@@ -172,6 +172,12 @@ export function personAge(person,today=new Date()){
   if(!person.deceased)return calculateAge(person.birthDate,today);
   const {year,month,day}=deathDateParts(person.deathDate);if(!year||!month||!day)return null;
   const date=new Date(0);date.setFullYear(Number(year),Number(month)-1,Number(day));date.setHours(0,0,0,0);return calculateAge(person.birthDate,date);
+}
+
+export function personAgeLine(person,today=new Date()){
+ const age=personAge(person,today),sex=person.demographics?.sex?.trim()||'';
+ const ageText=age===null?(person.deceased?'Age at death unavailable (complete dates needed).':'Age unavailable (complete dates needed).'):(person.deceased?'Age at death: ':'')+age+' y.o.';
+ return ageText+(sex?' '+sex+(/[.!?]$/.test(sex)?'':'.'):'');
 }
 
 export function deleteDirectoryEntry(directory,target,user=null){

@@ -34,7 +34,7 @@ with sync_playwright() as p:
     prepare_test_page(page)
     page.goto('http://127.0.0.1:8000')
     unlock_test_drive(page,profile=True)
-    assert 'years' in page.locator('.age').inner_text()
+    assert 'y.o.' in page.locator('.age').inner_text()
     window=page.locator('.window')
     original=window.bounding_box()
     title=page.locator('.titlebar')

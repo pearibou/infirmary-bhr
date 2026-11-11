@@ -75,7 +75,7 @@ with sync_playwright() as p:
     page.locator('#rundown-save').click();page.wait_for_function("document.querySelector('#rundown-status').textContent.includes('changed in Drive')")
     assert page.locator('.rundown-text').first.inner_text()=='Synthetic conflict draft' and contents[original_id]==original
     # Sanitizer keeps controlled highlights but drops executable markup and arbitrary styles.
-    safe=page.evaluate("async()=>{const {cleanNoteHtml}=await import('./documents-model.js?v=0.31.0');return cleanNoteHtml('<script>bad()</script><span style=background-color:yellow onclick=bad()>Safe</span><img src=x onerror=bad()>',{highlight:true})}")
+    safe=page.evaluate("async()=>{const {cleanNoteHtml}=await import('./documents-model.js?v=0.31.1');return cleanNoteHtml('<script>bad()</script><span style=background-color:yellow onclick=bad()>Safe</span><img src=x onerror=bad()>',{highlight:true})}")
     assert 'onclick' not in safe and 'script' not in safe and 'img' not in safe and 'background-color' in safe
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     page.locator('#rundown-dialog .window-control').click();page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")

@@ -1,10 +1,10 @@
-import {listCommunityRundowns,readCommunityRundown,saveCommunityRundown,getCurrentUser,hasDriveAccess} from './drive.js?v=0.31.0';
-import {newRundown,validateRundown,rundownDate,rundownDateInput,rundownDateLabel} from './rundown-model.js?v=0.31.0';
-import {cleanNoteHtml} from './documents-model.js?v=0.31.0';
-import {personName,compareDirectoryPeople} from './model.js?v=0.31.0';
-import {showWindow,updateWindowTitle} from './windows.js?v=0.31.0';
-import {printDocument,clearPrint} from './printing.js?v=0.31.0';
-import {smallIcon} from './icons-ui.js?v=0.31.0';
+import {listCommunityRundowns,readCommunityRundown,saveCommunityRundown,getCurrentUser,hasDriveAccess} from './drive.js?v=0.31.1';
+import {newRundown,validateRundown,rundownDate,rundownDateInput,rundownDateLabel} from './rundown-model.js?v=0.31.1';
+import {cleanNoteHtml} from './documents-model.js?v=0.31.1';
+import {personName,compareDirectoryPeople} from './model.js?v=0.31.1';
+import {showWindow,updateWindowTitle} from './windows.js?v=0.31.1';
+import {printDocument,clearPrint} from './printing.js?v=0.31.1';
+import {smallIcon} from './icons-ui.js?v=0.31.1';
 const $=s=>document.querySelector(s),node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;},clean=html=>cleanNoteHtml(html,{highlight:true});
 let hooks,active=false,epoch=0,busy=false,dirty=false,editing=false,editor=null,files=[],pending=null,focused=null;
 function status(text){$('#rundown-status').textContent=text;}

@@ -44,7 +44,7 @@ with sync_playwright() as p:
     fill_death_date(dialog,'2020-01-01')
     dialog.get_by_label('Preferred name',exact=True).fill('Brother Alpha')
     page.locator('#person-submit').click()
-    assert page.locator('.age').inner_text()=='Age at death: 80 years'
+    assert page.locator('.age').inner_text()=='Age at death: 80 y.o.'
     assert '2020-01-01' in page.locator('.death-status').inner_text()
     assert page.locator('.note').count()==1
     assert page.get_by_role('link',name='Person documents').is_visible()
