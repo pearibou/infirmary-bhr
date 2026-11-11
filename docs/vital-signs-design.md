@@ -8,7 +8,7 @@ Implemented in **0.19.0**. All actual measurements are protected runtime informa
 - The patient's navigation row also has **Vital Signs**, with a small stethoscope icon, and opens the same window with that person selected.
 - Observations appear newest first by measurement time, with entry time/ID as a deterministic tie-breaker.
 - Any currently connected user with the workbook's Drive/Sheets permissions can add, edit or delete observations, consistent with medication/history maintenance. Original author and entry time are retained; edits identify their editor/time. Future staff roles still require backend authorization.
-- A standalone Medications desktop app was subsequently added in 0.22.0. No clinical severity alerts, trend charts or vital-sign print view are included in this release.
+- A standalone Medications desktop app was subsequently added in 0.22.0. Read-only printable trend charts were subsequently added in 0.30.0; see [trends](vital-signs-trends-design.md). No clinical severity alerts or tabular vital-sign print view are included.
 
 ## Observation fields
 

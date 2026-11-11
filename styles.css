@@ -255,3 +255,7 @@
 #immunizations-person-label[hidden],#immunizations-master-controls[hidden],#immunizations-add[hidden]{display:none}
 
 .refill-alert-person{margin-bottom:2px}.refill-alert-identity{font-size:11px;font-weight:normal;line-height:1.35;margin:0 0 8px;color:#555}
+
+#vitals-trends{margin-left:auto}#vital-trends-dialog{width:min(850px,calc(100vw - 24px));max-height:90dvh;overflow:auto}.vital-trend-controls{display:flex;align-items:end;flex-wrap:wrap;gap:8px 12px}.vital-trend-controls label{min-width:120px;flex:1;font-size:12px}.vital-trend-controls input,.vital-trend-controls select{font-size:13px;min-height:36px;padding:6px}#vital-trends-unit-label[hidden]{display:none}#vital-trends-graph{border:1px solid #999;background:white;margin-top:12px;overflow:hidden}#vital-trends-point{min-height:18px;overflow-wrap:anywhere}.vital-trend-chart circle{cursor:pointer}.vital-trend-chart circle:focus{stroke:#111;stroke-width:3;outline:none}#vital-trends-print{display:inline-flex;align-items:center;gap:5px}@media(max-width:500px){.vital-trend-controls label{flex:1 1 40%}#vital-trends-status{line-height:1.4}}
+
+@media(max-width:500px){#vital-trends-graph{overflow-x:auto}#vital-trends-graph svg{min-width:600px}}

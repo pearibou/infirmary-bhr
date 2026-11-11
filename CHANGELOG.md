@@ -1,5 +1,11 @@
 # Version history
 
+## 0.30.0 — 2026-11-10
+
+- Add Plot trends at the far right of Vital Signs controls, with on-demand SVG graphs, measurement/date-range selection, point details and display-only unit conversion.
+- Print temporary graphs using the existing letterhead and browser print dialog; close/logout discards graph state. No vital-sign records or spreadsheet schemas are rewritten.
+
+
 ## 0.29.0 — 2026-11-10
 
 - Implement shared Connected Users across Google accounts/browsers using private System/Presence session files, with per-account deduplication.

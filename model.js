@@ -1,8 +1,8 @@
-import {validateOrganization,mergeOrganization} from './organization-model.js?v=0.29.0';
-import {validateAlertEvents,mergeAlertEvents} from './refill-alerts-model.js?v=0.29.0';
-import {validateStickyDrawing} from './sticky-drawing.js?v=0.29.0';
-import {validateDemographics} from './demographics-model.js?v=0.29.0';
-import {mergeEventLogs,validateEventLog} from './events.js?v=0.29.0';
+import {validateOrganization,mergeOrganization} from './organization-model.js?v=0.30.0';
+import {validateAlertEvents,mergeAlertEvents} from './refill-alerts-model.js?v=0.30.0';
+import {validateStickyDrawing} from './sticky-drawing.js?v=0.30.0';
+import {validateDemographics} from './demographics-model.js?v=0.30.0';
+import {mergeEventLogs,validateEventLog} from './events.js?v=0.30.0';
 export const emptyDirectory = () => ({version:1,people:[]});
 export function validateDirectory(data) {
   if (!data || data.version !== 1 || !Array.isArray(data.people)) throw new Error('Unsupported directory format (expected version 1).');
