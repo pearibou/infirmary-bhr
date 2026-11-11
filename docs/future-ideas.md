@@ -14,7 +14,6 @@ Discussion inventory, updated 2026-11-10. These items are not implemented or app
 
 ## Earlier, longer-term discussions
 
-- **Shared presence:** show genuinely connected staff across browsers/devices. Current Connected Users reflects this browser; a provider seam exists, but shared presence has not been implemented.
 - **Central access backend:** server-enforced permissions and independent staff sessions with a separately managed central Drive connection. Current individual Google logins and persistent display names are already implemented; see [authentication/storage transition](authentication-and-storage-transition.md).
 - **Portable offline edition/local storage:** one application with an intentional storage choice; a self-contained executable could embed SQLite and keep attachments in a local folder. Local accounts, backups and any LAN access would need deliberate design. No offline executable or SQLite storage adapter exists yet.
 - **Drawing in clinical note editors:** sticky drawing exists; extending it to clinical notes remains discussion only. See [note drawing](note-drawing-design.md).
@@ -22,7 +21,7 @@ Discussion inventory, updated 2026-11-10. These items are not implemented or app
 
 ## Already implemented, not pending
 
-Individual Google sign-in, persistent staff display names, organization branding settings, medications/refill tracking and shared in-app refill alerts, medical history with local ICD-10-CM search, immunizations/master view, vital signs/GCS, weekly appointments, clinical-note viewing/editing, sticky drawing/editing and Event Log.
+Shared Drive presence across browsers (0.29.0), individual Google sign-in, persistent staff display names, organization branding settings, medications/refill tracking and shared in-app refill alerts, medical history with local ICD-10-CM search, immunizations/master view, vital signs/GCS, weekly appointments, clinical-note viewing/editing, sticky drawing/editing and Event Log.
 
 ## Outside the current scope
 

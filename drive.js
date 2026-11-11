@@ -1,7 +1,7 @@
-import {validateCalendar,calendarContent} from './calendar-model.js?v=0.28.0';
-import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.28.0';
-import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.28.0';
-import {validateDirectory,mergeDirectories} from './model.js?v=0.28.0';
+import {validateCalendar,calendarContent} from './calendar-model.js?v=0.29.0';
+import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.29.0';
+import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.29.0';
+import {validateDirectory,mergeDirectories} from './model.js?v=0.29.0';
 let token,expires=0,loading,authorizedClient,currentUser,workspaceFolder,workspaceName,legacyRootId,storageEpoch=0;
 const activeRequests=new Set();
 export function disconnect(){staffProfileReady=false;staffProfileFolder=undefined;storageEpoch++;workspaceFolder=undefined;workspaceName=undefined;legacyRootId=undefined;for(const controller of activeRequests)controller.abort(new DOMException('Google Drive connection closed.','AbortError'));activeRequests.clear();token=undefined;expires=0;authorizedClient=undefined;currentUser=undefined;}
@@ -378,4 +378,12 @@ export async function saveStaffProfile(displayName){
  }
  if(epoch!==storageEpoch||subject!==getCurrentUser()?.id||folder!==workspaceFolder)throw new Error('Google connection changed.');await profileFile();
  if(epoch!==storageEpoch||subject!==getCurrentUser()?.id||folder!==workspaceFolder)throw new Error('Google connection changed.');return applyStaffProfile(value);
+}
+
+// Private presence transport shares the existing authenticated, no-store session.
+export async function presenceFilesRequest(path,options={}){requireFilesAccess();const epoch=storageEpoch;const response=await api(path,options);if(epoch!==storageEpoch)throw new Error('Presence connection changed.');return response.status===204?null:response.json();}
+export async function uploadPresenceIdentity(fileId,metadata,identity){
+ requireFilesAccess();const epoch=storageEpoch,boundary='bhr_presence_'+crypto.randomUUID(),body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(identity)}\r\n--${boundary}--`;
+ const response=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files${fileId?'/'+safeDriveId(fileId):''}?uploadType=multipart&fields=id,appProperties,parents`,{method:fileId?'PATCH':'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`},body});
+ if(epoch!==storageEpoch)throw new Error('Presence connection changed.');if(!response.ok){if(response.status===401)disconnect();const error=new Error('Shared presence update failed ('+response.status+').');error.status=response.status;throw error;}return response.json();
 }

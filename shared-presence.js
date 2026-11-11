@@ -1,0 +1,12 @@
+import {drivePresenceTransport} from './presence-api.js?v=0.29.0';
+import {getCurrentUser} from './drive.js?v=0.29.0';
+import {recentPresenceUsers,PRESENCE_MIN_INTERVAL,PRESENCE_FALLBACK_INTERVAL,PRESENCE_TTL} from './presence-model.js?v=0.29.0';
+export function createSharedPresence({transport=drivePresenceTransport,user=getCurrentUser,now=Date.now,interval=setInterval,clear=clearInterval}={}){
+ let current=null;
+ function publish(state,status=state.status||{}){if(current!==state||state.stopped)return;if(state.checkedAt&&now()-state.checkedAt>=PRESENCE_TTL)status={error:true,scope:'Shared presence is stale — checking again.'};state.status=status;state.emit(recentPresenceUsers(state.records,now()),status);}
+ async function refresh(){const state=current;if(!state||state.stopped)return;if(state.task)return state.task;const time=now();if(state.lastAttempt!==null&&time>=state.lastAttempt&&time-state.lastAttempt<PRESENCE_MIN_INTERVAL)return;state.lastAttempt=time;
+  const task=(async()=>{try{const identity=user();if(!identity)throw new Error('Sign in to check shared presence.');await transport.touch(state,identity,time);if(current!==state||state.stopped){await transport.remove(state).catch(()=>{});return;}const records=await transport.read(state,now());if(current!==state||state.stopped)return;state.records=records;state.checkedAt=now();publish(state,{scope:'Shared Drive sessions · expires after 3 minutes without an update'});}catch{publish(state,{error:true,scope:'Shared presence unavailable — records still sync; retrying automatically.'});}})();const tracked=task.finally(()=>{if(state.task===tracked)state.task=null;});state.task=tracked;return tracked;
+ }
+ async function leave(){const state=current;if(!state)return;current=null;state.stopped=true;clear(state.timer);state.records=[];state.identities?.clear();const cleanup=async()=>{try{if(state.task)await state.task;await transport.remove(state);}catch{}};let timeout;try{await Promise.race([cleanup(),new Promise(resolve=>timeout=setTimeout(resolve,1500))]);}finally{clearTimeout(timeout);}}
+ return {subscribe(emit){const state={sessionId:crypto.randomUUID(),emit,records:[],lastAttempt:null,stopped:false};current=state;emit([],{loading:true,scope:'Checking shared Drive sessions…'});state.timer=interval(()=>{if(current!==state)return;const time=now();publish(state);if(state.lastAttempt===null||time<state.lastAttempt||time-state.lastAttempt>=PRESENCE_FALLBACK_INTERVAL)void refresh();},15000);void refresh();return ()=>{if(current===state)void leave();};},refresh,leave};
+}

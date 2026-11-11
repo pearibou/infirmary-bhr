@@ -1,5 +1,12 @@
 # Version history
 
+## 0.29.0 — 2026-11-10
+
+- Implement shared Connected Users across Google accounts/browsers using private System/Presence session files, with per-account deduplication.
+- Update alongside sync (30-second minimum), retain a lightweight minute fallback when sync is off/slower, and expire inactive sessions after three minutes.
+- Remove the departing session when possible, bound cleanup delay, recover lost-create responses, and show unavailable checks without blocking record sync or logout.
+
+
 ## 0.28.5 — 2026-11-09
 
 - Preserve sticky-note edit/create mode, text, drawing and tools while minimizing/restoring the editor; minimize no longer resets the draft.
