@@ -1,34 +1,35 @@
-import {createSharedPresence} from './shared-presence.js?v=0.30.0';
-import {initImmunizations,immunizationsSession,openImmunizations} from './immunizations.js?v=0.30.0';
-import {initOrganization,setOrganization,clearOrganization} from './organization.js?v=0.30.0';
-import {loadSyncInterval,validSyncInterval,syncDescription,SYNC_PREFERENCE_KEY} from './sync-preferences.js?v=0.30.0';
-import {initRefillAlerts,refillAlertsSession,refillAlertsDirectoryChanged,refreshRefillAlerts} from './refill-alerts.js?v=0.30.0';
-import {mergeAlertEvents,alertSettings} from './refill-alerts-model.js?v=0.30.0';
-import {initAccountMenu,updateAccountMenu} from './account-menu.js?v=0.30.0';
-import {calendarSymbol} from './calendar-symbols.js?v=0.30.0';
-import {clearDesktopSelection} from './desktop-selection.js?v=0.30.0';
-import {trashDesktopBatch} from './documents.js?v=0.30.0';
-import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.30.0';
-import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.30.0';
-import {changeFolderLink} from './model.js?v=0.30.0';
-import {openMainWindow,closeMainWindow,showWindow,updateWindowTitle} from './windows.js?v=0.30.0';
-import {initCalendar,calendarSession} from './calendar.js?v=0.30.0';
-import {initBackground} from './background.js?v=0.30.0';
-import {initHistory,historySession,openHistory} from './history.js?v=0.30.0';
-import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.30.0';
-import {printDocument} from './printing.js?v=0.30.0';
-import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.30.0';
-import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.30.0';
-import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.30.0';
-import {updateSessionPresence,setPresenceProvider} from './presence.js?v=0.30.0';
-import {closeAppMenu} from './app-menu.js?v=0.30.0';
-import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.30.0';
-import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.30.0';
-import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.30.0';
-import {validatePhoto} from './photos.js?v=0.30.0';
-import './windows.js?v=0.30.0';
-import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.30.0';
-import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.30.0';
+import {initRundown,rundownSession} from './rundown.js?v=0.31.0';
+import {createSharedPresence} from './shared-presence.js?v=0.31.0';
+import {initImmunizations,immunizationsSession,openImmunizations} from './immunizations.js?v=0.31.0';
+import {initOrganization,setOrganization,clearOrganization} from './organization.js?v=0.31.0';
+import {loadSyncInterval,validSyncInterval,syncDescription,SYNC_PREFERENCE_KEY} from './sync-preferences.js?v=0.31.0';
+import {initRefillAlerts,refillAlertsSession,refillAlertsDirectoryChanged,refreshRefillAlerts} from './refill-alerts.js?v=0.31.0';
+import {mergeAlertEvents,alertSettings} from './refill-alerts-model.js?v=0.31.0';
+import {initAccountMenu,updateAccountMenu} from './account-menu.js?v=0.31.0';
+import {calendarSymbol} from './calendar-symbols.js?v=0.31.0';
+import {clearDesktopSelection} from './desktop-selection.js?v=0.31.0';
+import {trashDesktopBatch} from './documents.js?v=0.31.0';
+import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} from './drive.js?v=0.31.0';
+import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.31.0';
+import {changeFolderLink} from './model.js?v=0.31.0';
+import {openMainWindow,closeMainWindow,showWindow,updateWindowTitle} from './windows.js?v=0.31.0';
+import {initCalendar,calendarSession} from './calendar.js?v=0.31.0';
+import {initBackground} from './background.js?v=0.31.0';
+import {initHistory,historySession,openHistory} from './history.js?v=0.31.0';
+import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.31.0';
+import {printDocument} from './printing.js?v=0.31.0';
+import {initDemographics,fillAdditional,readAdditional,openDemographics,clearDemographics} from './demographics.js?v=0.31.0';
+import {initMedications,medicationsSession,openMedications} from './medications.js?v=0.31.0';
+import {initDocuments,documentsSession,refreshFiles,chartDocuments} from './documents.js?v=0.31.0';
+import {updateSessionPresence,setPresenceProvider} from './presence.js?v=0.31.0';
+import {closeAppMenu} from './app-menu.js?v=0.31.0';
+import {recordChanges,createEvent,mergeEventLogs} from './events.js?v=0.31.0';
+import {initDesktopNotes,renderDesktopNotes,closeDesktopMenu,prepareStickyEditor,stickyDrawing,clearStickyState} from './sticky.js?v=0.31.0';
+import {makeTrashable,clearTrashSelection,finishEntryDrag} from './trash.js?v=0.31.0';
+import {validatePhoto} from './photos.js?v=0.31.0';
+import './windows.js?v=0.31.0';
+import {emptyDirectory,validateDirectory,personName,birthDateError,parseFolder,mergeDirectories,personAge,deathDateError,currentNoteText,currentNoteTime,canEditNote,editNote,deleteDirectoryEntry,compareDirectoryPeople,deathDateParts,formatDeathDate} from './model.js?v=0.31.0';
+import {prepareGoogle,authorize,syncDirectory,ensureWorkspaceFolder,getWorkspaceFolder,disconnect,preparePicker,pickFolder,hasDriveAccess,uploadPersonFile,ensureResidentFolder,getCurrentUser,loadCurrentUser,readPersonPhoto} from './drive.js?v=0.31.0';
 const $=s=>document.querySelector(s),KEY='infirmary.directory.v1',LOGOUT_KEY='infirmary.logout';
 const sharedPresence=createSharedPresence();setPresenceProvider(sharedPresence);
 let bulkTargets=[],bulkBusy=false;
@@ -142,12 +143,12 @@ $('#person-form').onsubmit=async event=>{
     let person=data.people.find(p=>p.id===id);
     if(editPersonId&&!person)throw new Error('This record was deleted while you were editing.');
     if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed while you were editing. Reopen it to review the latest details.');
-    let photo=person?.photo;const folder=person?.driveFolders?.[0]?.id||getWorkspaceFolder();
-    if(file){if(!hasDriveAccess())throw new Error('Connect Google Drive before saving a photo. Your form has been kept.');await validatePhoto(file);$('#person-error').textContent='Uploading photo directly to Drive…';const photoActor=getCurrentUser(),uploaded=await uploadPersonFile(folder,file);if(saveEpoch!==sessionEpoch)return;if(uploaded.id)appendActivity('photo.uploaded','file',uploaded.id,'Profile photo uploaded to Drive folder '+folder,id,photoActor);if(!uploaded.id)throw new Error('Google did not return a photo file ID.');photo={fileId:uploaded.id,folderId:folder};}
+    let photo=person?.photo,managedFolder;let folder;
+    if(file){if(!hasDriveAccess())throw new Error('Connect Google Drive before saving a photo. Your form has been kept.');await validatePhoto(file);managedFolder=await ensureResidentFolder({id,...fields,name:personName({...fields,name:''})});if(saveEpoch!==sessionEpoch)return;folder=managedFolder.id;$('#person-error').textContent='Uploading photo directly to Drive…';const photoActor=getCurrentUser(),uploaded=await uploadPersonFile(folder,file);if(saveEpoch!==sessionEpoch)return;if(uploaded.id)appendActivity('photo.uploaded','file',uploaded.id,'Profile photo uploaded to Drive folder '+folder,id,photoActor);if(!uploaded.id)throw new Error('Google did not return a photo file ID.');photo={fileId:uploaded.id,folderId:folder};}
     const next=structuredClone(data);person=next.people.find(p=>p.id===id);
     if(editPersonId&&!person)throw new Error('This record was deleted during the upload. The photo remains in Drive.');
     if(person&&recordFields(person)!==recordBaseline)throw new Error('This record changed during photo upload. The photo is in Drive; reopen the record before saving details.');
-    const updated={...(person||{id,notes:[],driveFolders:[]}),...fields,updatedAt:new Date().toISOString(),...(photo?{photo}:{})};updated.name=personName({...updated,name:''});
+    const updated={...(person||{id,notes:[],driveFolders:[]}),...fields,updatedAt:new Date().toISOString(),...(photo?{photo}:{})};updated.name=personName({...updated,name:''});if(managedFolder)Object.assign(updated,changeFolderLink(updated,{id:managedFolder.id,name:managedFolder.name},true));
     if(person)next.people[next.people.findIndex(p=>p.id===id)]=updated;else next.people.push(updated);
     if(save(next)){selected=id;$('#search').value='';render();$('#person-dialog').close();event.target.reset();clearPhotoPreview();$('#person-error').textContent='';}
   }catch(error){if(saveEpoch===sessionEpoch)$('#person-error').textContent=error.message;}
@@ -382,20 +383,20 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catc
 function openUpload(id){
   if(uploading){$('#upload-dialog').showModal();return;}
   const person=data.people.find(p=>p.id===id);
-  if(!person?.driveFolders?.length){toast('Attach a Google Drive folder to this person first.');return;}
+  if(!person){toast('This person was removed.');return;}
   if(!connected||!hasDriveAccess()){toast('Connect Google Drive before uploading a file.');if(!$('#drive-dialog').open)$('#drive-dialog').showModal();readyGoogle();return;}
   uploadPersonId=id;$('#upload-form').reset();$('#upload-status').textContent='';$('#upload-person-name').textContent='For '+personName(person);
   const select=$('#upload-folder');select.replaceChildren();
-  if(person.driveFolders.length>1){const placeholder=element('option','Choose this person’s destination folder…');placeholder.value='';select.append(placeholder);}
-  for(const folder of person.driveFolders){const option=element('option',folder.name||'Drive folder');option.value=folder.id;select.append(option);}
+  const defaultOption=element('option','Resident folder in Infirmary-BHR (default)');defaultOption.value='__resident_default__';select.append(defaultOption);
+  for(const folder of person.driveFolders||[]){const option=element('option',folder.name||'Drive folder');option.value=folder.id;select.append(option);}
   $('#upload-dialog').showModal();
 }
 $('#upload-form').onsubmit=async event=>{
   event.preventDefault();if(uploading)return;
-  const file=$('#upload-file').files[0],folder=$('#upload-folder').value;if(!file||!folder)return;
+  const file=$('#upload-file').files[0],destination=$('#upload-folder').value;let folder=destination;if(!file||!folder)return;
   const uploadEpoch=sessionEpoch;uploading=true;fillSettings();$('#upload-submit').disabled=true;$('#upload-file').disabled=true;$('#upload-folder').disabled=true;$('#upload-status').textContent='Uploading directly to Google Drive… Keep this page open.';
   const actor=getCurrentUser();
-  try{const uploaded=await uploadPersonFile(folder,file);if(uploadEpoch!==sessionEpoch)return;appendActivity('file.uploaded','file',uploaded.id||'unknown-file','File uploaded to Drive folder '+folder,uploadPersonId,actor);runSync();$('#upload-status').textContent='Uploaded to Google Drive: '+file.name;$('#upload-file').value='';toast('File uploaded to Google Drive.');}
+  try{if(destination==='__resident_default__'){const p=data.people.find(p=>p.id===uploadPersonId);if(!p)throw new Error('This person was removed.');const target=await ensureResidentFolder(p);if(uploadEpoch!==sessionEpoch)return;folder=target.id;const next=structuredClone(data),resident=next.people.find(p=>p.id===uploadPersonId);if(!resident)throw new Error('This person was removed.');Object.assign(resident,changeFolderLink(resident,{id:target.id,name:target.name},true));if(!save(next))throw new Error('The resident folder could not be linked.');renderKeepingDraft();}const uploaded=await uploadPersonFile(folder,file);if(uploadEpoch!==sessionEpoch)return;appendActivity('file.uploaded','file',uploaded.id||'unknown-file','File uploaded to Drive folder '+folder,uploadPersonId,actor);runSync();$('#upload-status').textContent='Uploaded to Google Drive: '+file.name;$('#upload-file').value='';toast('File uploaded to Google Drive.');}
   catch(error){if(uploadEpoch===sessionEpoch)$('#upload-status').textContent=error.message;}
   finally{uploading=false;fillSettings();$('#upload-submit').disabled=false;$('#upload-file').disabled=false;$('#upload-folder').disabled=false;}
 };
@@ -423,14 +424,14 @@ $('#trash-dialog').addEventListener('close',()=>{trashTarget=undefined;$('#trash
 function lockWorkspace(){
   $('#event-log-text').textContent='';document.querySelector('#window-dock [data-window="event-log-dialog"]')?.remove();
   clearOrganization();  refillAlertsSession(false);  clearDesktopSelection();bulkTargets=[];
-  closeMainWindow();detachFolderTarget=null;  clearStickyState();stickyEditId=null;stickyBaseline=null;clearDemographics();vitalsSession(false);calendarSession(false);historySession(false);immunizationsSession(false);medicationsSession(false);documentsSession(false);
+  closeMainWindow();detachFolderTarget=null;  clearStickyState();stickyEditId=null;stickyBaseline=null;clearDemographics();vitalsSession(false);calendarSession(false);rundownSession(false);historySession(false);immunizationsSession(false);medicationsSession(false);documentsSession(false);
   if(!hasDriveAccess()){connected=false;clearPhotos();$('#current-user').textContent='';}
   workspaceReady=false;document.body.classList.add('drive-locked');$('.desktop').inert=true;closeDesktopMenu();closeAppMenu();
   for(const dialog of document.querySelectorAll('dialog'))if(dialog.id!=='drive-dialog'&&dialog.open)dialog.close();
   $('#connection-required').hidden=false;$('#drive-dialog [data-close]').disabled=true;fillSettings();
   if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();
 }
-function unlockWorkspace(){const opening=!workspaceReady;workspaceReady=true;setOrganization(data.organization);document.body.classList.remove('drive-locked');$('.desktop').inert=storageFailed;$('#connection-required').hidden=true;$('#drive-dialog [data-close]').disabled=false;fillSettings();vitalsSession(true);documentsSession(true);medicationsSession(true);historySession(true);immunizationsSession(true);calendarSession(true);refillAlertsSession(true);if(opening)renderKeepingDraft();}
+function unlockWorkspace(){const opening=!workspaceReady;workspaceReady=true;setOrganization(data.organization);document.body.classList.remove('drive-locked');$('.desktop').inert=storageFailed;$('#connection-required').hidden=true;$('#drive-dialog [data-close]').disabled=false;fillSettings();vitalsSession(true);documentsSession(true);medicationsSession(true);historySession(true);immunizationsSession(true);calendarSession(true);rundownSession(true);refillAlertsSession(true);if(opening)renderKeepingDraft();}
 $('#drive-dialog').addEventListener('cancel',event=>{if(!workspaceReady)event.preventDefault();});
 $('#drive-dialog').addEventListener('close',()=>{if(!workspaceReady&&!choosingFolder)queueMicrotask(()=>{if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();});});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&workspaceReady){if(!hasDriveAccess()){lockWorkspace();readyGoogle();}else void sharedPresence.refresh();}});
@@ -448,6 +449,7 @@ $('#sticky-form').onsubmit=event=>{
  else next.desktopNotes.push({id:crypto.randomUUID(),text,...(drawing.length?{drawing}:{}),createdAt:now,updatedAt:now,authorName:user?.name||'Connected staff',...(user?{authorId:user.id}:{}),x:stickyOrigin.x,y:stickyOrigin.y});
  if(save(next)){$('#sticky-dialog').close();stickyEditId=null;stickyBaseline=null;renderDesktopNotes(data.desktopNotes);runSync();}
 };
+initRundown({people:()=>data.people,activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('rundown',value)});
 initCalendar({people:()=>data.people.map(person=>({name:personName(person)})),activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('calendar',value)});
 initBackground();decoratePrintButtons();
 initDocuments({closeDesktopMenu,person:id=>data.people.find(person=>person.id===id),people:()=>[...data.people].sort(compareDirectoryPeople).map(person=>({id:person.id,name:personName(person),deceased:Boolean(person.deceased)})),activity:(...args)=>{appendActivity(...args);runSync();},busy:value=>externalBusy('documents',value),chartChanged:()=>renderKeepingDraft()});
