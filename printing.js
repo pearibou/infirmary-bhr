@@ -20,7 +20,7 @@ export function printFilenameTitle(title,person,date=new Date()){
   const initials=(given.match(/[\p{L}\p{N}]+/gu)||[]).map(part=>Array.from(part)[0].toLocaleUpperCase()).join('');
   identity=surname?surname+(initials?', '+initials:''):clean(fullPersonName(person));
  }
- return [`${day}-${month}-${year}`,identity,clean(title)||'Record'].filter(Boolean).join(' - ');
+ return [`${month}-${day}-${year}`,identity,clean(title)||'Record'].filter(Boolean).join(' - ');
 }
 
 export async function printDocument({title,person,sections,retrievedAt,subtitle='',layout='standard',onLayout}){

@@ -8,9 +8,10 @@ with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
     page=browser.new_page(service_workers='block');prepare_test_page(page)
     page.goto('http://127.0.0.1:8000')
+    page.wait_for_function("document.querySelector('#drive-dialog').open")
     original_title=page.title()
-    names=page.evaluate("""async()=>{const {printFilenameTitle:f}=await import('./printing.js?v=0.31.1');const date=new Date(2026,10,11);return [f('Demographics',{lastName:'Smith',firstName:'John-Carrol'},date),f('Medication List',{lastName:'Smith',firstName:'John',middleName:'Carrol James'},date),f('Immunizations — Master list',null,date),f('Notes / Draft',{name:'Legacy Name'},date)];}""")
-    assert names==['11-11-2026 - Smith, JC - Demographics','11-11-2026 - Smith, JCJ - Medication List','11-11-2026 - Immunizations — Master list','11-11-2026 - Legacy Name - Notes Draft']
+    names=page.evaluate("""async()=>{const {printFilenameTitle:f}=await import('./printing.js?v=0.31.1');const date=new Date(2026,10,5);return [f('Demographics',{lastName:'Smith',firstName:'John-Carrol'},date),f('Medication List',{lastName:'Smith',firstName:'John',middleName:'Carrol James'},date),f('Immunizations — Master list',null,date),f('Notes / Draft',{name:'Legacy Name'},date)];}""")
+    assert names==['11-05-2026 - Smith, JC - Demographics','11-05-2026 - Smith, JCJ - Medication List','11-05-2026 - Immunizations — Master list','11-05-2026 - Legacy Name - Notes Draft']
     pending=[];release_logo=[False]
     def logo_route(route):
         if release_logo[0]:route.fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes())
@@ -23,7 +24,7 @@ with sync_playwright() as p:
     release_logo[0]=True
     while pending:pending.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes())
     page.wait_for_function('window.calls===1')
-    date_prefix=page.evaluate("String(new Date().getDate()).padStart(2,'0')+'-'+String(new Date().getMonth()+1).padStart(2,'0')+'-'+new Date().getFullYear()")
+    date_prefix=page.evaluate("String(new Date().getMonth()+1).padStart(2,'0')+'-'+String(new Date().getDate()).padStart(2,'0')+'-'+new Date().getFullYear()")
     expected_title=date_prefix+' - Patient, S - Synthetic multi-page medications'
     assert page.frame_locator('#bhr-print-frame').locator('title').text_content()==expected_title
     assert page.title()==expected_title
