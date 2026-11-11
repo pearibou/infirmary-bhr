@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Suggest PDF filenames as `mm-dd-yyyy - Surname, Initials - Module`, using the local print date and initials from given and middle names, including hyphenated names. Master views omit the resident segment. Restore the application title when printing finishes or is cancelled.
+
 - Include calculated age and recorded sex directly below DOB in all individual record print headers, including repeated table headers. Preserve age-at-death ranges and unavailable-date wording.
 
 - Calculate age at partial death or immunization dates using the earliest and latest possible calendar dates. Show a single age when certain, otherwise an age range. A complete birthday and comparison year remain required; original dates stay unchanged.
