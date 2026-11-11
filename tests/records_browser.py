@@ -45,6 +45,13 @@ with sync_playwright() as p:
     dialog.get_by_label('Preferred name',exact=True).fill('Brother Alpha')
     page.locator('#person-submit').click()
     assert page.locator('.age').inner_text()=='Age at death: 80 y.o.'
+    page.get_by_role('button',name='Edit record for Brother Alpha',exact=True).click()
+    dialog.get_by_label('Death day',exact=True).fill('')
+    page.locator('#person-submit').click()
+    assert page.locator('.age').inner_text()=='Age at death: 80 y.o.'
+    page.get_by_role('button',name='Edit record for Brother Alpha',exact=True).click()
+    fill_death_date(dialog,'2020-01-01')
+    page.locator('#person-submit').click()
     assert '2020-01-01' in page.locator('.death-status').inner_text()
     assert page.locator('.note').count()==1
     assert page.get_by_role('link',name='Person documents').is_visible()

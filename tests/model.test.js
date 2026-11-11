@@ -104,8 +104,8 @@ test('middle name is optional text and survives directory merge',()=>{
 
 import {deathDateParts,formatDeathDate} from '../model.js';
 test('partial death dates retain precision and reject isolated days',()=>{
- const p={...person(),deceased:true};
- for(const deathDate of [{month:'5',day:'',year:''},{month:'',day:'',year:'2020'},{month:'5',day:'',year:'2020'},{month:'5',day:'3',year:''}]){assert.equal(deathDateError({...p,deathDate}),'');assert.equal(personAge({...p,deathDate}),null);}
+ const p={...person(),deceased:true,birthDate:{year:'1940',month:'6',day:'15'}};
+ for(const deathDate of [{month:'5',day:'',year:''},{month:'',day:'',year:'2020'},{month:'5',day:'',year:'2020'},{month:'5',day:'3',year:''}]){assert.equal(deathDateError({...p,deathDate}),'');assert.equal(personAge({...p,deathDate}),deathDate.year?(deathDate.month?79:'79–80'):null);}
  assert.ok(deathDateError({...p,deathDate:{day:'3'}}));assert.ok(deathDateError({...p,deathDate:{day:'3',year:'2020'}}));
  assert.ok(deathDateError({...p,deathDate:{month:'2',day:'30',year:'2020'}}));assert.ok(deathDateError({...p,deathDate:{year:'2999'}}));
  assert.equal(formatDeathDate({month:'5'}),'May');assert.equal(formatDeathDate({year:'2020'}),'2020');assert.equal(formatDeathDate({month:'5',year:'2020'}),'May 2020');assert.deepEqual(deathDateParts('2020-05-03'),{year:'2020',month:'05',day:'03'});
@@ -164,3 +164,19 @@ test('folder detach markers survive stale sync and allow intentional later reatt
  for(const [a,b] of [[detached,reattached],[reattached,detached]])assert.equal(mergeDirectories(wrap(a),wrap(b)).people[0].driveFolders[0].id,'folder-a');
  assert.throws(()=>validateDirectory(wrap({...p,folderLinkStates:[{id:'bad/id',attached:false,updatedAt:p.updatedAt}]})));
 });
+
+ test('partial comparison dates return certain ages or bounds across birthdays and leap days',async()=>{
+ const {ageAtDate}=await import('../model.js'),birth={year:'1955',month:'6',day:'15'};
+ assert.equal(ageAtDate(birth,{year:'2021',month:'2'}),65);
+ assert.equal(ageAtDate(birth,{year:'2021',month:'6'}),'65–66');
+ assert.equal(ageAtDate(birth,{year:'2021'}),'65–66');
+ assert.equal(ageAtDate(birth,{year:'2021',month:'6',day:'15'}),66);
+ assert.equal(ageAtDate(birth,{month:'6'}),null);
+ assert.equal(ageAtDate({year:'1955'},{year:'2021'}),null);
+ assert.equal(ageAtDate(birth,{year:'1950'}),null);
+ assert.equal(ageAtDate(birth,{year:'2021',month:'2',day:'29'}),null);
+ const leap={year:'2000',month:'2',day:'29'};
+ assert.equal(ageAtDate(leap,{year:'2020',month:'2'}),'19–20');
+ assert.equal(ageAtDate(leap,{year:'2021',month:'2'}),20);
+ assert.equal(ageAtDate(leap,{year:'2021',month:'3'}),21);
+ });
