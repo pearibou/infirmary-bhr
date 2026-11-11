@@ -1,5 +1,9 @@
 # Version history
 
+## Unreleased
+
+- Fix Immunizations Master List pairing returned Google Sheets grids with residents by stable sheet ID, regardless of response order. Preserve row-marker validation and reject missing or ambiguous sheet responses.
+
 ## 0.31.1 — 2026-11-10
 
 - Move the optional Sex field below birth date on the primary person form while preserving its existing stored field.
