@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add Estimated MAP to vital-sign trends and graph printing, derived from paired blood-pressure values in each observation. Match the rounded estimate shown beside BP; skip missing pairs without altering stored observations or sheet columns.
+
 - Suggest PDF filenames as `mm-dd-yyyy - Surname, Initials - Module`, using the local print date and initials from given and middle names, including hyphenated names. Master views omit the resident segment. Restore the application title when printing finishes or is cancelled.
 
 - Include calculated age and recorded sex directly below DOB in all individual record print headers, including repeated table headers. Preserve age-at-death ranges and unavailable-date wording.

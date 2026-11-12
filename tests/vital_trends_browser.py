@@ -138,15 +138,21 @@ with sync_playwright() as p:
     date('#vital-trends-from','2026-11-03');date('#vital-trends-to','2026-11-03');assert page.locator('#vital-trends-graph circle').count()==1 and page.locator('#vital-trends-graph polyline').count()==0
     date('#vital-trends-from','2026-11-04');assert 'Start date' in page.locator('#vital-trends-status').inner_text() and page.locator('#vital-trends-print').is_disabled()
     page.locator('#vital-trends-preset').select_option('0');page.locator('#vital-trends-type').select_option('bloodPressure');assert page.locator('#vital-trends-graph circle').count()==4 and page.locator('#vital-trends-graph polyline').count()==2
+    page.locator('#vital-trends-type').select_option('map')
+    assert page.locator('#vital-trends-graph circle').count()==2 and page.locator('#vital-trends-graph polyline').count()==1
+    page.locator('#vital-trends-graph circle').first.click()
+    assert 'Estimated MAP' in page.locator('#vital-trends-point').inner_text() and '93 mmHg' in page.locator('#vital-trends-point').inner_text()
+    assert '120/80 mmHg' in page.locator('#vital-trends-point').inner_text()
     page.locator('#vital-trends-type').select_option('weight');page.locator('#vital-trends-units').select_option('kg');page.locator('#vital-trends-graph circle').click();assert '69.99 kg' in page.locator('#vital-trends-point').inner_text()
     page.locator('#vital-trends-type').select_option('oxygenSaturation');assert page.locator('#vital-trends-print').is_disabled() and 'No oxygen' in page.locator('#vital-trends-status').inner_text()
-    page.locator('#vital-trends-type').select_option('pulse');page.locator('#vital-trends-dialog').screenshot(path='/tmp/bhr-vital-trends.png')
+    page.locator('#vital-trends-type').select_option('map');page.locator('#vital-trends-dialog').screenshot(path='/tmp/bhr-vital-trends.png')
     # Pause only the print logo so we can capture the standard browser print invocation.
     pending=[];page.route('**/icons/icon-512.png',lambda route:pending.append(route));page.locator('#vital-trends-print').click()
     page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.querySelector('svg')")
     page.evaluate("()=>{window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>{window.printCalls++};}")
     page.wait_for_timeout(100);pending.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes());page.wait_for_function('window.printCalls===1')
     frame=page.frame_locator('#bhr-print-frame');assert frame.locator('svg circle').count()==2 and 'John Smith' in frame.locator('body').inner_text()
+    assert 'Estimated MAP' in frame.locator('body').inner_text() and 'rounded to whole mmHg' in frame.locator('body').inner_text()
     preview=browser.new_page();preview.set_content(page.locator('#bhr-print-frame').evaluate('frame=>frame.contentDocument.documentElement.outerHTML'));preview.pdf(path='/tmp/bhr-vital-trends.pdf',format='Letter');preview.close()
     import subprocess
     assert 'Pages:           1' in subprocess.check_output(['pdfinfo','/tmp/bhr-vital-trends.pdf'],text=True)

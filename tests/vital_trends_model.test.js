@@ -5,3 +5,13 @@ test('trends filter inclusively, omit missing values, keep timestamps sorted and
 test('unit conversion is display-only and blood pressure keeps two independent series',()=>{const weight=buildVitalTrend(rows,{type:'weight',unit:'kg'});assert.ok(Math.abs(weight.series[0].points[1].value-100)<.001);assert.equal(buildVitalTrend(rows,{type:'temperature',unit:'F'}).series[0].points[0].value,98.6);assert.deepEqual(buildVitalTrend(rows,{type:'bloodPressure'}).series.map(s=>s.points[0].value),[120,80]);assert.equal(buildVitalTrend(rows,{type:'oxygenSaturation'}).series[0].points[0].value,0);});
 test('empty/constant series are safe and month presets clamp the calendar day',()=>{assert.equal(buildVitalTrend([]).count,0);const plot=buildVitalTrend([rows[0]]);assert.ok(plot.minX<plot.maxX&&plot.minY<plot.maxY);assert.equal(trendPreset(1,new Date(2026,2,31)).from,'2026-02-28');assert.deepEqual(trendPreset(0),{from:'',to:''});});
 test('inclusive local dates include the repeated hour at daylight-saving fall-back',()=>{const previous=process.env.TZ;process.env.TZ='America/New_York';try{const observations=['2026-11-01T03:59:00Z','2026-11-01T04:30:00Z','2026-11-02T04:30:00Z','2026-11-02T05:00:00Z'].map((measuredAt,i)=>({id:String(i),measuredAt,pulse:'70'}));assert.deepEqual(buildVitalTrend(observations,{from:'2026-11-01',to:'2026-11-01'}).series[0].points.map(p=>p.id),['1','2']);}finally{if(previous===undefined)delete process.env.TZ;else process.env.TZ=previous;}});
+
+test('estimated MAP trends derive rounded values only from valid paired observations without changing data',()=>{
+ const observations=[...rows,{id:'d',measuredAt:'2026-11-04T12:00:00Z',systolic:'120',diastolic:'73'},{id:'e',measuredAt:'2026-11-05T12:00:00Z',systolic:'130'},{id:'f',measuredAt:'2026-11-06T12:00:00Z',diastolic:'80'},{id:'g',measuredAt:'2026-11-07T12:00:00Z',systolic:'70',diastolic:'80'}];
+ const before=JSON.stringify(observations),plot=buildVitalTrend(observations,{type:'map'});
+ assert.equal(plot.label,'Estimated MAP');assert.equal(plot.unit,'mmHg');assert.equal(plot.series.length,1);
+ assert.deepEqual(plot.series[0].points.map(p=>[p.id,p.value]),[['a',93],['d',89]]);
+ assert.equal(plot.series[0].points[0].original,'120/80 mmHg');
+ assert.deepEqual(buildVitalTrend(observations,{type:'map',from:'2026-11-04',to:'2026-11-04'}).series[0].points.map(p=>p.value),[89]);
+ assert.equal(buildVitalTrend([observations[4]],{type:'map'}).count,0);assert.equal(JSON.stringify(observations),before);
+});

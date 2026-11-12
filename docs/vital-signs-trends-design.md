@@ -21,3 +21,5 @@ Show measurement dates/times horizontally and the selected value/unit vertically
 Use JavaScript and the browser's built-in SVG capabilities for axes, labels, points and connecting lines. No Python runtime, charting library or additional installed program is necessary. SVG remains sharp when resized or printed; a print option can be considered separately.
 
 Implemented as a read-only view: Plot trends sits at the far right of the Vital Signs controls. All listed measurement choices and browser printing are available. Date boundaries use local calendar days, including DST transitions. Closed/cleared graphs leave no persistent chart files or schema changes.
+
+Estimated MAP is also available in mmHg, calculated as (systolic + 2 × diastolic) / 3 and rounded to whole mmHg to match the observation display. Each point requires both pressures from the same observation; missing pairs are omitted. Point details retain the source BP, and printouts identify the calculation as an estimate. No stored MAP column or migration is needed.
