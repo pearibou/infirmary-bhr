@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Position Community Rundown as a viewport-bounded floating window on first open, keeping its title and bottom buttons visible instead of placing the nonmodal dialog below the desktop. Preserve independent pane scrolling and constrain it after dragging/resizing.
+
 - Scroll the saved rundown archive independently from the reader/editor, including the compact stacked mobile layout.
 
 - Show full name and DOB alongside preferred name in the Vital Signs, Immunizations, and Medications person selectors. Keep native one-line options, stable person-ID values, and living/deceased grouping.
