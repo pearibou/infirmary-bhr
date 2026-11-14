@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Replace the rundown resident picker with a resident-suggesting text input that also accepts custom section names, plus a compact + button to add an entry.
+
+- Allow saved rundown archive entries to be dragged to Trash, and add Delete between Print and Close in the reader. Confirm before moving files to Drive Trash; protect unsaved drafts and reject changed or unavailable files.
+
 - Display the recorded medication dose beside its name in refill tracking, with a small visual gap. Use the medication list dose without changing refill records. Display refill dates and timestamps as mm-dd-yyyy, preserving stored values and native date inputs.
 
 - Add Estimated MAP to vital-sign trends and graph printing, derived from paired blood-pressure values in each observation. Match the rounded estimate shown beside BP; skip missing pairs without altering stored observations or sheet columns.
