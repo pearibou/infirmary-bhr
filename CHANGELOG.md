@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Display the recorded medication dose beside its name in refill tracking, with a small visual gap. Use the medication list dose without changing refill records. Display refill dates and timestamps as mm-dd-yyyy, preserving stored values and native date inputs.
+
 - Add Estimated MAP to vital-sign trends and graph printing, derived from paired blood-pressure values in each observation. Match the rounded estimate shown beside BP; skip missing pairs without altering stored observations or sheet columns.
 
 - Suggest PDF filenames as `mm-dd-yyyy - Surname, Initials - Module`, using the local print date and initials from given and middle names, including hyphenated names. Master views omit the resident segment. Restore the application title when printing finishes or is cancelled.

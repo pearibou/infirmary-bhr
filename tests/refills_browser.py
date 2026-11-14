@@ -139,6 +139,8 @@ with sync_playwright() as p:
     original_medication=copy.deepcopy(entry_rows(sid)[0]);med_id=original_medication[0];count_before=len(book['sheets'])
     card.get_by_role('button',name='Refills…',exact=True).click();page.get_by_text('No refill information recorded.',exact=True).wait_for()
     assert len(book['sheets'])==count_before
+    heading=page.locator('#refill-content .refill-medication h3')
+    assert 'Synthetic tablet 10 mg' in heading.inner_text() and heading.locator('.refill-medication-dose').inner_text()=='One synthetic tablet'
     page.get_by_role('button',name='+ Record refill',exact=True).click();refill_form=page.locator('#refill-form')
     refill_form.get_by_label('Last filled (dispensing date)',exact=True).fill('2026-11-01');refill_form.get_by_label('Days supply',exact=True).fill('30');refill_form.get_by_label('Rx number',exact=True).fill('000-SYNTHETIC-RX');refill_form.get_by_label('Refills remaining',exact=True).fill('0');refill_form.get_by_label('Prescription expiration date',exact=True).fill('2026-11-05');refill_form.get_by_label('Dispensing pharmacy',exact=True).fill('SYNTHETIC PRIVATE PHARMACY');refill_form.get_by_label('Adjustment (days)',exact=True).fill('-2');refill_form.get_by_label('Adjustment reason',exact=True).fill('SYNTHETIC PRIVATE ADJUSTMENT')
     lost_add[0]=True;page.locator('#refill-save').click();page.wait_for_function("document.querySelector('#refill-form-error').textContent.includes('lost')")
@@ -147,6 +149,10 @@ with sync_playwright() as p:
     assert len(entry_rows(refill_sid))==1
     page.locator('#refill-save').click();page.wait_for_function("!document.querySelector('#refill-form-dialog').open && !document.querySelector('#refill-refresh').disabled")
     assert len(entry_rows(refill_sid))==1 and entry_rows(sid)==[original_medication]
+    assert '11-01-2026' in page.locator('#refill-content').inner_text() and '11-05-2026' in page.locator('#refill-content').inner_text()
+    assert page.locator('.refill-history-entry h4').first.text_content()=='11-01-2026'
+    assert entry_rows(refill_sid)[0][3]=='2026-11-01' and entry_rows(refill_sid)[0][7]=='2026-11-05'
+    assert 'Last retrieved ' in page.locator('#refill-status').inner_text() and '/' not in page.locator('#refill-status').inner_text().split(' · ')[0]
     first=copy.deepcopy(entry_rows(refill_sid)[0]);assert first[1]==med_id and first[5]=='000-SYNTHETIC-RX' and first[6]=='0'
     assert '20 days' in page.locator('#refill-content').inner_text() and 'Prescription expired' in page.locator('#refill-content').inner_text() and 'No refills remaining' in page.locator('#refill-content').inner_text()
     assert 'SYNTHETIC PRIVATE PHARMACY' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
