@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Scroll the saved rundown archive independently from the reader/editor, including the compact stacked mobile layout.
+
 - Show full name and DOB alongside preferred name in the Vital Signs, Immunizations, and Medications person selectors. Keep native one-line options, stable person-ID values, and living/deceased grouping.
 
 - Fix Community Rundown section Up/Down arrows to move the selected section rather than reposition its neighbor in place. Preserve the reordered sections and their stable IDs when saving, reopening, copying, and printing.
