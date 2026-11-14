@@ -105,6 +105,21 @@ with sync_playwright() as p:
     assert saved_custom['heading']=='Synthetic visiting guest' and 'personId' not in saved_custom
     assert page.locator('#rundown-reader [style]').count()==2 and page.locator('#rundown-reader b').count()==1
     assert 'Synthetic ongoing issue' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
+    # Long archives and long reader content scroll independently on desktop and mobile.
+    page.evaluate("""()=>{const list=document.querySelector('#rundown-archive');for(let i=0;i<50;i++){const button=list.querySelector('button').cloneNode(true);button.dataset.scrollFixture='true';list.append(button);}const filler=document.createElement('p');filler.dataset.scrollFixture='true';filler.style.height='1600px';filler.textContent='Synthetic scrolling content';document.querySelector('#rundown-reader').append(filler);}""")
+    for viewport in [{'width':1440,'height':1100},{'width':390,'height':844}]:
+        page.set_viewport_size(viewport)
+        page.evaluate("document.querySelector('#rundown-archive').scrollTop=0;document.querySelector('.rundown-workspace>section').scrollTop=0")
+        page.locator('#rundown-archive').hover();page.mouse.wheel(0,400)
+        page.wait_for_function("document.querySelector('#rundown-archive').scrollTop>0")
+        assert page.locator('.rundown-workspace>section').evaluate('el=>el.scrollTop')==0
+        archive_scroll=page.locator('#rundown-archive').evaluate('el=>el.scrollTop')
+        page.locator('#rundown-reader').hover();page.mouse.wheel(0,400)
+        page.wait_for_function("document.querySelector('.rundown-workspace>section').scrollTop>0")
+        assert page.locator('#rundown-archive').evaluate('el=>el.scrollTop')==archive_scroll
+        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
+    page.evaluate("document.querySelectorAll('[data-scroll-fixture]').forEach(el=>el.remove());document.querySelector('#rundown-archive').scrollTop=0;document.querySelector('.rundown-workspace>section').scrollTop=0")
+    page.set_viewport_size({'width':1440,'height':1100})
     page.locator('#rundown-print').click();page.wait_for_function("window.rundownPrintCalls===1")
     frame=page.frame_locator('#bhr-print-frame');assert 'Tuesday, 10 November 2026' in frame.locator('body').inner_text()
     assert frame.locator('.sections section h2').all_text_contents()==expected_headings
