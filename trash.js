@@ -17,7 +17,7 @@ export function makeTrashable(node,target,allowed=()=>true){
 }
 function endDrag(){dragged=undefined;trash.classList.remove('drop-ready');document.body.classList.remove('dragging-entry');}
 trash.addEventListener('dragover',event=>{if(!dragged)return;event.preventDefault();event.dataTransfer.dropEffect='move';trash.classList.add('drop-ready');});
-trash.addEventListener('dragleave',()=>trash.classList.remove('drop-ready'));
+trash.addEventListener('dragleave',event=>{if(!trash.contains(event.relatedTarget))trash.classList.remove('drop-ready');});
 trash.addEventListener('drop',event=>{if(!dragged)return;event.preventDefault();event.stopPropagation();const target=dragged;endDrag();request(target);});
 trash.onclick=()=>request(selected);
 export function clearTrashSelection(){selected=undefined;document.querySelectorAll('.trash-selected').forEach(el=>el.classList.remove('trash-selected'));}
@@ -25,3 +25,10 @@ export function clearTrashSelection(){selected=undefined;document.querySelectorA
 export function draggedEntry(){return dragged;}
 
 export function finishEntryDrag(){endDrag();}
+
+// Share target feedback across entry, file and multi-selection native drags.
+export function setTrashDropActive(active){trash.classList.toggle('drop-ready',Boolean(active));}
+document.addEventListener('dragover',event=>{if(document.body.classList.contains('dragging-entry'))setTrashDropActive(Boolean(event.target.closest('#desktop-trash')));},true);
+const feedback=document.createElement('span');feedback.className='trash-drop-feedback';feedback.textContent='Release to confirm deletion';feedback.setAttribute('aria-hidden','true');trash.append(feedback);
+
+trash.addEventListener('dragenter',()=>{if(document.body.classList.contains('dragging-entry'))setTrashDropActive(true);});

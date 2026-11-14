@@ -28,7 +28,11 @@ with sync_playwright() as p:
         page.mouse.move(rect['x']+rect['width']/2,rect['y']+rect['height']/2)
         page.mouse.down();page.mouse.move(rect['x']+rect['width']/2+15,rect['y']+rect['height']/2+8,steps=4)
         page.wait_for_function("document.body.classList.contains('dragging-entry')")
-        target=trash.bounding_box();page.mouse.move(target['x']+target['width']/2,target['y']+target['height']/2,steps=10);page.mouse.up()
+        target=trash.bounding_box();page.mouse.move(target['x']+target['width']/2,target['y']+target['height']/2,steps=10)
+        page.mouse.move(target['x']+target['width']/2+1,target['y']+target['height']/2+1)
+        page.wait_for_function("document.querySelector('#desktop-trash').classList.contains('drop-ready')")
+        assert page.locator('#desktop-trash .trash-drop-feedback').is_visible()
+        page.mouse.up()
     default=window.bounding_box();menu=page.locator('.menubar').bounding_box()
     def assert_footer():
         win=window.bounding_box();foot=footer.bounding_box()

@@ -32,6 +32,30 @@ with sync_playwright() as p:
  assert page.locator('#drive-dialog').is_hidden()
  page.evaluate("async()=>{await (await import('./documents.js?v=0.31.1')).refreshFiles()}")
  page.locator('#desktop-icons .drive-file').first.wait_for();assert page.locator('#desktop-icons .drive-file').count()==4
+ # Stickies move live without persisting intermediate positions, and cancellation restores them.
+ sticky=page.locator('.sticky-note').first;initial=sticky.bounding_box()
+ before=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')).desktopNotes.find(n=>n.id==='0')")
+ page.mouse.move(initial['x']+50,initial['y']+15);page.mouse.down();page.mouse.move(initial['x']+150,initial['y']+65,steps=8)
+ assert sticky.bounding_box()['x']>initial['x']+80 and sticky.evaluate('el=>getComputedStyle(el).opacity')=='1'
+ assert sticky.get_attribute('draggable')=='false' and 'sticky-dragging' in sticky.get_attribute('class')
+ interim=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')).desktopNotes.find(n=>n.id==='0')")
+ assert interim['x']==before['x'] and interim['y']==before['y']
+ page.mouse.up();moved=sticky.bounding_box()
+ after=page.evaluate("JSON.parse(localStorage.getItem('infirmary.directory.v1')).desktopNotes.find(n=>n.id==='0')")
+ assert after['x']>before['x']+80
+ page.mouse.move(moved['x']+50,moved['y']+15);page.mouse.down();page.mouse.move(moved['x']+120,moved['y']+45,steps=6);page.keyboard.press('Escape');page.mouse.up()
+ assert abs(sticky.bounding_box()['x']-moved['x'])<1 and 'sticky-dragging' not in sticky.get_attribute('class')
+ # Hover feedback marks both source and Trash; leaving and releasing clear it.
+ r=sticky.bounding_box();target=page.locator('#desktop-trash').bounding_box()
+ page.mouse.move(r['x']+50,r['y']+15);page.mouse.down();page.mouse.move(target['x']+44,target['y']+44,steps=12)
+ assert 'drop-ready' in page.locator('#desktop-trash').get_attribute('class') and 'sticky-over-trash' in sticky.get_attribute('class')
+ assert page.locator('#desktop-trash .trash-drop-feedback').is_visible()
+ page.mouse.move(500,300,steps=6);assert 'drop-ready' not in (page.locator('#desktop-trash').get_attribute('class') or '')
+ page.mouse.move(target['x']+44,target['y']+44,steps=6);page.mouse.up()
+ page.locator('#trash-dialog').wait_for(state='visible');page.locator('#trash-dialog [data-close]').click()
+ assert 'drop-ready' not in (page.locator('#desktop-trash').get_attribute('class') or '') and sticky.is_visible()
+ # Restore its original position so the existing marquee geometry remains unchanged.
+ r=sticky.bounding_box();page.mouse.move(r['x']+50,r['y']+15);page.mouse.down();page.mouse.move(initial['x']+50,initial['y']+15,steps=8);page.mouse.up()
  # Minimized stickies are desktop-level; expanded stickies retain their foreground layer.
  page.locator('.sticky-note').last.click(button='right');page.locator('#sticky-menu-minimize').click()
  assert page.locator('.sticky-minimized').count()==1
@@ -57,7 +81,9 @@ with sync_playwright() as p:
  # Shared stickies may be deleted by staff other than their creator.
  marquee(5,145,590,460)
  assert page.locator('.sticky-note.desktop-selected').count()==2
- page.keyboard.press('Delete');page.locator('#bulk-trash-confirm').click();page.wait_for_function("!document.querySelector('#bulk-trash-dialog').open")
+ page.locator('.sticky-note.desktop-selected').first.drag_to(page.locator('#desktop-trash'))
+ page.locator('#bulk-trash-dialog').wait_for(state='visible');assert page.locator('#bulk-trash-list li').count()==2
+ page.locator('#bulk-trash-confirm').click();page.wait_for_function("!document.querySelector('#bulk-trash-dialog').open")
  assert page.locator('.sticky-note').count()==0 and page.locator('.sticky-minimized').count()==1
  assert page.locator('#bhr-icon').count()==1 and page.locator('#calendar-maker-icon').count()==1
  page.screenshot(path='/tmp/bhr-desktop-selection.png');assert not errors,errors

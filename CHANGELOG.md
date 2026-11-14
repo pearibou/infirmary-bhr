@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Move sticky notes live at full opacity with pointer dragging; save position on release, cancel with Escape, and keep trash confirmation. Highlight Trash with a bright blue glow and a release hint for sticky, entry, file, and multi-selection drags.
+
 - Position Community Rundown as a viewport-bounded floating window on first open, keeping its title and bottom buttons visible instead of placing the nonmodal dialog below the desktop. Preserve independent pane scrolling and constrain it after dragging/resizing.
 
 - Scroll the saved rundown archive independently from the reader/editor, including the compact stacked mobile layout.

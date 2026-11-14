@@ -39,3 +39,5 @@ document.addEventListener('dragstart',event=>{const node=event.target.closest('[
 const trash=document.querySelector('#desktop-trash');trash.addEventListener('dragover',event=>{if(dragging){event.preventDefault();event.dataTransfer.dropEffect='move';trash.classList.add('drop-ready');}});
 trash.addEventListener('drop',event=>{if(!dragging)return;event.preventDefault();event.stopImmediatePropagation();dragging=false;trash.classList.remove('drop-ready');document.body.classList.remove('dragging-entry');request();},true);
 document.addEventListener('dragend',()=>{dragging=false;trash.classList.remove('drop-ready');document.body.classList.remove('dragging-entry');});
+
+export function desktopDragTargets(target){return chosen.size>1&&chosen.has(key(target))?[...chosen.values()]:[target];}
