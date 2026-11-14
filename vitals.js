@@ -2,7 +2,7 @@ import {initVitalTrends,openVitalTrends,clearVitalTrends} from './vital-trends.j
 import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.31.1';
 import {readVitalList,createVitalList,addVital,updateVital,deleteVital,resetVitalsSource} from './vitals-api.js?v=0.31.1';
 import {GCS_OPTIONS,gcsTotal,gcsMeaning,EDITABLE_VITAL_FIELDS,newVital,reviseVital,compareVitals,latestDimensions,heightText,weightText,vitalDetails,estimatedMap,localVitalInput,vitalInputUtc} from './vitals-model.js?v=0.31.1';
-import {compareDirectoryPeople} from './model.js?v=0.31.1';
+import {compareDirectoryPeople,personSelectionLabel} from './model.js?v=0.31.1';
 import {smallIcon} from './icons-ui.js?v=0.31.1';
 import {showWindow,updateWindowTitle} from './windows.js?v=0.31.1';
 const $=s=>document.querySelector(s),node=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
@@ -13,7 +13,7 @@ function alive(stamp){if(!active||stamp!==epoch||!hasDriveAccess())throw new Err
 function controls(){for(const c of document.querySelectorAll('#vitals-dialog button,#vitals-person,#vitals-form-dialog input,#vitals-form-dialog select,#vitals-form-dialog textarea,#vitals-form-dialog button,#vitals-delete-dialog button'))c.disabled=busy;$('#vitals-add').disabled=busy||!current||!context;$('#vitals-refresh').disabled=busy||!current;$('#vitals-trends').disabled=busy||!current||!context;}
 function status(text){$('#vitals-status').textContent=text;}
 async function run(work){if(busy)return;const stamp=epoch;alive(stamp);busy=true;hooks.busy(true);controls();try{return await work(stamp);}catch(error){if(epoch===stamp)status(error.message);throw error;}finally{if(epoch===stamp){busy=false;hooks.busy(false);controls();}}}
-function updatePicker(){const select=$('#vitals-person');select.replaceChildren();const empty=node('option','Choose a person…');empty.value='';select.append(empty);const sorted=[...hooks.people()].sort(compareDirectoryPeople);for(const deceased of [false,true]){const entries=sorted.filter(p=>Boolean(p.deceased)===deceased);if(!entries.length)continue;const group=node('optgroup');group.label=deceased?'Deceased':'Living';for(const p of entries){const option=node('option',hooks.personName(p)+(deceased?' (Deceased)':''));option.value=p.id;group.append(option);}select.append(group);}if(current&&!person(current)){current=null;context=null;}select.value=current||'';}
+function updatePicker(){const select=$('#vitals-person');select.replaceChildren();const empty=node('option','Choose a person…');empty.value='';select.append(empty);const sorted=[...hooks.people()].sort(compareDirectoryPeople);for(const deceased of [false,true]){const entries=sorted.filter(p=>Boolean(p.deceased)===deceased);if(!entries.length)continue;const group=node('optgroup');group.label=deceased?'Deceased':'Living';for(const p of entries){const option=node('option',personSelectionLabel(p));option.value=p.id;group.append(option);}select.append(group);}if(current&&!person(current)){current=null;context=null;}select.value=current||'';}
 function title(){const p=person(current);$('#vitals-title').textContent=p?'Vital Signs — '+hooks.personName(p):'Vital Signs';updateWindowTitle($('#vitals-dialog'));}
 function paintSummary(target){
  const {element,id}=target;if(!element.isConnected){targets.delete(target);return;}element.replaceChildren();const saved=cache.get(id),latest=latestDimensions(saved?.data.rows||[]);element.hidden=!latest.height&&!latest.weight;
