@@ -79,10 +79,25 @@ with sync_playwright() as p:
     assert caret_body.evaluate("el=>{const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode())if(n.textContent.includes('plain suffix')){for(let p=n.parentElement;p&&p!==el;p=p.parentElement)if(getComputedStyle(p).backgroundColor==='rgb(255, 255, 179)')return false;return true;}return false;}")
     page.locator('.rundown-section').last.get_by_role('button',name='Remove section',exact=True).click()
     page.locator('#rundown-add-general').click();page.locator('.rundown-text').last.fill('Synthetic general concern')
+    def section_ids():return page.locator('.rundown-section').evaluate_all('els=>els.map(el=>el.dataset.id)')
+    initial_order=section_ids()
+    page.locator('.rundown-section').first.get_by_role('button',name='Move section up',exact=True).click()
+    page.locator('.rundown-section').last.get_by_role('button',name='Move section down',exact=True).click()
+    assert section_ids()==initial_order
+    page.locator('.rundown-section').first.get_by_role('button',name='Move section down',exact=True).click()
+    assert section_ids()==[initial_order[1],initial_order[0],initial_order[2]]
+    page.locator('.rundown-section').nth(1).get_by_role('button',name='Move section up',exact=True).click()
+    assert section_ids()==initial_order
+    page.locator('.rundown-section').nth(1).get_by_role('button',name='Move section down',exact=True).click()
+    expected_order=[initial_order[0],initial_order[2],initial_order[1]]
+    assert section_ids()==expected_order
+    expected_headings=page.locator('.rundown-section-heading input').evaluate_all('els=>els.map(el=>el.value)')
     lost[0]=True;page.locator('#rundown-save').click();page.wait_for_function("document.querySelector('#rundown-status').textContent.includes('kept')")
     assert len(files)==1 and page.locator('#rundown-editor').is_visible()
     page.locator('#rundown-save').click();page.wait_for_function("!document.querySelector('#rundown-reader').hidden && !document.querySelector('#rundown-new').disabled")
     assert len(files)==1;original_id=next(iter(files));original=copy.deepcopy(contents[original_id])
+    assert [section['id'] for section in original['sections']]==expected_order
+    assert page.locator('#rundown-reader h3').all_text_contents()==expected_headings
     assert 'Tuesday, 10 November 2026' in page.locator('#rundown-reader').inner_text()
     assert 'Brother Synthetic (01/02/1940)' in page.locator('#rundown-reader').inner_text()
     assert 'Synthetic visiting guest' in page.locator('#rundown-reader').inner_text()
@@ -92,6 +107,7 @@ with sync_playwright() as p:
     assert 'Synthetic ongoing issue' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     page.locator('#rundown-print').click();page.wait_for_function("window.rundownPrintCalls===1")
     frame=page.frame_locator('#bhr-print-frame');assert 'Tuesday, 10 November 2026' in frame.locator('body').inner_text()
+    assert frame.locator('.sections section h2').all_text_contents()==expected_headings
     assert frame.locator('header img').evaluate('e=>parseFloat(getComputedStyle(e).width)')==36
     assert frame.locator('.clinical-print-text [style]').count()==2
     preview=browser.new_page();preview.set_content(page.locator('#bhr-print-frame').evaluate('f=>f.contentDocument.documentElement.outerHTML'));preview.pdf(path='/tmp/bhr-rundown.pdf',format='Letter');preview.close()
@@ -106,6 +122,7 @@ with sync_playwright() as p:
     page.locator('#rundown-archive button').last.click();page.locator('#rundown-switch-dialog [data-close]').click();assert page.locator('.rundown-text').first.inner_text()=='Synthetic unsaved draft'
     page.locator('#rundown-archive button').last.click();page.locator('#rundown-switch-discard').click();page.wait_for_function("!document.querySelector('#rundown-reader').hidden")
     assert 'Synthetic ongoing issue' in page.locator('#rundown-reader').inner_text()
+    assert page.locator('#rundown-reader h3').all_text_contents()==expected_headings
     # Stale saved document writes fail and preserve the working text.
     page.locator('#rundown-edit').click();page.locator('.rundown-text').first.fill('Synthetic conflict draft');files[original_id]['modifiedTime']='2099-01-01T00:00:00Z'
     page.locator('#rundown-save').click();page.wait_for_function("document.querySelector('#rundown-status').textContent.includes('changed in Drive')")

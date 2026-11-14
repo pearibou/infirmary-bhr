@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix Community Rundown section Up/Down arrows to move the selected section rather than reposition its neighbor in place. Preserve the reordered sections and their stable IDs when saving, reopening, copying, and printing.
+
 - Fix rundown highlighting toggles for selections spanning formatted text and list items; show the Highlight button as pressed while active and allow highlight removal without clearing other formatting.
 
 - Replace the rundown resident picker with a resident-suggesting text input that also accepts custom section names, plus a compact + button to add an entry.
