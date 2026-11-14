@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix rundown highlighting toggles for selections spanning formatted text and list items; show the Highlight button as pressed while active and allow highlight removal without clearing other formatting.
+
 - Replace the rundown resident picker with a resident-suggesting text input that also accepts custom section names, plus a compact + button to add an entry.
 
 - Allow saved rundown archive entries to be dragged to Trash, and add Delete between Print and Close in the reader. Confirm before moving files to Drive Trash; protect unsaved drafts and reject changed or unavailable files.

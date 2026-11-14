@@ -53,6 +53,31 @@ with sync_playwright() as p:
     body=page.locator('.rundown-text').first;body.fill('Synthetic ongoing issue')
     body.evaluate("el=>{el.focus();const range=document.createRange();range.selectNodeContents(el);const selection=getSelection();selection.removeAllRanges();selection.addRange(range);}")
     page.locator('#rundown-format [data-command=bold]').click();page.locator('#rundown-format [data-command=highlight]').click()
+    highlight=page.locator('#rundown-format [data-command=highlight]')
+    assert highlight.get_attribute('aria-pressed')=='true'
+    highlight.click();assert highlight.get_attribute('aria-pressed')=='false'
+    assert body.locator('[style*="background-color"]').count()==0 and body.locator('b').count()==1
+    highlight.click();assert highlight.get_attribute('aria-pressed')=='true'
+    # A caret on a new highlighted line can turn highlighting off for subsequent typing.
+    custom=page.locator('.rundown-text').last;custom.fill('Synthetic highlighted line')
+    custom.evaluate("el=>{el.focus();const r=document.createRange();r.selectNodeContents(el);getSelection().removeAllRanges();getSelection().addRange(r);}")
+    highlight.click();assert highlight.get_attribute('aria-pressed')=='true'
+    custom.evaluate("()=>getSelection().collapseToEnd()")
+    custom.press('Enter');highlight.click();assert highlight.get_attribute('aria-pressed')=='false'
+    page.keyboard.type('Synthetic plain next line');custom.press('Enter');page.keyboard.type('Synthetic still plain')
+    states=custom.evaluate("""el=>{const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){let yellow=false;for(let p=n.parentElement;p&&p!==el;p=p.parentElement)if(getComputedStyle(p).backgroundColor==='rgb(255, 255, 179)')yellow=true;out.push([n.textContent,yellow]);}return out;}""")
+    assert any('Synthetic highlighted line' in text and yellow for text,yellow in states)
+    assert all(not yellow for text,yellow in states if 'Synthetic plain' in text or 'Synthetic still plain' in text)
+
+    # Toggling off at the end of highlighted text also affects the next characters.
+    page.locator('#rundown-person').fill('Synthetic caret test');page.locator('#rundown-add-person').click()
+    caret_body=page.locator('.rundown-text').last;caret_body.fill('Synthetic caret text')
+    caret_body.evaluate("el=>{el.focus();const r=document.createRange();r.selectNodeContents(el);getSelection().removeAllRanges();getSelection().addRange(r);}")
+    highlight.click();caret_body.evaluate("()=>getSelection().collapseToEnd()")
+    highlight.click();assert highlight.get_attribute('aria-pressed')=='false'
+    page.keyboard.type(' plain suffix')
+    assert caret_body.evaluate("el=>{const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode())if(n.textContent.includes('plain suffix')){for(let p=n.parentElement;p&&p!==el;p=p.parentElement)if(getComputedStyle(p).backgroundColor==='rgb(255, 255, 179)')return false;return true;}return false;}")
+    page.locator('.rundown-section').last.get_by_role('button',name='Remove section',exact=True).click()
     page.locator('#rundown-add-general').click();page.locator('.rundown-text').last.fill('Synthetic general concern')
     lost[0]=True;page.locator('#rundown-save').click();page.wait_for_function("document.querySelector('#rundown-status').textContent.includes('kept')")
     assert len(files)==1 and page.locator('#rundown-editor').is_visible()
@@ -63,12 +88,12 @@ with sync_playwright() as p:
     assert 'Synthetic visiting guest' in page.locator('#rundown-reader').inner_text()
     saved_custom=next(section for section in next(iter(contents.values()))['sections'] if section['kind']=='custom')
     assert saved_custom['heading']=='Synthetic visiting guest' and 'personId' not in saved_custom
-    assert page.locator('#rundown-reader [style]').count()==1 and page.locator('#rundown-reader b').count()==1
+    assert page.locator('#rundown-reader [style]').count()==2 and page.locator('#rundown-reader b').count()==1
     assert 'Synthetic ongoing issue' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     page.locator('#rundown-print').click();page.wait_for_function("window.rundownPrintCalls===1")
     frame=page.frame_locator('#bhr-print-frame');assert 'Tuesday, 10 November 2026' in frame.locator('body').inner_text()
     assert frame.locator('header img').evaluate('e=>parseFloat(getComputedStyle(e).width)')==36
-    assert frame.locator('.clinical-print-text [style]').count()==1
+    assert frame.locator('.clinical-print-text [style]').count()==2
     preview=browser.new_page();preview.set_content(page.locator('#bhr-print-frame').evaluate('f=>f.contentDocument.documentElement.outerHTML'));preview.pdf(path='/tmp/bhr-rundown.pdf',format='Letter');preview.close()
     assert 'Pages:           1' in subprocess.check_output(['pdfinfo','/tmp/bhr-rundown.pdf'],text=True)
     page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))")
