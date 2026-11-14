@@ -13,3 +13,7 @@ Implemented in 0.31.0. A manually curated handoff document, not an automatically
 - Logout/disconnect clears the archive, bodies, draft, headings, selection and print frame. Late results cannot populate a later session.
 
 No appointments, medication changes or recent notes are pulled into the content automatically.
+
+Saved archive entries can be dragged to the desktop Trash (or selected and deleted with the Delete key). The saved reader also offers Delete between Print and Close. Both paths confirm before moving the validated, unchanged file to Google Drive Trash; it can be restored in Drive. Drafts retain save/discard protection. The rundown window is nonmodal to permit desktop drag targets, while deletion confirmation remains modal.
+
+The section-name input offers resident suggestions and accepts custom names, like the calendar name fields. Choose a resident or type a custom heading, then click + or press Enter to add the section. Resident suggestions retain stable IDs; custom sections do not invent a resident link.

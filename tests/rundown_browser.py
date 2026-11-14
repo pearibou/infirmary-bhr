@@ -16,7 +16,7 @@ with sync_playwright() as p:
         if url.path.endswith('/files') and method=='GET':
             q=params.get('q',[''])[0]
             if 'bhrRundown' in q:
-                found=list(files.values());match=re.search(r"key='rundownId' and value='([^']+)'",q)
+                found=[file for file in files.values() if not file.get('trashed')];match=re.search(r"key='rundownId' and value='([^']+)'",q)
                 if match:found=[file for file in found if file['appProperties']['rundownId']==match[1]]
                 route.fulfill(json={'files':found});return
             route.fulfill(json={'files':[{'id':'directory'}] if 'people_directory.json' in q else []});return
@@ -35,13 +35,21 @@ with sync_playwright() as p:
             if lost[0]:lost[0]=False;route.fulfill(status=503,json={'error':{'message':'Synthetic lost save reply'}});return
             route.fulfill(json=files[id]);return
         id=url.path.split('/')[-1]
+        if id in files and method=='PATCH' and request.post_data_json.get('trashed'):
+            if fail[0]:route.fulfill(status=503,json={'error':{'message':'Synthetic trash failure'}});return
+            files[id]['trashed']=True;route.fulfill(json=files[id]);return
         if id in files:route.fulfill(json=contents[id] if params.get('alt')==['media'] else files[id]);return
         route.fulfill(status=404,json={'error':{'message':'Unknown synthetic route'}})
     page.route('https://www.googleapis.com/**',drive);ignore_event_log_projection(page)
     page.add_init_script("if(!localStorage.getItem('infirmary.directory.v1'))localStorage.setItem('infirmary.directory.v1',"+json.dumps(json.dumps(directory[0]))+");")
     page.goto('http://127.0.0.1:8000');unlock_test_drive(page,open_records=False)
     page.locator('#rundown-icon').dblclick();page.locator('#rundown-new').click();page.locator('#rundown-date').fill('11/10/2026')
-    page.locator('#rundown-person').select_option('synthetic-person');page.locator('#rundown-add-person').click()
+    page.locator('#rundown-person').fill('Brother Synthetic');page.locator('#rundown-person').press('Enter')
+    assert page.locator('#rundown-add-person').inner_text()=='+'
+    assert page.locator('#rundown-person-names option').count()==1
+    page.locator('#rundown-person').fill('Synthetic visiting guest');page.locator('#rundown-add-person').click()
+    assert page.locator('.rundown-section').last.get_attribute('data-kind')=='custom'
+    assert page.locator('.rundown-section').last.locator('input').input_value()=='Synthetic visiting guest'
     body=page.locator('.rundown-text').first;body.fill('Synthetic ongoing issue')
     body.evaluate("el=>{el.focus();const range=document.createRange();range.selectNodeContents(el);const selection=getSelection();selection.removeAllRanges();selection.addRange(range);}")
     page.locator('#rundown-format [data-command=bold]').click();page.locator('#rundown-format [data-command=highlight]').click()
@@ -52,6 +60,9 @@ with sync_playwright() as p:
     assert len(files)==1;original_id=next(iter(files));original=copy.deepcopy(contents[original_id])
     assert 'Tuesday, 10 November 2026' in page.locator('#rundown-reader').inner_text()
     assert 'Brother Synthetic (01/02/1940)' in page.locator('#rundown-reader').inner_text()
+    assert 'Synthetic visiting guest' in page.locator('#rundown-reader').inner_text()
+    saved_custom=next(section for section in next(iter(contents.values()))['sections'] if section['kind']=='custom')
+    assert saved_custom['heading']=='Synthetic visiting guest' and 'personId' not in saved_custom
     assert page.locator('#rundown-reader [style]').count()==1 and page.locator('#rundown-reader b').count()==1
     assert 'Synthetic ongoing issue' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     page.locator('#rundown-print').click();page.wait_for_function("window.rundownPrintCalls===1")
@@ -62,7 +73,7 @@ with sync_playwright() as p:
     assert 'Pages:           1' in subprocess.check_output(['pdfinfo','/tmp/bhr-rundown.pdf'],text=True)
     page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))")
     page.locator('#rundown-dialog').screenshot(path='/tmp/bhr-rundown.png')
-    page.locator('#rundown-copy').click();assert page.locator('.rundown-text').count()==2
+    page.locator('#rundown-copy').click();assert page.locator('.rundown-text').count()==3
     page.locator('#rundown-date').fill('11/11/2026');page.locator('.rundown-text').first.fill('Synthetic new snapshot');page.locator('#rundown-save').click();page.wait_for_function("!document.querySelector('#rundown-reader').hidden && !document.querySelector('#rundown-new').disabled")
     assert len(files)==2 and contents[original_id]==original
     # Unsaved archive switches offer cancel/save/discard, keeping drafts intact.
@@ -77,6 +88,35 @@ with sync_playwright() as p:
     # Sanitizer keeps controlled highlights but drops executable markup and arbitrary styles.
     safe=page.evaluate("async()=>{const {cleanNoteHtml}=await import('./documents-model.js?v=0.31.1');return cleanNoteHtml('<script>bad()</script><span style=background-color:yellow onclick=bad()>Safe</span><img src=x onerror=bad()>',{highlight:true})}")
     assert 'onclick' not in safe and 'script' not in safe and 'img' not in safe and 'background-color' in safe
+    # Deleting a saved rundown confirms first and preserves cancelled/failed entries.
+    assert page.locator('#rundown-delete').is_hidden()
+    page.locator('#rundown-archive button').last.click();page.locator('#rundown-switch-discard').click()
+    page.wait_for_function("!document.querySelector('#rundown-reader').hidden && !document.querySelector('#rundown-new').disabled")
+    assert page.locator('#rundown-delete svg').count()==1
+    assert page.locator('#rundown-print').evaluate("el=>el.nextElementSibling.id")== 'rundown-delete'
+    page.locator('#rundown-delete').click();page.locator('#rundown-delete-dialog [data-close]').click()
+    assert not files[original_id].get('trashed')
+    files[original_id]['modifiedTime']='2100-01-01T00:00:00Z'
+    page.locator('#rundown-delete').click();page.locator('#rundown-delete-confirm').click()
+    page.wait_for_function("document.querySelector('#rundown-delete-error').textContent.includes('changed in Drive')")
+    assert not files[original_id].get('trashed')
+    page.locator('#rundown-delete-dialog [data-close]').click();page.locator('#rundown-archive button').last.click()
+    page.wait_for_function("!document.querySelector('#rundown-new').disabled")
+    page.locator('#rundown-delete').click();fail[0]=True;page.locator('#rundown-delete-confirm').click()
+    page.wait_for_function("document.querySelector('#rundown-delete-error').textContent.length>0")
+    assert not files[original_id].get('trashed') and page.locator('#rundown-reader').is_visible()
+    fail[0]=False;page.locator('#rundown-delete-confirm').click()
+    page.wait_for_function("!document.querySelector('#rundown-delete-dialog').open && !document.querySelector('#rundown-new').disabled")
+    assert files[original_id]['trashed'] and page.locator('#rundown-archive button').count()==1
+    assert page.locator('#rundown-reader').text_content()=='' and page.locator('#rundown-delete').is_hidden()
+    page.locator('#rundown-archive button').drag_to(page.locator('#desktop-trash'))
+    page.locator('#rundown-delete-dialog').wait_for(state='visible');page.locator('#rundown-delete-dialog [data-close]').click()
+    assert page.locator('#rundown-archive button').count()==1
+    page.locator('#rundown-archive button').drag_to(page.locator('#desktop-trash'))
+    page.locator('#rundown-delete-confirm').click()
+    page.wait_for_function("!document.querySelector('#rundown-delete-dialog').open && !document.querySelector('#rundown-new').disabled")
+    assert page.locator('#rundown-archive button').count()==0 and all(file.get('trashed') for file in files.values())
+    assert contents[original_id]==original
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     page.locator('#rundown-dialog .window-control').click();page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
     assert page.locator('#rundown-reader').text_content()=='' and page.locator('#rundown-sections').text_content()=='' and page.locator('#rundown-archive').text_content()==''

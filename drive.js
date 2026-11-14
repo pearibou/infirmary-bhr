@@ -351,6 +351,14 @@ export async function saveCommunityRundown(rundown,baseline=null){
  const response=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files${baseline?'/'+safeDriveId(baseline.id):''}?uploadType=multipart&fields=${rundownFields}`,{method:baseline?'PATCH':'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':`multipart/related; boundary=${boundary}`,...(file?.etag?{'If-Match':file.etag}:{})},body});if(epoch!==storageEpoch)throw new Error('Connection changed.');if(!response.ok)throw new Error(response.status===412?'This rundown changed in Drive. Reopen it before editing.':'Rundown save failed. Your draft has been kept.');return response.json();
 }
 
+export async function trashCommunityRundown(baseline){
+ requireRundownAccess();const epoch=storageEpoch,file=await communityRundownMetadata(baseline.id);
+ if(epoch!==storageEpoch)throw new Error('Connection changed.');
+ if(file.modifiedTime!==baseline.modifiedTime||file.appProperties.rundownId!==baseline.appProperties?.rundownId)throw new Error('This rundown changed in Drive. Refresh the archive and reopen it before deleting.');
+ const response=await api(`files/${safeDriveId(file.id)}?fields=${rundownFields}`,{method:'PATCH',headers:{'Content-Type':'application/json',...(file.etag?{'If-Match':file.etag}:{})},body:JSON.stringify({trashed:true})});
+ if(epoch!==storageEpoch)throw new Error('Connection changed.');return response.json();
+}
+
 // Profiles are preferences only. Google userinfo remains the source of identity.
 // One file per subject avoids overwriting another staff member's preferences.
 let staffProfileReady=false,staffProfileFolder;

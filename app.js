@@ -404,6 +404,7 @@ window.addEventListener('beforeunload',event=>{if(uploading){event.preventDefaul
 
 let trashTarget;
 document.addEventListener('trash-request',event=>{
+  if(event.detail.rundownFileId)return;
   const target=event.detail,sticky=target.desktopNoteId?data.desktopNotes?.find(note=>note.id===target.desktopNoteId):null,person=data.people.find(p=>p.id===target.personId),note=target.noteId?person?.notes.find(n=>n.id===target.noteId):null;
   if(target.desktopNoteId?!sticky:!person||(target.noteId&&!note)){toast('This entry is no longer in the directory.');return;}
   if(note&&!canEditNote(note,getCurrentUser())){toast('Only the Google account that entered this note can delete it.');return;}
