@@ -180,3 +180,11 @@ test('folder detach markers survive stale sync and allow intentional later reatt
  assert.equal(ageAtDate(leap,{year:'2021',month:'2'}),20);
  assert.equal(ageAtDate(leap,{year:'2021',month:'3'}),21);
  });
+
+test('person selector labels distinguish preferred names using full names and DOB on one line',async()=>{
+ const {personSelectionLabel:label}=await import('../model.js');
+ assert.equal(label({preferredName:'Brother Synthetic',firstName:'John',middleName:'M',lastName:'Example',birthDate:{month:'1',day:'2',year:'1940'}}),'Brother Synthetic — John M Example · DOB: 01/02/1940');
+ assert.equal(label({name:'Legacy Synthetic',birthDate:{year:'1940'},deceased:true}),'Legacy Synthetic · DOB: —/—/1940 (Deceased)');
+ assert.equal(label({firstName:'John',lastName:'Example'}),'John Example · DOB: —/—/—');
+ assert.ok(!label({preferredName:'Brother\nSynthetic',firstName:'John\nM',lastName:'Example'}).includes('\n'));
+});

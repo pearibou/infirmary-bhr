@@ -93,6 +93,13 @@ export function mergeDirectories(local,remote){
 export function personName(person){
   return person.preferredName?.trim() || [person.firstName,person.lastName].filter(Boolean).join(' ').trim() || person.name || '';
 }
+// Keep native selector rows compact while distinguishing residents with shared names.
+export function personSelectionLabel(person){
+ const compact=value=>String(value||'').replace(/\s+/g,' ').trim();
+ const preferred=compact(personName(person)),full=compact([person.firstName,person.middleName,person.lastName].filter(Boolean).join(' '))||compact(person.name);
+ const birth=person.birthDate||{},dob=[birth.month?String(birth.month).padStart(2,'0'):'—',birth.day?String(birth.day).padStart(2,'0'):'—',birth.year?String(birth.year).padStart(4,'0'):'—'].join('/');
+ return preferred+(full&&full!==preferred?' — '+full:'')+' · DOB: '+dob+(person.deceased?' (Deceased)':'');
+}
 export function birthDateError(birth={}){
   const {month='',day='',year=''}=birth;
   for(const [value,max] of [[month,12],[day,31],[year,9999]]){

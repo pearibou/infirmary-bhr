@@ -1,4 +1,4 @@
-import {compareDirectoryPeople} from './model.js?v=0.31.1';
+import {compareDirectoryPeople,personSelectionLabel} from './model.js?v=0.31.1';
 import {initRefills,refillsSession,openRefills} from './refills.js?v=0.31.1';
 import {printDocument,clearPrint} from './printing.js?v=0.31.1';
 import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.31.1';
@@ -129,4 +129,4 @@ function printMedications(){
  }).catch(error=>{if(active)status('Could not print: '+error.message);});
 }
 
-function updateMedicationPicker(){const picker=$('#med-person');picker.replaceChildren();const placeholder=node('option','Choose a person…');placeholder.value='';picker.append(placeholder);for(const deceased of [false,true]){const list=[...people()].filter(person=>Boolean(person.deceased)===deceased).sort(compareDirectoryPeople);if(!list.length)continue;const group=node('optgroup');group.label=deceased?'Deceased':'Living';for(const person of list){const option=node('option',hooks.personName(person)+(deceased?' (Deceased)':''));option.value=person.id;group.append(option);}picker.append(group);}picker.value=currentPerson||'';controls();}
+function updateMedicationPicker(){const picker=$('#med-person');picker.replaceChildren();const placeholder=node('option','Choose a person…');placeholder.value='';picker.append(placeholder);for(const deceased of [false,true]){const list=[...people()].filter(person=>Boolean(person.deceased)===deceased).sort(compareDirectoryPeople);if(!list.length)continue;const group=node('optgroup');group.label=deceased?'Deceased':'Living';for(const person of list){const option=node('option',personSelectionLabel(person));option.value=person.id;group.append(option);}picker.append(group);}picker.value=currentPerson||'';controls();}
