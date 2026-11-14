@@ -16,10 +16,11 @@ export function registerWindow(win,options={}){
 
 function constrain(win){
   if(win.hidden||(win instanceof HTMLDialogElement&&!win.open)||win.classList.contains('maximized'))return;
-  const rect=win.getBoundingClientRect(),top=menu.getBoundingClientRect().bottom;
-  if(win.style.position==='fixed'){
+  const rundown=win.id==='rundown-dialog',top=menu.getBoundingClientRect().bottom;
+  const rect=win.getBoundingClientRect();
+  if(win.style.position==='fixed'||rundown){
     win.style.left=`${Math.max(0,Math.min(rect.left,innerWidth-rect.width))}px`;
-    win.style.top=`${Math.max(top,Math.min(rect.top,innerHeight-Math.min(rect.height,180)))}px`;
+    win.style.top=`${Math.max(top,Math.min(rect.top,innerHeight-(rundown?rect.height+12:Math.min(rect.height,180))))}px`;
   }
   if(win===main){const current=win.getBoundingClientRect();win.style.setProperty('--window-room-height',`${Math.max(180,innerHeight-current.top-8)}px`);win.style.setProperty('--window-room-width',`${Math.max(300,innerWidth-current.left-8)}px`);}
 }

@@ -43,7 +43,15 @@ with sync_playwright() as p:
     page.route('https://www.googleapis.com/**',drive);ignore_event_log_projection(page)
     page.add_init_script("if(!localStorage.getItem('infirmary.directory.v1'))localStorage.setItem('infirmary.directory.v1',"+json.dumps(json.dumps(directory[0]))+");")
     page.goto('http://127.0.0.1:8000');unlock_test_drive(page,open_records=False)
-    page.locator('#rundown-icon').dblclick();page.locator('#rundown-new').click();page.locator('#rundown-date').fill('11/10/2026')
+    initial_scroll=page.evaluate('scrollY')
+    page.locator('#rundown-icon').dblclick()
+    def assert_window_fits():
+        assert page.locator('#rundown-dialog').evaluate("el=>{const r=el.getBoundingClientRect(),m=document.querySelector('.menubar').getBoundingClientRect();return getComputedStyle(el).position==='fixed'&&r.top>=m.bottom&&r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight;}")
+        assert page.locator('#rundown-dialog .button-row').last.evaluate('el=>el.getBoundingClientRect().bottom<=innerHeight')
+    assert_window_fits();assert page.evaluate('scrollY')==initial_scroll
+    page.locator('#rundown-dialog .window-control').click();page.locator('#window-dock [data-window=rundown-dialog]').click();assert_window_fits()
+    page.locator('#rundown-dialog .dialog-title').focus();page.keyboard.press('ArrowDown');assert_window_fits()
+    page.locator('#rundown-new').click();page.locator('#rundown-date').fill('11/10/2026')
     page.locator('#rundown-person').fill('Brother Synthetic');page.locator('#rundown-person').press('Enter')
     assert page.locator('#rundown-add-person').inner_text()=='+'
     assert page.locator('#rundown-person-names option').count()==1
@@ -109,6 +117,7 @@ with sync_playwright() as p:
     page.evaluate("""()=>{const list=document.querySelector('#rundown-archive');for(let i=0;i<50;i++){const button=list.querySelector('button').cloneNode(true);button.dataset.scrollFixture='true';list.append(button);}const filler=document.createElement('p');filler.dataset.scrollFixture='true';filler.style.height='1600px';filler.textContent='Synthetic scrolling content';document.querySelector('#rundown-reader').append(filler);}""")
     for viewport in [{'width':1440,'height':1100},{'width':390,'height':844}]:
         page.set_viewport_size(viewport)
+        assert_window_fits()
         page.evaluate("document.querySelector('#rundown-archive').scrollTop=0;document.querySelector('.rundown-workspace>section').scrollTop=0")
         page.locator('#rundown-archive').hover();page.mouse.wheel(0,400)
         page.wait_for_function("document.querySelector('#rundown-archive').scrollTop>0")
