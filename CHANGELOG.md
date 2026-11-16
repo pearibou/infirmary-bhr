@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Replace the public April 2026 ICD-10-CM search catalog with verified FY2027 reporting codes from a pinned CMS archive copy; retain saved historical diagnosis code/title/edition without migration. Support FY2027 QA codes.
+- Make local diagnosis search more permissive with in-phrase abbreviations, common synonyms, word prefixes, bounded typo correction, filler-word handling and ranked/labeled related matches. Exact codes stay first and require explicit selection.
+
 - Move sticky notes live at full opacity with pointer dragging; save position on release, cancel with Escape, and keep trash confirmation. Highlight Trash with a bright blue glow and a release hint for sticky, entry, file, and multi-selection drags.
 
 - Position Community Rundown as a viewport-bounded floating window on first open, keeping its title and bottom buttons visible instead of placing the nonmodal dialog below the desktop. Preserve independent pane scrolling and constrain it after dragging/resizing.
