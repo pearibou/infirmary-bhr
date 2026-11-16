@@ -20,7 +20,7 @@ function controls(){$('#med-person').disabled=pending>0||refillsBusy;for(const i
 function status(text){$('#med-status').textContent=text;}
 function audit(action,entryId,personId,automatic=false){hooks.activity('medication.'+action,'medication',entryId,'Medication '+action.replaceAll('_',' '),personId,automatic?{id:getCurrentUser()?.id,name:`Automatic (checked by ${getCurrentUser()?.name||'connected staff'})`}:getCurrentUser());}
 function failure(error,prefix=''){
- $('#med-content').replaceChildren(node('p',prefix+error.message,'med-error'));const retry=node('button','Retry');retry.type='button';retry.onclick=()=>openMedications(currentPerson);$('#med-content').append(retry);status('Medication information is unavailable until it can be retrieved.');
+ $('#med-content').replaceChildren(node('p',prefix+error.message,'med-error'));const retry=node('button','Retry');retry.type='button';retry.onclick=()=>openMedications(personById(currentPerson)?currentPerson:null);$('#med-content').append(retry);status('Medication information is unavailable until it can be retrieved.');
 }
 async function rememberLink(ctx,stamp){alive(stamp);const person=personById(ctx.personId);if(!person)throw new Error('This person was removed.');if(!ctx.missing&&(!person.medicationSheet||person.medicationSheet.spreadsheetId!==ctx.spreadsheetId||person.medicationSheet.sheetId!==ctx.sheetId))hooks.link(ctx.personId,{spreadsheetId:ctx.spreadsheetId,sheetId:ctx.sheetId});}
 async function load(personId,stamp){
@@ -31,7 +31,7 @@ async function load(personId,stamp){
  alive(stamp);if(currentPerson!==personId)return;loaded.retrievedAt=new Date().toISOString();context=loaded;render();status(result.pending.length?'Scheduled end passed—update pending. '+result.pending[0].error:result.completed.length?'Scheduled course completed. See Discontinued.':'');return result.pending.length===0;
 }
 export function initMedications(options){
- hooks=options;$('#medications-icon').ondblclick=()=>openMedications();$('#medications-icon').onkeydown=event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();openMedications();}};$('#med-person').onchange=()=>{if(pending||refillsBusy||formDirty){$('#med-person').value=currentPerson||'';if(formDirty)showWindow(formDialog);return;}openMedications($('#med-person').value||null);};initRefills({alertSettings:options.alertSettings,person:personById,personName:options.personName,activity:options.activity,busy:value=>{refillsBusy=value;hooks.busy(value||pending>0);controls();},medications:id=>readMedicationList(personById(id),knownIds())});$('#med-refills').onclick=()=>{if(!pending&&!refillsBusy&&context&&!context.missing)openRefills(currentPerson);};$('#med-print').onclick=printMedications;$('#med-refresh').onclick=()=>openMedications(currentPerson,true);
+ hooks=options;$('#medications-icon').ondblclick=()=>openMedications(personById(currentPerson)?currentPerson:null);$('#medications-icon').onkeydown=event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();openMedications(personById(currentPerson)?currentPerson:null);}};$('#med-person').onchange=()=>{if(pending||refillsBusy||formDirty){$('#med-person').value=currentPerson||'';if(formDirty)showWindow(formDialog);return;}openMedications($('#med-person').value||null);};initRefills({alertSettings:options.alertSettings,person:personById,personName:options.personName,activity:options.activity,busy:value=>{refillsBusy=value;hooks.busy(value||pending>0);controls();},medications:id=>readMedicationList(personById(id),knownIds())});$('#med-refills').onclick=()=>{if(!pending&&!refillsBusy&&context&&!context.missing)openRefills(currentPerson);};$('#med-print').onclick=printMedications;$('#med-refresh').onclick=()=>openMedications(currentPerson,true);
  $('#med-active').onclick=()=>{tab='Active';render();};$('#med-discontinued').onclick=()=>{tab='Discontinued';render();};$('#med-add').onclick=()=>openForm();
  $('#med-short-course').onchange=endFields;
  $('#medication-form').addEventListener('input',()=>formDirty=true);
@@ -58,7 +58,7 @@ function startupCheck(){
 export function openMedications(personId=null,preserveTab=false){
  if(!active||refillsBusy)return;if(formDirty){showWindow(formDialog);return;}const person=personId?personById(personId):null;if(personId&&!person)return;
  if(!person){currentPerson=null;context=null;tab='Active';updateMedicationPicker();$('#medications-title').textContent='Medications';updateWindowTitle(dialog);$('#med-controls').hidden=true;$('#med-retrieved').textContent='';$('#med-content').replaceChildren(node('p',people().length?'Choose a person to view their medication list.':'No people in the directory yet.','empty'));status('');controls();showWindow(dialog);return;}
- if(!preserveTab||currentPerson!==personId)tab='Active';currentPerson=personId;context=null;updateMedicationPicker();$('#medications-title').textContent='Medications — '+hooks.personName(person);updateWindowTitle(dialog);$('#med-controls').hidden=true;$('#med-content').replaceChildren(node('p','Retrieving medication list…','small'));status('');showWindow(dialog);
+ if(!preserveTab||currentPerson!==personId)tab='Active';currentPerson=personId;context=null;updateMedicationPicker();$('#medications-title').textContent='Medications — '+personSelectionLabel(person);updateWindowTitle(dialog);$('#med-controls').hidden=true;$('#med-content').replaceChildren(node('p','Retrieving medication list…','small'));status('');showWindow(dialog);
  run(stamp=>load(personId,stamp)).catch(error=>{if(active&&currentPerson===personId)failure(error);});
 }
 function render(){
@@ -87,9 +87,10 @@ function render(){
 function endFields(){const enabled=$('#med-short-course').checked;$('#med-end-fields').disabled=!enabled;$('#medication-form').elements.endDate.required=enabled;}
 function openForm(entry=null){
  if(!context||context.missing||pending)return;
+ if(!personById(currentPerson)){status('This person was removed. Close this viewer or select another resident.');return;}
  if(formDirty&&formState){showWindow(formDialog);return;}
  $('#medication-form').reset();formDisabled(false);formState={personId:currentPerson,ctx:context,before:entry,id:entry?.id||crypto.randomUUID(),created:new Date()};formDirty=false;
- const person=personById(currentPerson);$('#med-form-title').textContent=(entry?'Edit medication':'Add medication')+' — '+hooks.personName(person);updateWindowTitle(formDialog);
+ const person=personById(currentPerson);$('#med-form-title').textContent=(entry?'Edit medication':'Add medication')+' — '+personSelectionLabel(person);updateWindowTitle(formDialog);
  for(const key of EDITABLE_MED_FIELDS)if(!['scheduledEnd'].includes(key))$('#medication-form').elements[key].value=entry?.[key]||'';
  $('#med-short-course').checked=Boolean(entry?.scheduledEnd);$('#medication-form').elements.endDate.value=entry?.scheduledEnd.slice(0,10)||'';$('#medication-form').elements.endTime.value=entry?.scheduledEnd.split('T')[1]?.slice(0,5)||'';endFields();
  $('#med-end-help').textContent='Timezone: '+context.timezone+'. Without a time, this medication stays active through the end date.';$('#med-form-error').textContent='';showWindow(formDialog);$('#medication-form').elements.medication.focus();

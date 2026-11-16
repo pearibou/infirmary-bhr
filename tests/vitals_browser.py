@@ -121,7 +121,7 @@ with sync_playwright() as p:
     assert page.locator('#records-window').is_hidden()
     icon=page.locator('#vitals-icon');assert icon.locator('img').evaluate('i=>i.complete&&i.naturalWidth>0');assert icon.bounding_box()['y']>page.locator('#bhr-icon').bounding_box()['y']
     icon.dblclick();assert page.locator('#records-window').is_hidden();assert page.locator('#vitals-person').input_value()==''
-    assert page.locator('#vitals-person optgroup[label="Deceased"] option').inner_text()=='Synthetic Departed (Deceased)'
+    assert page.locator('#vitals-person optgroup[label="Deceased"] option').inner_text()=='Synthetic Departed — Zulu · DOB: —/—/— (Deceased)'
     page.locator('#vitals-person').select_option('person-a');page.wait_for_function("!document.querySelector('#vitals-add').disabled")
     assert not batches and len(book['sheets'])<=1
     page.locator('#vitals-add').click();form=page.locator('#vitals-form');assert form.get_by_label('Oxygen delivery method (optional)',exact=True).input_value()=='RA'

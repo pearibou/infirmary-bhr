@@ -125,6 +125,13 @@ with sync_playwright() as p:
     assert grids[sid][0]==HEADERS and 'Status' not in HEADERS
     traffic=[];page.on('request',lambda request:traffic.append(request.url))
     page.locator('#history-add').click();page.locator('#history-search').fill('hypertensoin')
+    original_title=page.locator('#history-title').inner_text()
+    page.locator('#history-form-dialog .window-control').click()
+    page.locator('#records-window .titlebar').focus();page.locator('.person').filter(has_text='Synthetic John').click()
+    page.get_by_role('button',name='Medical History',exact=True).click()
+    assert page.locator('#history-form-dialog').evaluate('el=>el.matches(":modal")')
+    assert page.locator('#history-search').input_value()=='hypertensoin' and page.locator('#history-title').inner_text()==original_title
+    page.locator('#history-search').fill('hypertensoin')
     page.locator('#history-results button').filter(has_text='I10 — Essential (primary) hypertension').wait_for()
     assert 'FY2027' in page.locator('#history-catalog-status').inner_text()
     assert 'Review the full description' in page.locator('#history-results').inner_text()
