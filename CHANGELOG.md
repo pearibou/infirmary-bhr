@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Open clinical record viewers as independent floating windows with click/keyboard focus stacking, viewport bounds and resident full-name/DOB titles. Keep edit/confirmation dialogs modal and prevent a minimized history draft from being switched to another resident.
+
 - Replace the public April 2026 ICD-10-CM search catalog with verified FY2027 reporting codes from a pinned CMS archive copy; retain saved historical diagnosis code/title/edition without migration. Support FY2027 QA codes.
 - Make local diagnosis search more permissive with in-phrase abbreviations, common synonyms, word prefixes, bounded typo correction, filler-word handling and ranked/labeled related matches. Exact codes stay first and require explicit selection.
 

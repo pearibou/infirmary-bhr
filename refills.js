@@ -1,3 +1,4 @@
+import {personSelectionLabel} from './model.js?v=0.31.1';
 import {getCurrentUser,hasDriveAccess} from './drive.js?v=0.31.1';
 import {readRefills,saveRefill,deleteRefill} from './refills-api.js?v=0.31.1';
 import {REFILL_EDITABLE,newRefill,reviseRefill,compareRefills,refillEstimate,refillWarnings} from './refills-model.js?v=0.31.1';
@@ -33,9 +34,9 @@ function render(){
  if(!area.children.length)area.append(node('p','No medications available for refill tracking.'));controls();
 }
 function openForm(med,before=null){
- if(busy||!context)return;if(dirty&&draft){showWindow($('#refill-form-dialog'));return;}
+ if(busy||!context)return;if(!hooks.person(personId)){status('This person was removed. Close this viewer.');return;}if(dirty&&draft){showWindow($('#refill-form-dialog'));return;}
  const form=$('#refill-form');form.reset();const recent=context.rows.filter(r=>r.medicationId===med.id).sort(compareRefills)[0];draft={med,before,ctx:context,id:before?.id||crypto.randomUUID(),created:new Date(),personId};dirty=false;
- $('#refill-form-title').textContent=(before?'Edit refill':'Record refill')+' — '+med.medication;updateWindowTitle($('#refill-form-dialog'));
+ $('#refill-form-title').textContent=(before?'Edit refill':'Record refill')+' — '+med.medication+' — '+personSelectionLabel(hooks.person(personId));updateWindowTitle($('#refill-form-dialog'));
  for(const key of REFILL_EDITABLE)form.elements[key].value=before?.[key]||'';
  if(!before){form.elements.lastFilled.value=localMedicationTime(new Date(),context.timezone).slice(0,10);form.elements.pharmacy.value=recent?.pharmacy||'';}
  $('#refill-form-error').textContent='';showWindow($('#refill-form-dialog'));form.elements.lastFilled.focus();
@@ -52,4 +53,4 @@ export function initRefills(options){
  window.addEventListener('beforeunload',event=>{if(dirty||busy){event.preventDefault();event.returnValue='';}});
 }
 export function refillsSession(ready){if(ready){if(!active){active=true;epoch++;}return;}active=false;epoch++;busy=false;dirty=false;personId=null;medContext=null;context=null;filterId=null;draft=null;deleting=null;hooks.busy(false);for(const id of ['refills-dialog','refill-form-dialog','refill-delete-dialog']){const win=$('#'+id);if(win.open)win.close();document.querySelector(`#window-dock [data-window="${id}"]`)?.remove();}$('#refill-content').replaceChildren();$('#refill-form').reset();for(const id of ['refill-status','refill-form-error','refill-delete-error','refill-delete-subject'])$('#'+id).textContent='';$('#refills-title').textContent='Refill tracking';$('#refill-form-title').textContent='Record refill';controls();}
-export function openRefills(id,medicationId=null){if(!active||busy)return;if(dirty&&draft){showWindow($('#refill-form-dialog'));return;}const person=hooks.person(id);if(!person)return;personId=id;filterId=medicationId;context=null;medContext=null;$('#refill-content').replaceChildren(node('p','Retrieving refill history…'));$('#refills-title').textContent='Refill tracking — '+hooks.personName(person);updateWindowTitle($('#refills-dialog'));status('');showWindow($('#refills-dialog'));refresh();}
+export function openRefills(id,medicationId=null){if(!active||busy)return;if(dirty&&draft){showWindow($('#refill-form-dialog'));return;}const person=hooks.person(id);if(!person)return;personId=id;filterId=medicationId;context=null;medContext=null;$('#refill-content').replaceChildren(node('p','Retrieving refill history…'));$('#refills-title').textContent='Refill tracking — '+personSelectionLabel(person);updateWindowTitle($('#refills-dialog'));status('');showWindow($('#refills-dialog'));refresh();}

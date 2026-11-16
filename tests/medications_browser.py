@@ -30,6 +30,7 @@ HEADERS=['Entry ID','Medication','Dose','Route','Frequency','Instructions','Indi
 with sync_playwright() as p:
     browser=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
     page=browser.new_page(viewport={'width':1440,'height':1000},service_workers='block');prepare_test_page(page)
+    page.add_init_script("""(()=>{const append=Element.prototype.append;Element.prototype.append=function(...nodes){const result=append.apply(this,nodes);for(const node of nodes)if(node instanceof HTMLIFrameElement&&node.id==='bhr-print-frame')node.contentWindow.print=()=>{window.printCalls=(window.printCalls||0)+1};return result;};})()""")
     errors=[];page.on('pageerror',lambda error:errors.append(str(error)))
     seed={'version':1,'people':[{'id':'person-a','name':'Synthetic John','firstName':'John','lastName':'Smith','preferredName':'Synthetic John','info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]},{'id':'person-b','name':'Synthetic James','firstName':'James','lastName':'Smith','preferredName':'Synthetic James','info':'','updatedAt':'2026-01-01T00:00:00Z','notes':[]}]}
     seed['people'].append({'id':'departed','name':'Synthetic Departed','preferredName':'Synthetic Departed','lastName':'Zulu','deceased':True,'deathDate':{'year':'2020'},'info':'','notes':[],'updatedAt':'2026-01-01T00:00:00Z'})
@@ -119,15 +120,15 @@ with sync_playwright() as p:
     assert page.locator('#med-person').input_value()=='' and page.locator('#med-controls').is_hidden()
     assert page.locator('#medications-icon img').evaluate('i=>i.complete&&i.naturalWidth>0')
     assert page.locator('#med-person option').evaluate_all('nodes=>nodes.map(n=>n.value)')==['','person-b','person-a','departed']
-    assert page.locator('#med-person optgroup[label=Deceased] option').inner_text()=='Synthetic Departed (Deceased)'
+    assert page.locator('#med-person optgroup[label=Deceased] option').inner_text()=='Synthetic Departed — Zulu · DOB: —/—/— (Deceased)'
     page.locator('#med-person').select_option('departed');page.get_by_role('button',name='+ Add medication list',exact=True).wait_for();assert len(book['sheets'])==1
-    page.locator('#medications-dialog [data-close]').click();page.locator('#medications-icon').focus();page.keyboard.press('Enter');assert page.locator('#med-person').input_value()==''
+    page.locator('#medications-dialog [data-close]').click();page.locator('#medications-icon').focus();page.keyboard.press('Enter');assert page.locator('#med-person').input_value()=='departed'
     page.locator('#medications-dialog [data-close]').click();page.screenshot(path='/tmp/bhr-medications-desktop.png');page.locator('#medications-icon').screenshot(path='/tmp/bhr-medications-icon.png');page.locator('#medications-icon').dblclick()
     page.locator('#med-person').select_option('person-a');page.get_by_role('button',name='+ Add medication list',exact=True).wait_for()
     assert len(book['sheets'])==1 and grids[0]==[]
     page.locator('#medications-dialog [data-close]').click();open_bhr(page)
     page.locator('.person strong').filter(has_text='Synthetic John').click()
-    nav=page.locator('.chart-navigation');assert nav.get_by_role('button').all_text_contents()==['Demographics','Vital Signs','Medications','Medical History']
+    nav=page.locator('.chart-navigation');assert nav.get_by_role('button').all_text_contents()==['Demographics','Vital Signs','Medications','Medical History','Immunizations']
     nav.get_by_role('button',name='Medications',exact=True).click();page.get_by_role('button',name='+ Add medication list',exact=True).wait_for()
     assert len(book['sheets'])==1 and grids[0]==[] and page.locator('#med-controls').is_hidden()
     grids[0]=[['Synthetic existing content']]
@@ -151,16 +152,14 @@ with sync_playwright() as p:
     assert 'Synthetic tablet 10 mg' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     def print_current(history=False):
         page.locator('#med-print-history').set_checked(history)
-        print_routes=[];page.route('**/icons/icon-512.png',lambda route:print_routes.append(route))
-        page.locator('#med-print').click();page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Medication List')")
-        page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
-        page.wait_for_timeout(100);assert print_routes;print_routes.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes())
+        page.evaluate('window.printCalls=0')
+        page.locator('#med-print').click()
         page.wait_for_function('window.printCalls===1');page.wait_for_function("!document.querySelector('#med-print').disabled")
         assert all(table.locator('thead tr').count()==1 for table in page.frame_locator('#bhr-print-frame').locator('table').all())
         result=page.frame_locator('#bhr-print-frame').locator('body').inner_text()
         preview=browser.new_page();preview.set_content(page.locator('#bhr-print-frame').evaluate('frame=>frame.contentDocument.documentElement.outerHTML'));preview.locator('img').evaluate('image=>image.decode()');preview.pdf(path='/tmp/bhr-medications-print.pdf',format='Letter');preview.close()
         page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))")
-        page.unroute('**/icons/icon-512.png');return result
+        return result
     assert page.locator('#med-add .diagnosis-plus').inner_text()=='+'
     for name,frequency in [('Zulu scheduled','Daily'),('Alpha as-needed','PRN'),('Beta as-needed','Q6H prn')]:
         page.locator('#med-add').click();form.get_by_label('Medication name',exact=True).fill(name);form.get_by_label('Frequency',exact=True).fill(frequency);page.locator('#med-form-save').click();page.wait_for_function("!document.querySelector('#medication-form-dialog').open && !document.querySelector('#med-add').disabled")

@@ -130,7 +130,7 @@ with sync_playwright() as p:
     add({'Measurement date and time':'2026-11-03T09:00','Pulse · bpm':'80','Systolic':'130','Diastolic':'85'})
     before=copy.deepcopy(grids);before_batches=len(batches)
     bar=page.locator('#vitals-dialog .vitals-actions').first.bounding_box();button=page.locator('#vitals-trends').bounding_box();assert button['x']>page.locator('#vitals-refresh').bounding_box()['x']
-    page.locator('#vitals-trends').click();assert page.locator('#vital-trends-title').inner_text()=='Vital-sign trends — Synthetic John'
+    page.locator('#vitals-trends').click();assert page.locator('#vital-trends-title').inner_text().startswith('Vital-sign trends — Synthetic John') and 'John Smith' in page.locator('#vital-trends-title').inner_text()
     assert page.locator('#vital-trends-graph circle').count()==2 and page.locator('#vital-trends-graph polyline').count()==1
     page.locator('#vital-trends-graph circle').first.click();assert '72 bpm' in page.locator('#vital-trends-point').inner_text()
     def date(id,value):
