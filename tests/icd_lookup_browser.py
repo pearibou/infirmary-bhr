@@ -16,15 +16,27 @@ with sync_playwright() as p:
     page.locator('#icd-list .icd-result').first.click()
     assert page.locator('#icd-detail .icd-reportable').inner_text()=='Choose a more specific code'
     page.locator('#icd-detail .icd-result').filter(has_text='I11.0').click()
+    assert page.locator('#icd-detail h2').bounding_box()['y']>=page.locator('#icd-detail nav').bounding_box()['y']+page.locator('#icd-detail nav').bounding_box()['height']+7
     assert page.locator('#icd-detail .icd-reportable').inner_text()=='Reportable'
+    assert page.locator('#icd-detail').get_by_role('button',name='Copy code #',exact=True).is_visible()
+    assert page.locator('#icd-detail').get_by_role('button',name='Copy diagnosis',exact=True).is_visible()
+    assert page.get_by_role('button',name='Bookmarked/recent',exact=True).is_visible()
     assert 'Use additional code' in page.locator('#icd-detail').inner_text()
     page.locator('#icd-detail').get_by_role('button',name='☆ Bookmark',exact=True).click()
     page.evaluate("window.copied='';Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.copied=text}},configurable:true})")
     page.locator('#icd-detail').get_by_role('button',name='Copy both',exact=True).click();assert page.evaluate('window.copied').startswith('I11.0 — ')
+    page.locator('#icd-detail').get_by_role('button',name='Clear active diagnosis',exact=True).click()
+    assert 'Select a result or category' in page.locator('#icd-detail').inner_text()
+    assert query.input_value()=='I11' and page.locator('#icd-list .icd-result').count()>0
+    page.locator('#icd-list .icd-result').first.click()
     page.locator('[data-tab=browse]').click();assert page.locator('#icd-list .icd-result').count()==22
     page.locator('#icd-list .icd-result').first.click();assert page.locator('#icd-detail .icd-result').count()>0
     page.locator('[data-tab=saved]').click();assert 'I11.0' in page.locator('#icd-list').inner_text() and 'I11' in page.locator('#icd-list').inner_text()
-    page.locator('[data-side=right]').click();assert page.locator('body').evaluate("el=>el.classList.contains('icd-reference-reserved')")
+    page.locator('[data-side=right]').click()
+    page.locator('#icd-list .icd-result').first.click()
+    page.locator('#icd-detail').get_by_role('button',name='Clear active diagnosis',exact=True).click()
+    assert page.locator('#icd-navigation').is_visible() and 'I11.0' in page.locator('#icd-list').inner_text()
+    assert page.locator('body').evaluate("el=>el.classList.contains('icd-reference-reserved')")
     page.locator('#bhr-icon').dblclick()
     page.locator('#maximize-main').click()
     bounds=dialog.bounding_box();assert page.locator('#records-window').bounding_box()['width']<=bounds['x']+1
@@ -32,7 +44,7 @@ with sync_playwright() as p:
     page.locator('[data-side=left]').click();assert dialog.bounding_box()['x']==0
     assert page.locator('#records-window').bounding_box()['x']>=370
     page.set_viewport_size({'width':390,'height':844})
-    assert not page.locator('body').evaluate("el=>el.classList.contains('icd-reference-reserved')")
+    page.wait_for_function("!document.body.classList.contains('icd-reference-reserved')")
     assert dialog.evaluate('el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1}')
     page.set_viewport_size({'width':1440,'height':1000});page.wait_for_function("document.querySelector('#icd-lookup-dialog').dataset.snap==='left'")
     page.locator('#icd-lookup-dialog .window-control').click();page.wait_for_function("!document.body.classList.contains('icd-reference-reserved')")
