@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Clarify ICD-10 Lookup copy/bookmark labels and add a small × to clear the active diagnosis pane while retaining the list and bookmarks. Add breathing room between the navigation buttons and active diagnosis heading.
+
 - Add ICD-10 Lookup below Weekly Appts: permissive local search, official FY2027 tabular browsing and inherited notes, reportable status, copy controls, bookmarks and session-only recent searches. Support resizable left/right reference docking with reserved workspace space and compact small-screen navigation. Verify all 74,879 reporting codes against the supplied CDC descriptions archive; load the larger tabular catalog only when opened.
 
 - Open clinical record viewers as independent floating windows with click/keyboard focus stacking, viewport bounds and resident full-name/DOB titles. Keep edit/confirmation dialogs modal and prevent a minimized history draft from being switched to another resident.
