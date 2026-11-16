@@ -1,3 +1,4 @@
+import {icdLookupSession} from './icd-lookup.js?v=1';
 import {initRundown,rundownSession} from './rundown.js?v=0.31.1';
 import {createSharedPresence} from './shared-presence.js?v=0.31.1';
 import {initImmunizations,immunizationsSession,openImmunizations} from './immunizations.js?v=0.31.1';
@@ -425,14 +426,14 @@ $('#trash-dialog').addEventListener('close',()=>{trashTarget=undefined;$('#trash
 function lockWorkspace(){
   $('#event-log-text').textContent='';document.querySelector('#window-dock [data-window="event-log-dialog"]')?.remove();
   clearOrganization();  refillAlertsSession(false);  clearDesktopSelection();bulkTargets=[];
-  closeMainWindow();detachFolderTarget=null;  clearStickyState();stickyEditId=null;stickyBaseline=null;clearDemographics();vitalsSession(false);calendarSession(false);rundownSession(false);historySession(false);immunizationsSession(false);medicationsSession(false);documentsSession(false);
+  closeMainWindow();detachFolderTarget=null;  clearStickyState();stickyEditId=null;stickyBaseline=null;clearDemographics();vitalsSession(false);calendarSession(false);rundownSession(false);icdLookupSession(false);historySession(false);immunizationsSession(false);medicationsSession(false);documentsSession(false);
   if(!hasDriveAccess()){connected=false;clearPhotos();$('#current-user').textContent='';}
   workspaceReady=false;document.body.classList.add('drive-locked');$('.desktop').inert=true;closeDesktopMenu();closeAppMenu();
   for(const dialog of document.querySelectorAll('dialog'))if(dialog.id!=='drive-dialog'&&dialog.open)dialog.close();
   $('#connection-required').hidden=false;$('#drive-dialog [data-close]').disabled=true;fillSettings();
   if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();
 }
-function unlockWorkspace(){const opening=!workspaceReady;workspaceReady=true;setOrganization(data.organization);document.body.classList.remove('drive-locked');$('.desktop').inert=storageFailed;$('#connection-required').hidden=true;$('#drive-dialog [data-close]').disabled=false;fillSettings();vitalsSession(true);documentsSession(true);medicationsSession(true);historySession(true);immunizationsSession(true);calendarSession(true);rundownSession(true);refillAlertsSession(true);if(opening)renderKeepingDraft();}
+function unlockWorkspace(){const opening=!workspaceReady;workspaceReady=true;setOrganization(data.organization);document.body.classList.remove('drive-locked');$('.desktop').inert=storageFailed;$('#connection-required').hidden=true;$('#drive-dialog [data-close]').disabled=false;fillSettings();vitalsSession(true);documentsSession(true);medicationsSession(true);historySession(true);immunizationsSession(true);calendarSession(true);rundownSession(true);icdLookupSession(true);refillAlertsSession(true);if(opening)renderKeepingDraft();}
 $('#drive-dialog').addEventListener('cancel',event=>{if(!workspaceReady)event.preventDefault();});
 $('#drive-dialog').addEventListener('close',()=>{if(!workspaceReady&&!choosingFolder)queueMicrotask(()=>{if(!$('#drive-dialog').open&&!choosingFolder)$('#drive-dialog').showModal();});});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&workspaceReady){if(!hasDriveAccess()){lockWorkspace();readyGoogle();}else void sharedPresence.refresh();}});

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add ICD-10 Lookup below Weekly Appts: permissive local search, official FY2027 tabular browsing and inherited notes, reportable status, copy controls, bookmarks and session-only recent searches. Support resizable left/right reference docking with reserved workspace space and compact small-screen navigation. Verify all 74,879 reporting codes against the supplied CDC descriptions archive; load the larger tabular catalog only when opened.
+
 - Open clinical record viewers as independent floating windows with click/keyboard focus stacking, viewport bounds and resident full-name/DOB titles. Keep edit/confirmation dialogs modal and prevent a minimized history draft from being switched to another resident.
 
 - Replace the public April 2026 ICD-10-CM search catalog with verified FY2027 reporting codes from a pinned CMS archive copy; retain saved historical diagnosis code/title/edition without migration. Support FY2027 QA codes.

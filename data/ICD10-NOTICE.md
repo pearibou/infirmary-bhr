@@ -25,3 +25,20 @@ Search is entirely local: exact/dotted/undotted code matches rank first; text se
 Saved spreadsheet rows keep their original code, official description and edition. Older codes, including codes no longer selectable in FY2027, remain readable/editable/printable without lookup or automatic recoding. The public search catalog is the only data replaced; no patient-sheet migration occurs. Public code files can be cached; search text stays in session memory and is never sent to a lookup service.
 
 The underlying classification data is a U.S. government publication. The retained ICD10-MIRROR-LICENSE.txt documents the previous catalog's mirror attribution; that mirror is no longer the source of the shipped catalog.
+
+## Official tabular reference added November 16, 2026
+
+The user supplied the CDC/NCHS FY2027 `icd10cm-table-and-index-2027.zip` and `icd10cm-code-descriptions-2027.zip` archives. Their 74,879 reporting codes and full descriptions match the previously shipped catalog exactly. This independently reconciles the code content; the workspace still did not download the government archives directly.
+
+`icd10cm-tabular-2027.json` includes 98,722 chapter, block, category and reporting-code nodes. Nonreportable categories are included for navigation. Seventh-character leaves are expanded from official inherited definitions only when present in the verified reporting catalog. Official notes, general notes and the visual-impairment table are retained, with inherited notes displayed under their source category. This is tabular browsing, not a reproduction of the separate Alphabetic Index or the complete official guidelines PDF.
+
+Reproduce with `python3 scripts/build-icd-tabular.py TABLE_AND_INDEX.zip CODE_DESCRIPTIONS.zip`. The script checks ZIP integrity, XML edition, unique nodes, parent references, exact agreement with the reporting catalog, and permitted seventh-character expansions. Metadata records these SHA-256 hashes:
+
+- Table/index ZIP: `99b5c2be16ff53eab861cc0be4b1dacba27f687b8ff4bc700679944355037ee0`
+- Tabular XML: `d778c97a5bb9da7d71645610e277f8db3bd302befa3b08d71dd5043715a74b2a`
+- Descriptions ZIP: `93e3ad6004badf470c55bfe679b748ae88fd9b2b421851e409eec382c7713b9a`
+- Descriptions text: `3c0583a38ee0e848f7dc0ac8ce88e8f001bbba8c6385ed825d44d46f6e5297c9`
+
+Official archive: https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Publications/ICD10CM/2027/icd10cm-table-and-index-2027.zip
+
+The 12.3 MB tabular JSON (approximately 1.33 MB gzip) is fetched and indexed only when ICD-10 Lookup is opened. It is excluded from service-worker install downloads and cached after use. Only explicit public shell/reference paths are cacheable; no clinical responses are added by this feature.

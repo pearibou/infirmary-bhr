@@ -2,6 +2,8 @@
 
 A dependency-free, single-page PWA with a System 7 Macintosh interface. Directory entries and timestamped notes are saved locally, with explicit Google Drive pull/merge/push sync.
 
+Double-click **ICD-10 Lookup** below Weekly Appts for public FY2027 code search and tabular browsing. It can snap beside the record workspace and does not read or write patient records. See [the reference guide](docs/icd-lookup.md).
+
 ## Run
 
 From this repository, run `npm start` (Node/npm and Python 3 required), then open port 8000 locally. Alternatively serve this directory using any static HTTP server. No install or build step is required. Deploy these files to an HTTPS static host for home-screen installation and offline support. Do not open `index.html` as a file URL.
