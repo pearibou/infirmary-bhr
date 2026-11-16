@@ -124,13 +124,16 @@ with sync_playwright() as p:
     sid=next(tab['properties']['sheetId'] for tab in book['sheets'] if tab['properties']['title']=='Smith J')
     assert grids[sid][0]==HEADERS and 'Status' not in HEADERS
     traffic=[];page.on('request',lambda request:traffic.append(request.url))
-    page.locator('#history-add').click();page.locator('#history-search').fill('hypertension')
+    page.locator('#history-add').click();page.locator('#history-search').fill('hypertensoin')
+    page.locator('#history-results button').filter(has_text='I10 — Essential (primary) hypertension').wait_for()
+    assert 'FY2027' in page.locator('#history-catalog-status').inner_text()
+    assert 'Review the full description' in page.locator('#history-results').inner_text()
     page.locator('#history-results button').filter(has_text='I10 — Essential (primary) hypertension').click()
     form=page.locator('#history-form');form.locator('[name=displayName]').fill('Synthetic short label');form.locator('[name=notes]').fill('Synthetic private history note')
     lost_add[0]=True;page.locator('#history-form-save').click();page.wait_for_function("document.querySelector('#history-form-error').textContent.includes('lost')")
     assert len(entry_rows(sid))==1 and form.locator('[name=displayName]').input_value()=='Synthetic short label'
     page.locator('#history-form-save').click();page.wait_for_function("!document.querySelector('#history-form-dialog').open && !document.querySelector('#history-add').disabled")
-    row=entry_rows(sid)[0];assert row[1]=='I10' and row[2]=='Essential (primary) hypertension' and row[3]=='Synthetic short label' and row[4]=='' and 'FY2026' in row[6]
+    row=entry_rows(sid)[0];assert row[1]=='I10' and row[2]=='Essential (primary) hypertension' and row[3]=='Synthetic short label' and row[4]=='' and 'FY2027' in row[6]
     assert len(entry_rows(sid))==1
     assert 'Synthetic private history note' not in page.evaluate("localStorage.getItem('infirmary.directory.v1')")
     assert not any('hypertension' in url.lower() or 'Synthetic%20short' in url for url in traffic)
@@ -139,10 +142,16 @@ with sync_playwright() as p:
     assert 'Courier' in card.locator('.diagnosis-code').evaluate('el=>getComputedStyle(el).fontFamily')
     assert card.locator('small').count()==0 and 'FY2026' not in card.inner_text()
     assert page.locator('#history-add .diagnosis-plus').inner_text()=='+' and page.locator('#history-print svg').count()==1
-    print_routes=[];page.route('**/icons/icon-512.png',lambda route:print_routes.append(route));page.locator('#history-print').click()
+    print_routes=[];release_logo=[False]
+    def logo(route):
+        if release_logo[0]:route.fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes())
+        else:print_routes.append(route)
+    page.route('**/icons/icon-512.png',logo);page.locator('#history-print').click()
     page.wait_for_function("document.querySelector('#bhr-print-frame')?.contentDocument?.body?.textContent.includes('Synthetic short label')")
     page.evaluate("window.printCalls=0;document.querySelector('#bhr-print-frame').contentWindow.print=()=>window.printCalls++")
-    page.wait_for_timeout(100);print_routes.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes());page.wait_for_function('window.printCalls===1')
+    page.wait_for_timeout(100);release_logo[0]=True
+    while print_routes:print_routes.pop().fulfill(content_type='image/png',body=Path('icons/icon-512.png').read_bytes())
+    page.wait_for_function('window.printCalls===1')
     assert page.frame_locator('#bhr-print-frame').locator('thead tr').count()==1
     assert 'Courier' in page.frame_locator('#bhr-print-frame').locator('tbody td').first.evaluate('el=>getComputedStyle(el).fontFamily')
     assert 'FY2026' not in page.frame_locator('#bhr-print-frame').locator('body').inner_text()
