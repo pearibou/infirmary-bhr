@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {prepareTabular,ancestry,lookup} from '../icd-lookup-model.js';
+const raw=JSON.parse(readFileSync(new URL('../data/icd10cm-tabular-2027.json',import.meta.url)));
+const catalog=JSON.parse(readFileSync(new URL('../data/icd10cm-2027.json',import.meta.url)));
+const model=prepareTabular(raw,catalog);
+test('official tabular reconciles every reporting code and description',()=>{assert.equal(model.children.get(null).length,22);assert.equal([...model.nodes.values()].filter(n=>n.reportable).length,74879);for(const [code,title] of catalog.entries){assert.equal(model.nodes.get(code).title,title);assert.ok(ancestry(model,code).length>=3);}assert.equal(model.nodes.get('I11').reportable,false);assert.equal(model.nodes.get('I11.0').reportable,true);});
+test('parent code search, permissive descriptions and inherited coding notes',()=>{assert.equal(lookup(model,'I11')[0].id,'I11');assert.ok(lookup(model,'high blood pressure').length);assert.ok(lookup(model,'hypertensoin').length);assert.ok(ancestry(model,'I11.0').flatMap(n=>n.notes).some(([kind])=>kind==='useAdditionalCode'));assert.equal(ancestry(model,'S52.501A').at(-2).id,'S52.501');assert.ok(ancestry(model,'S52.501A').some(n=>n.notes.some(([kind])=>kind==='sevenChrDef')));});
+test('invalid references, duplicate nodes and inconsistent editions fail closed',()=>{assert.throws(()=>prepareTabular({...raw,edition:'wrong'},catalog));assert.throws(()=>prepareTabular({...raw,nodes:[...raw.nodes,raw.nodes[0]]},catalog));assert.throws(()=>prepareTabular({...raw,nodes:raw.nodes.map((row,i)=>i===0?[row[0],'bad-parent',...row.slice(2)]:row)},catalog));});
