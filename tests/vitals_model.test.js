@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {newVital,reviseVital,latestDimensions,vitalToRow,parseVitalRows,VITAL_HEADERS,validateVital,heightText,weightText,vitalDetails,estimatedMap} from '../vitals-model.js';
+import {newVital,reviseVital,latestDimensions,bodyMassIndex,vitalToRow,parseVitalRows,VITAL_HEADERS,validateVital,heightText,weightText,vitalDetails,estimatedMap} from '../vitals-model.js';
 import {validateDirectory,mergeDirectories} from '../model.js';
 const actor={id:'synthetic-author',name:'Synthetic staff'},now=new Date('2026-11-09T12:00:00Z');
 const make=(fields={},id='synthetic-observation')=>newVital({measuredAt:'2026-11-09T10:00:00.000Z',pulse:'70',...fields},actor,id,now);
@@ -20,3 +20,5 @@ test('GCS requires three valid responses, computes every possible score and keep
 });
 
 test('MAP is rounded from paired BP readings and never stored',()=>{const entry=make({systolic:'120',diastolic:'73'});assert.equal(estimatedMap(entry),89);assert.equal(estimatedMap({systolic:'120',diastolic:'80'}),93);for(const fields of [{},{systolic:'120'},{systolic:'',diastolic:'80'},{systolic:'NaN',diastolic:'80'},{systolic:'70',diastolic:'80'}])assert.equal(estimatedMap(fields),null);assert.equal(Object.hasOwn(entry,'map'),false);assert.equal(vitalToRow(entry).length,VITAL_HEADERS.length);});
+
+test('BMI converts imperial, metric and mixed units without storing derived values',()=>{const imperial=make({height:'70',weight:'180'}),metric=make({height:'177.8',heightUnit:'cm',weight:'81.6466266',weightUnit:'kg'});const before=JSON.stringify(imperial);assert.equal(bodyMassIndex(imperial,imperial).toFixed(1),'25.8');assert.ok(Math.abs(bodyMassIndex(imperial,imperial)-bodyMassIndex(metric,metric))<1e-10);assert.ok(Math.abs(bodyMassIndex(imperial,metric)-bodyMassIndex(metric,imperial))<1e-10);assert.equal(JSON.stringify(imperial),before);const latest=latestDimensions([imperial,make({weight:'82',weightUnit:'kg',measuredAt:'2026-11-10T10:00:00.000Z'},'new-weight')]);assert.equal(bodyMassIndex(latest.height,latest.weight).toFixed(1),'25.9');for(const [h,w] of [[null,imperial],[imperial,null],[{height:'0',heightUnit:'cm'},imperial],[imperial,{weight:'',weightUnit:'kg'}],[{height:'bad',heightUnit:'cm'},imperial],[imperial,{weight:'80',weightUnit:'unknown'}]])assert.equal(bodyMassIndex(h,w),null);});

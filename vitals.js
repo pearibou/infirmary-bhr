@@ -1,7 +1,7 @@
 import {initVitalTrends,openVitalTrends,clearVitalTrends} from './vital-trends.js?v=0.31.1';
 import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.31.1';
 import {readVitalList,createVitalList,addVital,updateVital,deleteVital,resetVitalsSource} from './vitals-api.js?v=0.31.1';
-import {GCS_OPTIONS,gcsTotal,gcsMeaning,EDITABLE_VITAL_FIELDS,newVital,reviseVital,compareVitals,latestDimensions,heightText,weightText,vitalDetails,estimatedMap,localVitalInput,vitalInputUtc} from './vitals-model.js?v=0.31.1';
+import {GCS_OPTIONS,gcsTotal,gcsMeaning,EDITABLE_VITAL_FIELDS,newVital,reviseVital,compareVitals,latestDimensions,bodyMassIndex,heightText,weightText,vitalDetails,estimatedMap,localVitalInput,vitalInputUtc} from './vitals-model.js?v=0.31.2';
 import {compareDirectoryPeople,personSelectionLabel} from './model.js?v=0.31.1';
 import {smallIcon} from './icons-ui.js?v=0.31.1';
 import {showWindow,updateWindowTitle} from './windows.js?v=0.31.1';
@@ -18,6 +18,7 @@ function title(){const p=person(current);$('#vitals-title').textContent=p?'Vital
 function paintSummary(target){
  const {element,id}=target;if(!element.isConnected){targets.delete(target);return;}element.replaceChildren();const saved=cache.get(id),latest=latestDimensions(saved?.data.rows||[]);element.hidden=!latest.height&&!latest.weight;
  for(const [key,label,format] of [['height','Height',heightText],['weight','Weight',weightText]]){const observation=latest[key];if(!observation)continue;const row=node('div');row.className='patient-vital-dimension';row.append(node('strong',label),node('span',format(observation[key],observation[key+'Unit'])));const time=node('time',new Date(observation.measuredAt).toLocaleDateString());time.dateTime=observation.measuredAt;time.title='Measured '+new Date(observation.measuredAt).toLocaleString();row.append(time);element.append(row);}
+ const bmi=bodyMassIndex(latest.height,latest.weight);if(bmi!==null){const row=node('div');row.className='patient-vital-bmi';row.append(node('strong','BMI'),node('span',bmi.toFixed(1)));row.title='Calculated from height measured '+new Date(latest.height.measuredAt).toLocaleDateString()+' and weight measured '+new Date(latest.weight.measuredAt).toLocaleDateString();element.append(row);}
  if(saved?.error){const warning=node('small','Could not refresh vitals');element.append(warning);}
 }
 function notify(){for(const target of targets)paintSummary(target);}
