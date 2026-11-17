@@ -1,5 +1,5 @@
 import {findVitalsWorkbook,medicationSheetsRequest as vitalsSheetsRequest,getDriveSessionEpoch,getCurrentUser} from './drive.js?v=0.31.1';
-import {VITAL_FIELDS,VITAL_HEADERS,EDITABLE_VITAL_FIELDS,parseVitalRows,vitalToRow,validateVital} from './vitals-model.js?v=0.31.2';
+import {VITAL_FIELDS,VITAL_HEADERS,EDITABLE_VITAL_FIELDS,parseVitalRows,vitalToRow,validateVital} from './vitals-model.js?v=0.31.3';
 import {medicationSheetTitle,medicationSheetId} from './medications-model.js?v=0.31.1';
 const PERSON_KEY='bhr.vitals.personId',ROW_KEY='bhr.vitals.entryId',SCHEMA_KEY='bhr.vitals.schema';
 let source,sourceEpoch=-1;
@@ -78,25 +78,26 @@ export async function addVital(ctx,entry){
  const fresh=await readVitalList({id:ctx.personId,vitalsSheet:{spreadsheetId:ctx.spreadsheetId,sheetId:ctx.sheetId}},[ctx.spreadsheetId]),old=fresh.rows.find(row=>row.id===entry.id);checkSession();
  if(old){if(old.enteredById===entry.enteredById&&EDITABLE_VITAL_FIELDS.every(key=>old[key]===entry[key]))return old;throw new Error('This entry ID already exists with different details. Refresh before editing it.');}
  if(fresh.markers.has(entry.id))throw new Error('This entry was removed. Start a new entry if needed.');
- await ensureGcsColumns(ctx);checkSession();await post(id(ctx.spreadsheetId)+':batchUpdate',{requests:[{insertDimension:{range:{sheetId:ctx.sheetId,dimension:'ROWS',startIndex:1,endIndex:2},inheritFromBefore:false}},{updateCells:{start:{sheetId:ctx.sheetId,rowIndex:1,columnIndex:0},rows:[cells(vitalToRow(entry))],fields:'userEnteredValue'}},{repeatCell:{range:{sheetId:ctx.sheetId,startRowIndex:1,endRowIndex:2},cell:{userEnteredFormat:{textFormat:{bold:false,foregroundColor:{red:0,green:0,blue:0}},numberFormat:{type:'TEXT'}}},fields:'userEnteredFormat.textFormat,userEnteredFormat.numberFormat'}},{createDeveloperMetadata:{developerMetadata:{metadataKey:ROW_KEY,metadataValue:entry.id,visibility:'DOCUMENT',location:{dimensionRange:{sheetId:ctx.sheetId,dimension:'ROWS',startIndex:1,endIndex:2}}}}}]});return entry;
+ await ensureVitalColumns(ctx);checkSession();await post(id(ctx.spreadsheetId)+':batchUpdate',{requests:[{insertDimension:{range:{sheetId:ctx.sheetId,dimension:'ROWS',startIndex:1,endIndex:2},inheritFromBefore:false}},{updateCells:{start:{sheetId:ctx.sheetId,rowIndex:1,columnIndex:0},rows:[cells(vitalToRow(entry))],fields:'userEnteredValue'}},{repeatCell:{range:{sheetId:ctx.sheetId,startRowIndex:1,endRowIndex:2},cell:{userEnteredFormat:{textFormat:{bold:false,foregroundColor:{red:0,green:0,blue:0}},numberFormat:{type:'TEXT'}}},fields:'userEnteredFormat.textFormat,userEnteredFormat.numberFormat'}},{createDeveloperMetadata:{developerMetadata:{metadataKey:ROW_KEY,metadataValue:entry.id,visibility:'DOCUMENT',location:{dimensionRange:{sheetId:ctx.sheetId,dimension:'ROWS',startIndex:1,endIndex:2}}}}}]});return entry;
 }
 export async function updateVital(ctx,before,after){
  validateVital(after); if(after.id!==before.id||after.enteredById!==before.enteredById||after.enteredAt!==before.enteredAt||Number(after.revision)!==Number(before.revision)+1)throw new Error('Observation identity cannot be changed.');
  connected();if(after.updatedById!==getCurrentUser().id)throw new Error('Reconnect to identify the observation editor.');const checkSession=sessionGuard();await freshRow(ctx,before);checkSession();await freshRow(ctx,before);checkSession();
- await ensureGcsColumns(ctx);checkSession();await freshRow(ctx,before);checkSession();await post(id(ctx.spreadsheetId)+'/values:batchUpdateByDataFilter',{valueInputOption:'RAW',data:[{dataFilter:rowFilter(before.metadataId),majorDimension:'ROWS',values:[vitalToRow(after)]}]});return after;
+ await ensureVitalColumns(ctx);checkSession();await freshRow(ctx,before);checkSession();await post(id(ctx.spreadsheetId)+'/values:batchUpdateByDataFilter',{valueInputOption:'RAW',data:[{dataFilter:rowFilter(before.metadataId),majorDimension:'ROWS',values:[vitalToRow(after)]}]});return after;
 }
 export async function deleteVital(ctx,entry){
  connected();const checkSession=sessionGuard();if(!await freshRow(ctx,entry,true)){checkSession();return;}checkSession();await freshRow(ctx,entry);checkSession();
  // Clear data through its stable metadata ID. Physically deleting a row by an
  // index could remove the wrong entry after another client inserts rows.
- await ensureGcsColumns(ctx);checkSession();await freshRow(ctx,entry);checkSession();await post(id(ctx.spreadsheetId)+'/values:batchUpdateByDataFilter',{valueInputOption:'RAW',data:[{dataFilter:rowFilter(entry.metadataId),majorDimension:'ROWS',values:[VITAL_FIELDS.map(()=>'')]}]});
+ await ensureVitalColumns(ctx);checkSession();await freshRow(ctx,entry);checkSession();await post(id(ctx.spreadsheetId)+'/values:batchUpdateByDataFilter',{valueInputOption:'RAW',data:[{dataFilter:rowFilter(entry.metadataId),majorDimension:'ROWS',values:[VITAL_FIELDS.map(()=>'')]}]});
 }
 
-async function ensureGcsColumns(ctx){
+async function ensureVitalColumns(ctx){
  const check=sessionGuard(),book=await vitalsWorkbook([ctx.spreadsheetId]),sheet=findSheet(book,{id:ctx.personId,vitalsSheet:{spreadsheetId:ctx.spreadsheetId,sheetId:ctx.sheetId}});check();
  const count=sheet.properties.gridProperties.columnCount,response=await getValues(ctx.spreadsheetId,[grid(ctx.sheetId,count)]),values=response.valueRanges?.[0]?.valueRange?.values||[];check();parseVitalRows(values,markers(sheet));
  if(VITAL_HEADERS.every((label,i)=>values[0]?.[i]===label))return;
- if(values.some(row=>row.slice(22,25).some(value=>String(value).trim())))throw new Error('The GCS columns contain unexpected data. Existing cells were left unchanged.');
+ const missing=VITAL_HEADERS.map((label,index)=>({label,index})).filter(({label,index})=>values[0]?.[index]!==label);
+ if(missing.some(({index})=>values.slice(1).some(row=>String(row[index]??'').trim())))throw new Error('New vitals columns contain unexpected data. Existing cells were left unchanged.');
  const requests=[];if(count<VITAL_FIELDS.length)requests.push({updateSheetProperties:{properties:{sheetId:ctx.sheetId,gridProperties:{columnCount:VITAL_FIELDS.length}},fields:'gridProperties.columnCount'}});
  requests.push({updateCells:{start:{sheetId:ctx.sheetId,rowIndex:0,columnIndex:22},rows:[cells(VITAL_HEADERS.slice(22))],fields:'userEnteredValue'}});check();await post(id(ctx.spreadsheetId)+':batchUpdate',{requests});check();
 }

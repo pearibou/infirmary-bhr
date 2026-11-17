@@ -289,3 +289,5 @@ dialog[data-nonmodal="true"]{position:fixed;inset:auto;left:12px;top:calc(var(--
 @media(max-width:700px){#icd-layout{display:block}#icd-navigation{height:100%}#icd-detail{display:none;height:100%}#icd-layout.show-detail #icd-navigation{display:none}#icd-layout.show-detail #icd-detail{display:block}#icd-detail .icd-back{display:block}}
 
 .icd-detail-toolbar{display:flex;align-items:center;justify-content:space-between;gap:6px}.icd-clear{margin-left:auto;padding:1px 6px;min-width:24px;font-size:16px;line-height:20px}
+
+.vitals-temperature{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) 64px}.vitals-temperature select{padding-inline:4px}
