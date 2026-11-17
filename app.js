@@ -195,6 +195,17 @@ try{
   driveConfig={...remembered,...Object.fromEntries(Object.entries(driveConfig).filter(([,value])=>value))};
 }catch{}
 let dataWorkspace=driveConfig.folder;
+function selectLinkedWorkspace(){
+  const requested=new URLSearchParams(location.hash.slice(1)).get('workspace');
+  if(!requested)return;
+  if(!/^[-_a-zA-Z0-9]+$/.test(requested)||requested==='root')throw new Error('This BHR sign-in link has an invalid workspace. Ask your administrator for a new link.');
+  if(requested===driveConfig.folder)return;
+  if((workspaceReady||data.people.length||data.desktopNotes?.length)&&dataWorkspace!==requested){
+    throw new Error('This browser has records from another workspace. Open the original BHR link and log out before switching.');
+  }
+  driveConfig={...driveConfig,folder:requested,folderName:undefined,existingWorkspace:true};
+}
+
 function fillSettings(){
   $('#sync-status').hidden=!syncing;$('#auto-sync-status').textContent=syncDescription(autoSyncSeconds);
   const driveActive=connected&&hasDriveAccess(),driveReady=driveActive&&workspaceReady;$('#drive-dialog').classList.toggle('drive-connected',driveReady);$('#drive-connection-badge').hidden=!driveActive;const connectionLabel=driveReady?'● Connected to Google Drive':'Google signed in · finish directory sync';if($('#drive-connection-badge').textContent!==connectionLabel)$('#drive-connection-badge').textContent=connectionLabel;
@@ -203,6 +214,7 @@ function fillSettings(){
   $('#google-connect').setAttribute('aria-busy',String(connecting));
   $('#choose-sync-folder').disabled=!connected||!pickerReady;
   $('#open-shared-workspace').disabled=!connected||syncing;
+  $('#copy-workspace-link').hidden=!driveReady||!getWorkspaceFolder();
   $('#edit-staff-profile').hidden=!workspaceReady;
   $('#use-drive-root').disabled=!connected;
   $('#sync').disabled=!connected||!driveConfig.folder||syncing;
@@ -231,13 +243,25 @@ async function readyGoogle(){
   if(googleReady&&driveConfig.pickerApiKey&&driveConfig.projectNumber){try{await preparePicker();pickerReady=true;}catch(error){$('#drive-status').textContent=error.message;}fillSettings();}
 }
 $('#drive-open').onclick=()=>{if(!$('#drive-dialog').open)$('#drive-dialog').showModal();fillSettings();readyGoogle();};
+$('#copy-workspace-link').onclick=async()=>{
+  const folder=getWorkspaceFolder();
+  if(!workspaceReady||!hasDriveAccess()||!folder)return;
+  const link=new URL(location.pathname,location.origin);
+  link.hash=new URLSearchParams({workspace:folder}).toString();
+  try{
+    await navigator.clipboard.writeText(link.href);
+    $('#drive-status').textContent='BHR sign-in link copied. Share it privately with staff.';
+  }catch{
+    window.prompt('Copy this BHR sign-in link and share it privately with staff.',link.href);
+  }
+};
 $('#google-connect').onclick=async()=>{
   if(!driveConfig.clientId){$('#drive-status').textContent=missingGoogleSetup;return;}
   if(googleLoading){$('#drive-status').textContent='Google sign-in is loading. Please try again in a moment.';return;}
   // A ready SDK lets OAuth open directly from this click, avoiding popup blockers.
   if(!googleReady){await readyGoogle();return;}
   const authEpoch=sessionEpoch;connecting=true;fillSettings();$('#drive-status').textContent='Complete sign-in in the Google window. Close it to cancel.';
-  try{await authorize(driveConfig.clientId);if(authEpoch!==sessionEpoch){disconnect();return;}connected=true;sessionCleared=false;clearPhotos();const user=await loadCurrentUser();$('#current-user').textContent='Google account: '+(user.email||user.googleName);if(authEpoch!==sessionEpoch){$('#current-user').textContent='';return;}appendActivity('drive.connected','directory',driveConfig.folder||'unselected','Google Drive connection established');renderKeepingDraft();$('#drive-status').textContent='Signed in. Open the shared Infirmary-BHR folder supplied by your administrator.';if(driveConfig.folder&&!workspaceReady)await runSync();}
+  try{await authorize(driveConfig.clientId);if(authEpoch!==sessionEpoch){disconnect();return;}connected=true;sessionCleared=false;clearPhotos();const user=await loadCurrentUser();$('#current-user').textContent='Google account: '+(user.email||user.googleName);if(authEpoch!==sessionEpoch){$('#current-user').textContent='';return;}selectLinkedWorkspace();appendActivity('drive.connected','directory',driveConfig.folder||'unselected','Google Drive connection established');renderKeepingDraft();$('#drive-status').textContent='Signed in. Open the shared Infirmary-BHR folder supplied by your administrator.';if(driveConfig.folder&&!workspaceReady)await runSync();}
   catch(error){if(authEpoch!==sessionEpoch)return;disconnect();connected=false;$('#drive-status').textContent=error.message;}
   finally{connecting=false;fillSettings();}
 };
