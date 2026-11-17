@@ -1,5 +1,9 @@
 # Version history
 
+## 0.31.4 — 2026-11-17
+
+- Shorten the temperature unit label to Units.
+
 ## 0.31.3 — 2026-11-17
 
 - Add an optional temperature location dropdown to the Vital Signs form.
