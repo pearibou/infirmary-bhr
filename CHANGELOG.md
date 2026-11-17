@@ -1,5 +1,9 @@
 # Version history
 
+## 0.31.3 — 2026-11-17
+
+- Add an optional temperature location dropdown to the Vital Signs form.
+
 ## 0.31.2 — 2026-11-17
 
 - Add calculated BMI from the latest height and weight to the compact person-record summary without storing derived values or enlarging the panel. Synchronize the About version and package version, and refresh affected offline assets.
