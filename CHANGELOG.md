@@ -1,5 +1,9 @@
 # Version history
 
+## 0.31.5 — 2026-11-17
+
+- Copy a bookmarkable BHR sign-in link from Drive settings and open its shared workspace after Google sign-in.
+
 ## 0.31.4 — 2026-11-17
 
 - Shorten the temperature unit label to Units.
