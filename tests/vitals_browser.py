@@ -141,7 +141,7 @@ with sync_playwright() as p:
     assert page.locator('.vitals-map').first.inner_text()=='Estimated MAP ≈ 93 mmHg'
     page.locator('#vitals-dialog').screenshot(path='/tmp/bhr-vitals-window.png')
     page.locator('#vitals-dialog [data-close]').click();page.locator('#bhr-icon').dblclick();page.locator('.person strong').filter(has_text='Synthetic John').click()
-    summary=page.locator('.person-vitals-summary');assert summary.is_visible() and '5′ 10″' in summary.inner_text() and '180 lb' in summary.inner_text()
+    summary=page.locator('.person-vitals-summary');assert summary.locator('.patient-vital-bmi').inner_text().split()==['BMI','25.8'];assert summary.bounding_box()['height']<=146;assert summary.is_visible() and '5′ 10″' in summary.inner_text() and '180 lb' in summary.inner_text()
     page.locator('#records-window').screenshot(path='/tmp/bhr-person-latest-vitals.png')
     page.locator('.chart-navigation').get_by_role('button',name='Vital Signs',exact=True).click();assert page.locator('#vitals-person').input_value()=='person-a'
     def add(values):
@@ -152,7 +152,7 @@ with sync_playwright() as p:
     assert page.locator('.vitals-entry').first.locator('time').get_attribute('datetime')=='2026-11-09T17:00:00.000Z'
     assert '180 lb' in summary.inner_text() and '5′ 10″' in summary.inner_text()
     page.locator('#vitals-add').click();form.get_by_label('Measurement date and time',exact=True).fill('2026-11-05T12:00');form.get_by_label('Weight',exact=True).fill('82');form.get_by_label('Weight unit',exact=True).select_option('kg');page.locator('#vitals-save').click();page.wait_for_function("!document.querySelector('#vitals-form-dialog').open && !document.querySelector('#vitals-add').disabled")
-    assert '82 kg' in summary.inner_text() and summary.locator('time').last.get_attribute('datetime')=='2026-11-05T17:00:00.000Z'
+    assert summary.locator('.patient-vital-bmi span').inner_text()=='25.9';assert '82 kg' in summary.inner_text() and summary.locator('time').last.get_attribute('datetime')=='2026-11-05T17:00:00.000Z'
     add({'Measurement date and time':'2026-10-01T12:00','Height':'68'})
     assert '5′ 10″' in summary.inner_text() and len(entry_rows(sid))==4
     weight_card=page.locator('.vitals-entry').filter(has_text='82 kg');weight_card.get_by_role('button',name='Edit…',exact=True).click();form.get_by_label('Weight',exact=True).fill('83.5');fail_updates[0]=True;page.locator('#vitals-save').click();page.wait_for_function("document.querySelector('#vitals-form-error').textContent.includes('failed')");assert form.get_by_label('Weight',exact=True).input_value()=='83.5'
@@ -160,7 +160,7 @@ with sync_playwright() as p:
     page.locator('.vitals-entry').filter(has_text='83.5 kg').get_by_role('button',name='Edit…',exact=True).click();raw=next(row for row in entry_rows(sid) if row[12]=='83.5');raw[12]='85';form.get_by_label('Weight',exact=True).fill('84');page.locator('#vitals-save').click();page.wait_for_function("document.querySelector('#vitals-form-error').textContent.includes('changed in the spreadsheet')");assert raw[12]=='85';page.locator('#vitals-cancel').click()
     sheet(sid)['properties']['title']='Synthetic renamed vitals';page.locator('#vitals-refresh').click();page.wait_for_function("!document.querySelector('#vitals-refresh').disabled");assert '85 kg' in summary.inner_text()
     weight_card=page.locator('.vitals-entry').filter(has_text='85 kg');weight_card.get_by_role('button',name='Delete entry…',exact=True).click();page.locator('#vitals-delete-dialog [data-close]').click();assert len(entry_rows(sid))==4
-    weight_card.get_by_role('button',name='Delete entry…',exact=True).click();page.locator('#vitals-delete-confirm').click();page.wait_for_function("!document.querySelector('#vitals-delete-dialog').open && !document.querySelector('#vitals-add').disabled");assert len(entry_rows(sid))==3 and '180 lb' in summary.inner_text()
+    weight_card.get_by_role('button',name='Delete entry…',exact=True).click();page.locator('#vitals-delete-confirm').click();page.wait_for_function("!document.querySelector('#vitals-delete-dialog').open && !document.querySelector('#vitals-add').disabled");assert len(entry_rows(sid))==3 and '180 lb' in summary.inner_text() and summary.locator('.patient-vital-bmi span').inner_text()=='25.8'
     sheet(sid)['properties']['title']='Smith J'
     page.locator('#vitals-person').select_option('person-b');page.wait_for_function("!document.querySelector('#vitals-add').disabled");assert 'No vital signs recorded.' in page.locator('#vitals-content').inner_text() and len(book['sheets'])==2
     page.locator('#vitals-add').click();form.get_by_label('Height',exact=True).fill('165');form.get_by_label('Height unit',exact=True).select_option('cm');form.get_by_label('Oxygen saturation · %',exact=True).fill('96');form.get_by_label('Oxygen delivery method (optional)',exact=True).fill('NC 2 L/min');page.locator('#vitals-save').click();page.wait_for_function("!document.querySelector('#vitals-form-dialog').open && !document.querySelector('#vitals-add').disabled")

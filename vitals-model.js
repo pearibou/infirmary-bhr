@@ -29,6 +29,13 @@ export function newVital(fields,user,id=crypto.randomUUID(),now=new Date()){
 export function reviseVital(before,fields,user,now=new Date()){const after={...Object.fromEntries(VITAL_FIELDS.map(k=>[k,before[k]])),...Object.fromEntries(EDITABLE_VITAL_FIELDS.map(k=>[k,String(fields[k]??before[k]).trim()])),updatedBy:user.name,updatedById:user.id,updatedAt:now.toISOString(),revision:String(Number(before.revision)+1)};if(!after.oxygenMethod)after.oxygenMethod='RA';return validateVital(after);}
 export const compareVitals=(a,b)=>b.measuredAt.localeCompare(a.measuredAt)||b.enteredAt.localeCompare(a.enteredAt)||a.id.localeCompare(b.id);
 export function latestDimensions(rows){const ordered=[...rows].sort(compareVitals);return {height:ordered.find(r=>r.height!==''),weight:ordered.find(r=>r.weight!=='')};}
+// Display-only BMI uses the independently latest height and weight; never persisted.
+export function bodyMassIndex(height,weight){
+ if(!height||!weight||!['in','cm'].includes(height.heightUnit)||!['lb','kg'].includes(weight.weightUnit))return null;
+ const meters=Number(height.height)*(height.heightUnit==='in'?.0254:.01),kg=Number(weight.weight)*(weight.weightUnit==='lb'?.45359237:1);
+ if(!Number.isFinite(meters)||!Number.isFinite(kg)||meters<=0||kg<=0)return null;
+ const bmi=kg/(meters*meters);return Number.isFinite(bmi)?bmi:null;
+}
 const decimal=n=>String(Math.round(n*10)/10);
 export function heightText(value,unit){const inches=unit==='in'?Number(value):Number(value)/2.54,cm=unit==='cm'?Number(value):Number(value)*2.54,rounded=Math.round(inches*10)/10,feet=Math.floor(rounded/12),remainder=decimal(rounded-feet*12);return unit==='in'?`${feet}′ ${remainder}″ (${decimal(cm)} cm)`:`${decimal(cm)} cm (${feet}′ ${remainder}″)`;}
 export function weightText(value,unit){return unit==='lb'?`${value} lb (${decimal(Number(value)*.45359237)} kg)`:`${value} kg (${decimal(Number(value)/.45359237)} lb)`;}

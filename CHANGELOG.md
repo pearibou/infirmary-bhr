@@ -1,6 +1,10 @@
 # Version history
 
-## Unreleased
+## 0.31.2 — 2026-11-17
+
+- Add calculated BMI from the latest height and weight to the compact person-record summary without storing derived values or enlarging the panel. Synchronize the About version and package version, and refresh affected offline assets.
+
+### Previously merged updates
 
 - Clarify ICD-10 Lookup copy/bookmark labels and add a small × to clear the active diagnosis pane while retaining the list and bookmarks. Add breathing room between the navigation buttons and active diagnosis heading.
 
