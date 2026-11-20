@@ -1,5 +1,9 @@
 # Version history
 
+## 0.31.6 — 2026-11-20
+
+- Add a compact printable roster of living patients with sortable and movable columns.
+
 ## 0.31.5 — 2026-11-17
 
 - Copy a bookmarkable BHR sign-in link from Drive settings and open its shared workspace after Google sign-in.

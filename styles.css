@@ -291,3 +291,16 @@ dialog[data-nonmodal="true"]{position:fixed;inset:auto;left:12px;top:calc(var(--
 .icd-detail-toolbar{display:flex;align-items:center;justify-content:space-between;gap:6px}.icd-clear{margin-left:auto;padding:1px 6px;min-width:24px;font-size:16px;line-height:20px}
 
 .vitals-temperature{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) 64px}.vitals-temperature select{padding-inline:4px}
+
+#records-window .toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center}
+#storage-status{text-align:right}
+#roster-open{padding:2px 8px;font-size:inherit;min-height:0}
+#roster-dialog{width:min(640px,calc(100vw - 24px));max-height:calc(100dvh - 24px);min-height:0;padding:12px}
+#roster-dialog[open]{display:flex;flex-direction:column}
+.roster-table-wrap{overflow:auto;min-height:0}
+#roster-dialog table{width:100%;border-collapse:collapse;font-size:12px}
+#roster-dialog th,#roster-dialog td{border:1px solid #bbb;text-align:left;padding:3px 6px;overflow-wrap:anywhere}
+#roster-dialog th{position:sticky;top:0;background:#ddd;padding:0}
+#roster-dialog th button{width:100%;text-align:left;padding:4px 6px;min-height:0;border:0;border-radius:0;box-shadow:none;cursor:grab}
+#roster-dialog tbody tr:nth-child(odd){background:#fff}
+#roster-dialog [role=status]{margin:4px 0}
