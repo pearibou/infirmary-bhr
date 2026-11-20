@@ -1,3 +1,4 @@
+import {initRoster} from './roster.js?v=0.31.6';
 import {icdLookupSession} from './icd-lookup.js?v=1';
 import {initRundown,rundownSession} from './rundown.js?v=0.31.1';
 import {createSharedPresence} from './shared-presence.js?v=0.31.1';
@@ -41,7 +42,9 @@ function toast(message){$('#toast').textContent=message;$('#toast').hidden=false
 try{const stored=localStorage.getItem(KEY);if(stored)data=validateDirectory(JSON.parse(stored));}catch{storageFailed=true;toast('Stored data could not be read. Existing storage has been preserved; reload after resolving the problem.');}
 function save(next,fromSync=false){if(sessionCleared)return false;if(!fromSync&&(!workspaceReady||!hasDriveAccess())){if(workspaceReady)lockWorkspace();toast('Connect Google Drive and sync the directory first.');return false;}if(storageFailed){toast('Storage is unavailable. Existing data is protected.');return false;}try{if(!fromSync)next=recordChanges(data,next,getCurrentUser());const {organization,...cachedDirectory}=next;localStorage.setItem(KEY,JSON.stringify(cachedDirectory));data=next;if(workspaceReady)setOrganization(next.organization);refillAlertsDirectoryChanged();refreshEventLog();$('#storage-status').textContent='Saved on this device';return true;}catch{toast('Could not save: device storage is unavailable or full. Export your existing records.');return false;}}
 function element(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
+const roster=initRoster(()=>data.people,()=>workspaceReady&&hasDriveAccess());
 function render(){
+  roster.refresh();
   if(selected&&!data.people.some(person=>person.id===selected))selected=[...data.people].sort(compareDirectoryPeople)[0]?.id;
   refreshEventLog();clearTrashSelection();renderDesktopNotes(data.desktopNotes||[]);
   const query=$('#search').value.toLowerCase();const people=data.people.filter(p=>[personName(p),p.firstName,p.middleName,p.lastName,p.preferredName,p.name].filter(Boolean).join(' ').toLowerCase().includes(query)).sort(compareDirectoryPeople);
@@ -448,6 +451,7 @@ $('#trash-form').onsubmit=event=>{
 $('#trash-dialog').addEventListener('close',()=>{trashTarget=undefined;$('#trash-entry-label').textContent='';});
 
 function lockWorkspace(){
+  roster.clear();
   $('#event-log-text').textContent='';document.querySelector('#window-dock [data-window="event-log-dialog"]')?.remove();
   clearOrganization();  refillAlertsSession(false);  clearDesktopSelection();bulkTargets=[];
   closeMainWindow();detachFolderTarget=null;  clearStickyState();stickyEditId=null;stickyBaseline=null;clearDemographics();vitalsSession(false);calendarSession(false);rundownSession(false);icdLookupSession(false);historySession(false);immunizationsSession(false);medicationsSession(false);documentsSession(false);
