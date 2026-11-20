@@ -20,6 +20,8 @@ function rosterRow(person,today){
 
 export function initRoster(getPeople,canOpen){
   const dialog=document.querySelector('#roster-dialog');
+  const title=dialog.querySelector('#roster-title');
+  const heading=count=>`Current Roster (${count})`;
   const opener=document.querySelector('#roster-open');
   const head=dialog.querySelector('thead tr'),body=dialog.querySelector('tbody');
   const status=dialog.querySelector('[role=status]');
@@ -84,6 +86,7 @@ export function initRoster(getPeople,canOpen){
       head.append(th);
     }
     const list=rows();
+    title.textContent=heading(list.length);
     body.replaceChildren();
     for(const row of list){
       const tr=body.insertRow();
@@ -106,7 +109,8 @@ export function initRoster(getPeople,canOpen){
     if(!canOpen())return;
     try{
       printing=true;
-      await printDocument({title:'Current Roster',sections:[{columns:order.map(key=>labels[key]),rows:rows().map(values)}]});
+      const list=rows();
+      await printDocument({title:heading(list.length),sections:[{columns:order.map(key=>labels[key]),rows:list.map(values)}]});
     }catch(error){if(dialog.open)status.textContent=error.message;}
   };
   return {
@@ -116,6 +120,7 @@ export function initRoster(getPeople,canOpen){
       if(printing)clearPrint();
       printing=false;
       body.replaceChildren();
+      title.textContent='Current Roster';
       status.textContent='';
       order=Object.keys(labels);
       sort='name';

@@ -1,4 +1,4 @@
-import {initRoster} from './roster.js?v=0.31.6';
+import {initRoster} from './roster.js?v=0.31.7';
 import {icdLookupSession} from './icd-lookup.js?v=1';
 import {initRundown,rundownSession} from './rundown.js?v=0.31.1';
 import {createSharedPresence} from './shared-presence.js?v=0.31.1';
