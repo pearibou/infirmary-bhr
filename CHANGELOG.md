@@ -1,5 +1,9 @@
 # Version history
 
+## 0.31.7 — 2026-11-20
+
+- Show the living patient count in the roster and print headings.
+
 ## 0.31.6 — 2026-11-20
 
 - Add a compact printable roster of living patients with sortable and movable columns.
