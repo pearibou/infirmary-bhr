@@ -15,7 +15,7 @@ import {hasStaffProfile,loadStaffProfile,saveStaffProfile,useSharedWorkspace} fr
 import {initVitals,vitalsSession,openVitals,chartVitalSummary} from './vitals.js?v=0.31.3';
 import {changeFolderLink} from './model.js?v=0.31.1';
 import {openMainWindow,closeMainWindow,showWindow,updateWindowTitle} from './windows.js?v=0.31.1';
-import {initCalendar,calendarSession} from './calendar.js?v=0.31.1';
+import {initCalendar,calendarSession} from './calendar.js?v=0.31.8';
 import {initBackground} from './background.js?v=0.31.1';
 import {initHistory,historySession,openHistory} from './history.js?v=fy2027';
 import {smallIcon,decoratePrintButtons} from './icons-ui.js?v=0.31.1';
