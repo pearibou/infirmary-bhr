@@ -11,7 +11,7 @@ export function weekFor(value,version=2){return version===1?mondayFor(value):sun
 export function dayNames(value){return value.version===1?[...DAY_NAMES.slice(1),DAY_NAMES[0]]:DAY_NAMES;}
 export function dayIncluded(value,day){const name=dayNames(value)[day];return name==='Sunday'?value.includeSunday:name==='Saturday'?value.includeSaturday:true;}
 export function dayDate(start,day){const d=new Date(start+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+day);return d.toISOString().slice(0,10);}
-export function dateLabel(value){return new Date(value+'T12:00:00Z').toLocaleDateString('en-GB',{timeZone:'UTC',day:'numeric',month:'long',year:'numeric'});}
+export function dateLabel(value){return new Date(value+'T12:00:00Z').toLocaleDateString('en-GB',{timeZone:'UTC',day:'2-digit',month:'long',year:'numeric'}).toLowerCase();}
 export function todayInfirmary(){const p=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(p=>[p.type,p.value]));return `${p.year}-${p.month}-${p.day}`;}
 export function validateCalendar(value){
  if(!value||value.kind!==CALENDAR_KIND||![1,2].includes(value.version)||typeof value.id!=='string'||!/^[\w-]+$/.test(value.id)||typeof value.title!=='string'||!value.title.trim()||value.title.length>160||!dateValid(value.weekStart)||weekFor(value.weekStart,value.version)!==value.weekStart||typeof value.notice!=='string'||value.notice.length>1000||typeof value.includeSaturday!=='boolean'||typeof value.includeSunday!=='boolean'||!Array.isArray(value.appointments)||value.appointments.length>200)throw new Error('Invalid calendar. Choose a valid week start and a title; calendars support up to 200 appointments.');

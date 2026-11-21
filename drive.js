@@ -1,5 +1,5 @@
 import {validateRundown,rundownContent} from './rundown-model.js?v=0.31.1';
-import {validateCalendar,calendarContent} from './calendar-model.js?v=0.31.1';
+import {validateCalendar,calendarContent} from './calendar-model.js?v=0.31.8';
 import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.31.1';
 import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.31.1';
 import {validateDirectory,mergeDirectories} from './model.js?v=0.31.1';

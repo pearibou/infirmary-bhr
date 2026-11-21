@@ -1,5 +1,9 @@
 # Version history
 
+## 0.31.8 — 2026-11-21
+
+- Use two-digit days and lowercase month names in Weekly Appts and mark each appointment with a bullet in the reader and print views.
+
 ## 0.31.7 — 2026-11-20
 
 - Show the living patient count in the roster and print headings.
