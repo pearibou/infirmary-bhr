@@ -108,11 +108,11 @@ with sync_playwright() as p:
     page.locator('#calendar-view-button').click();page.locator('#calendar-switch-discard').click()
     page.locator('#calendar-refresh').click()
     page.wait_for_function("!document.querySelector('#calendar-refresh').disabled")
-    page.once('dialog',lambda dialog:dialog.dismiss())
     page.locator('.calendar-archive-delete').click()
+    page.locator('#calendar-delete-dialog').get_by_role('button',name='Cancel').click()
     assert saved_id in files
-    page.once('dialog',lambda dialog:dialog.accept())
     page.locator('.calendar-archive-delete').click()
+    page.locator('#calendar-delete-confirm').click()
     page.wait_for_function("document.querySelector('#calendar-status').textContent.includes('moved to Google Drive Trash')")
     assert saved_id not in files and page.locator('#calendar-empty').is_visible()
     page.locator('#calendar-dialog [data-close]').click();page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
