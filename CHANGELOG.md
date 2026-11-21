@@ -1,5 +1,9 @@
 # Version history
 
+## 0.31.11 — 2026-11-21
+
+- Record optional refill information when adding a medication, using the existing refill tracking sheet.
+
 ## 0.31.10 — 2026-11-21
 
 - Confirm saved calendar deletion in a BHR dialog.

@@ -1,3 +1,5 @@
+import {REFILL_EDITABLE,newRefill} from './refills-model.js?v=0.31.1';
+import {readRefills,saveRefill} from './refills-api.js?v=0.31.1';
 import {compareDirectoryPeople,personSelectionLabel} from './model.js?v=0.31.1';
 import {initRefills,refillsSession,openRefills} from './refills.js?v=0.31.1';
 import {printDocument,clearPrint} from './printing.js?v=0.31.1';
@@ -35,6 +37,11 @@ export function initMedications(options){
  $('#med-active').onclick=()=>{tab='Active';render();};$('#med-discontinued').onclick=()=>{tab='Discontinued';render();};$('#med-add').onclick=()=>openForm();
  $('#med-short-course').onchange=endFields;
  $('#medication-form').addEventListener('input',()=>formDirty=true);
+ $('#med-details-tab').onclick=()=>showEntryPane(false);
+ $('#med-refill-tab').onclick=()=>showEntryPane(true);
+ $('#medication-form').addEventListener('invalid',event=>{
+  showEntryPane(Boolean(event.target.closest('#med-refill-pane')));
+ },true);
  $('#medication-form').onsubmit=event=>{event.preventDefault();saveForm();};
  $('#med-form-cancel').onclick=()=>{formDirty=false;$('#medication-form').reset();formDialog.close();};
  formDialog.addEventListener('cancel',event=>{if(pending)event.preventDefault();else{formDirty=false;$('#medication-form').reset();}});
@@ -85,26 +92,88 @@ function render(){
  }
 }
 function endFields(){const enabled=$('#med-short-course').checked;$('#med-end-fields').disabled=!enabled;$('#medication-form').elements.endDate.required=enabled;}
+function showEntryPane(refills){
+ $('#med-details-pane').hidden=refills;
+ $('#med-refill-pane').hidden=!refills;
+ $('#med-details-tab').setAttribute('aria-pressed',String(!refills));
+ $('#med-refill-tab').setAttribute('aria-pressed',String(refills));
+}
 function openForm(entry=null){
  if(!context||context.missing||pending)return;
  if(!personById(currentPerson)){status('This person was removed. Close this viewer or select another resident.');return;}
  if(formDirty&&formState){showWindow(formDialog);return;}
- $('#medication-form').reset();formDisabled(false);formState={personId:currentPerson,ctx:context,before:entry,id:entry?.id||crypto.randomUUID(),created:new Date()};formDirty=false;
+ $('#medication-form').reset();
+ formState={personId:currentPerson,ctx:context,before:entry,id:entry?.id||crypto.randomUUID(),refillId:crypto.randomUUID(),created:new Date()};
+ $('#med-entry-tabs').hidden=Boolean(entry);
+ $('#med-form-save').textContent='Save medication';
+ $('#med-form-cancel').textContent='Cancel';
+ showEntryPane(false);formDisabled(false);formDirty=false;
  const person=personById(currentPerson);$('#med-form-title').textContent=(entry?'Edit medication':'Add medication')+' — '+personSelectionLabel(person);updateWindowTitle(formDialog);
  for(const key of EDITABLE_MED_FIELDS)if(!['scheduledEnd'].includes(key))$('#medication-form').elements[key].value=entry?.[key]||'';
  $('#med-short-course').checked=Boolean(entry?.scheduledEnd);$('#medication-form').elements.endDate.value=entry?.scheduledEnd.slice(0,10)||'';$('#medication-form').elements.endTime.value=entry?.scheduledEnd.split('T')[1]?.slice(0,5)||'';endFields();
  $('#med-end-help').textContent='Timezone: '+context.timezone+'. Without a time, this medication stays active through the end date.';$('#med-form-error').textContent='';showWindow(formDialog);$('#medication-form').elements.medication.focus();
 }
-function formDisabled(value){for(const control of $('#medication-form').elements)control.disabled=value;if(!value)endFields();}
+function formDisabled(value){
+ for(const control of $('#medication-form').elements){
+  control.disabled=value||Boolean(formState?.saved&&control.closest('#med-details-pane'));
+ }
+ if(!value&&!formState?.saved)endFields();
+}
 async function refreshAfterWrite(personId,stamp){try{await load(personId,stamp);}catch(error){if(active&&currentPerson===personId)failure(error,'Saved to spreadsheet; refresh failed. ');}}
 function saveForm(){
  if(pending||!formState)return;const state=formState,form=$('#medication-form'),fields=Object.fromEntries(EDITABLE_MED_FIELDS.map(key=>[key,String(form.elements[key]?.value||'').trim()]));
  fields.scheduledEnd=$('#med-short-course').checked?form.elements.endDate.value+(form.elements.endTime.value?'T'+form.elements.endTime.value:''):'';
- if($('#med-short-course').checked&&!form.elements.endDate.value){$('#med-form-error').textContent='Enter an end date for the short course.';return;}
+ if($('#med-short-course').checked&&!form.elements.endDate.value){showEntryPane(false);$('#med-form-error').textContent='Enter an end date for the short course.';return;}
  const actor=getCurrentUser();if(!actor){$('#med-form-error').textContent='Reconnect Google Drive before saving medications.';return;}
- let entry;try{entry=state.before?reviseMedication(state.before,fields,actor):newMedication(fields,actor,state.created,state.id);}catch(error){$('#med-form-error').textContent=error.message;return;}
+ let entry;
+ try{
+  entry=state.saved||(state.before?reviseMedication(state.before,fields,actor):newMedication(fields,actor,state.created,state.id));
+ }catch(error){
+  showEntryPane(false);$('#med-form-error').textContent=error.message;return;
+ }
+ const refillFields=Object.fromEntries(REFILL_EDITABLE.map(key=>[key,form.elements[key].value.trim()]));
+ let refill;
+ try{
+  if(!state.before&&REFILL_EDITABLE.some(key=>refillFields[key])){
+   refill=newRefill(refillFields,entry,actor,state.refillId,state.created);
+  }
+ }catch(error){
+  showEntryPane(true);$('#med-form-error').textContent=error.message;return;
+ }
  formDisabled(true);$('#med-form-error').textContent='Saving to spreadsheet…';
- run(async stamp=>{if(!personById(state.personId))throw new Error('This person was removed from the directory.');await (state.before?updateMedication(state.ctx,state.before,entry):addMedication(state.ctx,entry));alive(stamp);audit(state.before?'updated':'created',entry.id,state.personId);if(!state.before)tab='Active';formDirty=false;formDialog.close();await refreshAfterWrite(state.personId,stamp);}).catch(error=>{if(active)$('#med-form-error').textContent=error.message;}).finally(()=>formDisabled(false));
+ const requestEpoch=epoch;
+ run(async stamp=>{
+  const person=personById(state.personId);
+  if(!person)throw new Error('This person was removed from the directory.');
+  if(!state.saved){
+   if(state.before)await updateMedication(state.ctx,state.before,entry);
+   else state.saved=await addMedication(state.ctx,entry);
+   alive(stamp);
+   audit(state.before?'updated':'created',entry.id,state.personId);
+  }
+  if(!state.before)tab='Active';
+  if(refill){
+   try{
+    const refillContext=await readRefills(state.ctx);
+    alive(stamp);
+    await saveRefill(refillContext,person,refill);
+    alive(stamp);
+    hooks.activity('refill.created','refill',refill.id,'Refill created',state.personId,actor);
+   }catch(error){
+    alive(stamp);
+    await refreshAfterWrite(state.personId,stamp);
+    alive(stamp);
+    showEntryPane(true);
+    $('#med-form-save').textContent='Retry refill';
+    $('#med-form-cancel').textContent='Close';
+    throw new Error('Medication saved. Refill details could not be confirmed. Retry here or check Refills later. '+error.message);
+   }
+  }
+  formDirty=false;formDialog.close();
+  await refreshAfterWrite(state.personId,stamp);
+ }).catch(error=>{
+  if(active&&epoch===requestEpoch)$('#med-form-error').textContent=error.message;
+ }).finally(()=>{if(epoch===requestEpoch)formDisabled(false);});
 }
 function openAction(entry,action){
  if(pending)return;actionState={entry,action,ctx:context,personId:currentPerson};$('#medication-action-form').reset();$('#med-action-title').textContent=action==='delete'?'Delete medication entry':'Discontinue medication';$('#med-action-subject').textContent=entry.medication;

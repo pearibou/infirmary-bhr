@@ -54,6 +54,7 @@ with sync_playwright() as p:
         if not meta:return []
         loc=meta['location']['dimensionRange'];return [copy.deepcopy(grids[loc['sheetId']][loc['startIndex']])]
     def entry_rows(sid):return [row for row in grids[sid][1:] if row and row[0]]
+    lose_inline_refill=[False]
     def sheets_api(route):
         req=route.request;path=urllib.parse.urlparse(req.url).path;body=req.post_data_json if req.method=='POST' else None
         if disabled_api[0]:route.fulfill(status=403,json={'error':{'message':'Google Sheets API is disabled'}});return
@@ -94,6 +95,9 @@ with sync_playwright() as p:
                         index=start['rowIndex']+i
                         while len(rows)<=index:rows.append([])
                         rows[index]=[cell.get('userEnteredValue',{}).get('stringValue','') for cell in row['values']]
+            if is_add and lose_inline_refill[0] and 'INLINE-SYNTHETIC-RX' in (req.post_data or ''):
+                lose_inline_refill[0]=False
+                route.fulfill(status=503,json={'error':{'message':'Synthetic refill response lost'}});return
             if is_add and lost_add[0]:lost_add[0]=False;route.fulfill(status=503,json={'error':{'message':'Synthetic save response lost'}});return
             route.fulfill(json={'replies':[{} for _ in body['requests']]});return
         route.fulfill(status=404,json={'error':{'message':'Unknown synthetic Sheets route'}})
@@ -228,7 +232,24 @@ with sync_playwright() as p:
     assert 'Synthetic tablet 10 mg' in printed;page.evaluate("document.querySelector('#bhr-print-frame').contentWindow.dispatchEvent(new Event('afterprint'))")
     page.locator('#medications-dialog [data-close]').click();page.locator('.person strong').filter(has_text='Synthetic James').click();page.locator('.chart-navigation').get_by_role('button',name='Medications',exact=True).click();page.get_by_role('button',name='+ Add medication list',exact=True).click();page.wait_for_function("!document.querySelector('#med-add').disabled && !document.querySelector('#med-controls').hidden")
     page.locator('#med-refills').click();page.get_by_text('No medications available for refill tracking.',exact=True).wait_for();assert 'SYNTHETIC PRIVATE PHARMACY' not in page.locator('#refill-content').inner_text()
-    page.locator('#refills-dialog [data-close]').click();page.locator('#medications-dialog [data-close]').click();page.locator('.person strong').filter(has_text='Synthetic John').click();page.locator('.chart-navigation').get_by_role('button',name='Medications',exact=True).click();page.wait_for_function("!document.querySelector('#med-refills').disabled && !document.querySelector('#med-controls').hidden")
+    page.locator('#refills-dialog [data-close]').click()
+    page.locator('#med-add').click()
+    inline=page.locator('#medication-form')
+    inline.get_by_label('Medication name',exact=True).fill('Synthetic inline medication')
+    page.locator('#med-refill-tab').click()
+    inline.get_by_label('Rx number',exact=True).fill('INLINE-SYNTHETIC-RX')
+    inline.get_by_label('Refills remaining',exact=True).fill('0')
+    lose_inline_refill[0]=True
+    page.locator('#med-form-save').click()
+    page.wait_for_function("document.querySelector('#med-form-error').textContent.includes('Medication saved.')")
+    assert inline.get_by_label('Rx number',exact=True).input_value()=='INLINE-SYNTHETIC-RX'
+    page.locator('#med-form-save').click()
+    page.wait_for_function("!document.querySelector('#medication-form-dialog').open && !document.querySelector('#med-add').disabled")
+    matching_meds=[row for sid_ in grids for row in entry_rows(sid_) if 'Synthetic inline medication' in row and 'INLINE-SYNTHETIC-RX' not in row]
+    matching_refills=[row for sid_ in grids for row in entry_rows(sid_) if 'INLINE-SYNTHETIC-RX' in row]
+    assert len(matching_meds)==len(matching_refills)==1
+    assert matching_refills[0][1]==matching_meds[0][0] and matching_refills[0][6]=='0'
+    page.locator('#medications-dialog [data-close]').click();page.locator('.person strong').filter(has_text='Synthetic John').click();page.locator('.chart-navigation').get_by_role('button',name='Medications',exact=True).click();page.wait_for_function("!document.querySelector('#med-refills').disabled && !document.querySelector('#med-controls').hidden")
     page.locator('#med-refills').click();page.wait_for_function("!document.querySelector('#refill-refresh').disabled");page.get_by_role('button',name='+ Record refill',exact=True).click();refill_form.get_by_label('Rx number',exact=True).fill('SYNTHETIC UNSAVED PRIVATE RX');page.locator('#refill-form-dialog .window-control').click();page.locator('#refills-dialog [data-close]').click();page.locator('#medications-dialog [data-close]').click()
     page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
     assert page.locator('#refill-content').text_content()=='' and refill_form.get_by_label('Rx number',exact=True).input_value()==''
