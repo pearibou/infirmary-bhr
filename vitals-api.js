@@ -1,4 +1,4 @@
-import {findVitalsWorkbook,medicationSheetsRequest as vitalsSheetsRequest,getDriveSessionEpoch,getCurrentUser} from './drive.js?v=0.31.1';
+import {findVitalsWorkbook,medicationSheetsRequest as vitalsSheetsRequest,getDriveSessionEpoch,getCurrentUser} from './drive.js?v=0.31.9';
 import {VITAL_FIELDS,VITAL_HEADERS,EDITABLE_VITAL_FIELDS,parseVitalRows,vitalToRow,validateVital} from './vitals-model.js?v=0.31.3';
 import {medicationSheetTitle,medicationSheetId} from './medications-model.js?v=0.31.1';
 const PERSON_KEY='bhr.vitals.personId',ROW_KEY='bhr.vitals.entryId',SCHEMA_KEY='bhr.vitals.schema';

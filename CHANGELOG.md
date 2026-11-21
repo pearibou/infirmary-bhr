@@ -1,5 +1,9 @@
 # Version history
 
+## 0.31.9 — 2026-11-21
+
+- Capitalize calendar month names and add a delete button beside each saved calendar.
+
 ## 0.31.8 — 2026-11-21
 
 - Use two-digit days and lowercase month names in Weekly Appts and mark each appointment with a bullet in the reader and print views.

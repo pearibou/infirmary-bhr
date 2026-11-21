@@ -1,4 +1,4 @@
-import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.31.1';
+import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.31.9';
 import {readImmunizationList,readAllImmunizationLists,createImmunizationList,addImmunization,updateImmunization,deleteImmunization,resetImmunizationSource} from './immunization-api.js?v=0.31.1';
 import {EDITABLE_IMMUNIZATION_FIELDS,newImmunization,reviseImmunization,compareImmunizations,latestImmunizations,immunizationDateText,immunizationAgeText} from './immunization-model.js?v=0.31.1';
 import {compareDirectoryPeople,personAge,personSelectionLabel} from './model.js?v=0.31.1';

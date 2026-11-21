@@ -1,7 +1,7 @@
 import {CALENDAR_SYMBOLS,calendarSymbol} from './calendar-symbols.js?v=0.31.1';
-import {listAppointmentCalendars,readAppointmentCalendar,saveAppointmentCalendar,getCurrentUser,hasDriveAccess} from './drive.js?v=0.31.1';
-import {newCalendar,validateCalendar,calendarContent,weekFor,dayNames,dayIncluded,dayDate,dateLabel,DAY_NAMES,APPOINTMENT_FIELDS} from './calendar-model.js?v=0.31.8';
-import {printCalendar,clearCalendarPrint} from './calendar-print.js?v=0.31.8';
+import {listAppointmentCalendars,readAppointmentCalendar,saveAppointmentCalendar,trashAppointmentCalendar,getCurrentUser,hasDriveAccess} from './drive.js?v=0.31.9';
+import {newCalendar,validateCalendar,calendarContent,weekFor,dayNames,dayIncluded,dayDate,dateLabel,DAY_NAMES,APPOINTMENT_FIELDS} from './calendar-model.js?v=0.31.9';
+import {printCalendar,clearCalendarPrint} from './calendar-print.js?v=0.31.9';
 import {smallIcon} from './icons-ui.js?v=0.31.1';
 import {showWindow,updateWindowTitle} from './windows.js?v=0.31.1';
 const $=s=>document.querySelector(s),make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
@@ -23,7 +23,28 @@ function renderReading(){
 async function run(work){if(busy)return;const stamp=epoch;live(stamp);busy=true;hooks.busy(true);controls();try{return await work(stamp);}catch(error){if(stamp===epoch)status(error.message);throw error;}finally{if(stamp===epoch){busy=false;hooks.busy(false);controls();}}}
 function changed(){dirty=true;status('Unsaved calendar changes');}
 function title(){const label=editor?'Weekly Appts — '+dateLabel(editor.calendar.weekStart):'Weekly Appts';$('#calendar-title').textContent=label;updateWindowTitle($('#calendar-dialog'));}
-function renderArchive(){const list=$('#calendar-archive');list.replaceChildren();if(!files.length)list.append(make('p','No saved calendars yet.'));for(const file of [...files].sort((a,b)=>(b.appProperties?.weekStart||'').localeCompare(a.appProperties?.weekStart||'')||(b.modifiedTime||'').localeCompare(a.modifiedTime||''))){const b=make('button',file.appProperties?.weekStart?dateLabel(file.appProperties.weekStart)+' · '+file.name.replace(/^Calendar \d{4}-\d{2}-\d{2} — /,'').replace(/\.json$/,''):file.name);b.type='button';b.className='calendar-archive-item';b.onclick=()=>switchTo(()=>openFile(file.id));list.append(b);}controls();}
+function renderArchive(){const list=$('#calendar-archive');list.replaceChildren();if(!files.length)list.append(make('p','No saved calendars yet.'));for(const file of [...files].sort((a,b)=>(b.appProperties?.weekStart||'').localeCompare(a.appProperties?.weekStart||'')||(b.modifiedTime||'').localeCompare(a.modifiedTime||''))){const b=make('button',file.appProperties?.weekStart?dateLabel(file.appProperties.weekStart)+' · '+file.name.replace(/^Calendar \d{4}-\d{2}-\d{2} — /,'').replace(/\.json$/,''):file.name);b.type='button';b.className='calendar-archive-item';b.onclick=()=>switchTo(()=>openFile(file.id));const row=make('div');row.className='calendar-archive-row';
+ const remove=make('button','×');remove.type='button';remove.className='calendar-archive-delete';
+ remove.title='Move to Drive Trash';remove.setAttribute('aria-label','Delete '+b.textContent);
+ remove.onclick=()=>removeSavedCalendar(file,b.textContent);row.append(b,remove);list.append(row);}controls();}
+function removeSavedCalendar(file,label){
+ if(busy)return;
+ if(dirty&&editor?.file?.id===file.id){status('Save or discard your edits before deleting this calendar.');return;}
+ if(!window.confirm('Move “'+label+'” to Google Drive Trash?'))return;
+ run(async stamp=>{
+  await trashAppointmentCalendar(file);
+  live(stamp);
+  files=files.filter(item=>item.id!==file.id);
+  if(editor?.file?.id===file.id){
+   editor=null;dirty=false;clearCalendarPrint();
+   $('#calendar-reading').replaceChildren();
+   $('#calendar-days').replaceChildren();
+   $('#calendar-empty').hidden=false;
+   setMode(false);title();
+  }
+  renderArchive();status('Calendar moved to Google Drive Trash.');
+ }).catch(()=>{});
+}
 async function refresh(stamp){const loaded=await listAppointmentCalendars();live(stamp);files=loaded;renderArchive();}
 async function openFile(id){await run(async stamp=>{status('Opening saved calendar…');const loaded=await readAppointmentCalendar(id);live(stamp);editor=loaded;dirty=false;fill();setMode(false);status('Saved calendar opened');});}
 function switchTo(action){if(busy)return;if(dirty){pendingAction=action;$('#calendar-switch-error').textContent='';$('#calendar-switch-dialog').showModal();return;}Promise.resolve(action()).catch(()=>{});}

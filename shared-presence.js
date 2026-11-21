@@ -1,5 +1,5 @@
 import {drivePresenceTransport} from './presence-api.js?v=0.31.1';
-import {getCurrentUser} from './drive.js?v=0.31.1';
+import {getCurrentUser} from './drive.js?v=0.31.9';
 import {recentPresenceUsers,PRESENCE_MIN_INTERVAL,PRESENCE_FALLBACK_INTERVAL,PRESENCE_TTL} from './presence-model.js?v=0.31.1';
 export function createSharedPresence({transport=drivePresenceTransport,user=getCurrentUser,now=Date.now,interval=setInterval,clear=clearInterval}={}){
  let current=null;

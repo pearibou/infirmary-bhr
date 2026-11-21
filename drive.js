@@ -1,5 +1,5 @@
 import {validateRundown,rundownContent} from './rundown-model.js?v=0.31.1';
-import {validateCalendar,calendarContent} from './calendar-model.js?v=0.31.8';
+import {validateCalendar,calendarContent} from './calendar-model.js?v=0.31.9';
 import {validateDocument,requireDocumentOwner} from './documents-model.js?v=0.31.1';
 import {mergeEventLogs,eventLogText,parseEventLogText} from './events.js?v=0.31.1';
 import {validateDirectory,mergeDirectories} from './model.js?v=0.31.1';
@@ -323,6 +323,20 @@ export async function listAppointmentCalendars(calendarId=null){
  do{const params=new URLSearchParams({q,fields:`files(${calendarFields}),nextPageToken`,pageSize:'100',...(pageToken?{pageToken}:{})});const result=await(await api('files?'+params)).json();files.push(...result.files.filter(file=>file.appProperties?.bhrCalendar==='1'&&(!calendarId||file.appProperties.calendarId===calendarId)));pageToken=result.nextPageToken;}while(pageToken);return files;
 }
 async function appointmentCalendarMetadata(fileId){requireCalendarAccess();const response=await api(`files/${safeDriveId(fileId)}?fields=${calendarFields}`),file=await response.json();if(file.trashed||file.appProperties?.bhrCalendar!=='1'||!file.parents?.includes(workspaceFolder))throw new Error('This appointment calendar is unavailable in Infirmary-BHR.');return {...file,etag:response.headers.get('etag')};}
+export async function trashAppointmentCalendar(baseline){
+ const epoch=storageEpoch;
+ const file=await appointmentCalendarMetadata(baseline.id);
+ if(epoch!==storageEpoch)throw new Error('Connection changed.');
+ if(file.modifiedTime!==baseline.modifiedTime||file.appProperties.calendarId!==baseline.appProperties?.calendarId){
+  throw new Error('This calendar changed in Drive. Refresh the archive before deleting.');
+ }
+ await api(`files/${safeDriveId(file.id)}`,{
+  method:'PATCH',
+  headers:{'Content-Type':'application/json',...(file.etag?{'If-Match':file.etag}:{})},
+  body:JSON.stringify({trashed:true})
+ });
+ if(epoch!==storageEpoch)throw new Error('Connection changed.');
+}
 export async function readAppointmentCalendar(fileId){const epoch=storageEpoch,file=await appointmentCalendarMetadata(fileId);if(epoch!==storageEpoch)throw new Error('Connection changed.');const calendar=validateCalendar(await(await api(`files/${safeDriveId(fileId)}?alt=media`)).json());if(epoch!==storageEpoch)throw new Error('Connection changed.');if(file.appProperties.calendarId!==calendar.id)throw new Error('Calendar identity does not match its Drive file.');return {file,calendar};}
 export async function saveAppointmentCalendar(calendar,baseline=null){
  requireCalendarAccess();validateCalendar(calendar);if(calendar.updatedById!==getCurrentUser().id)throw new Error('Reconnect before saving this calendar.');const epoch=storageEpoch;
