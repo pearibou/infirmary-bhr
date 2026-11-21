@@ -1,5 +1,9 @@
 # Version history
 
+## 0.31.10 — 2026-11-21
+
+- Confirm saved calendar deletion in a BHR dialog.
+
 ## 0.31.9 — 2026-11-21
 
 - Capitalize calendar month names and add a delete button beside each saved calendar.

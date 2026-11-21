@@ -30,20 +30,39 @@ function renderArchive(){const list=$('#calendar-archive');list.replaceChildren(
 function removeSavedCalendar(file,label){
  if(busy)return;
  if(dirty&&editor?.file?.id===file.id){status('Save or discard your edits before deleting this calendar.');return;}
- if(!window.confirm('Move “'+label+'” to Google Drive Trash?'))return;
- run(async stamp=>{
-  await trashAppointmentCalendar(file);
-  live(stamp);
-  files=files.filter(item=>item.id!==file.id);
-  if(editor?.file?.id===file.id){
-   editor=null;dirty=false;clearCalendarPrint();
-   $('#calendar-reading').replaceChildren();
-   $('#calendar-days').replaceChildren();
-   $('#calendar-empty').hidden=false;
-   setMode(false);title();
+ const dialog=$('#calendar-delete-dialog'),confirm=$('#calendar-delete-confirm');
+ const error=$('#calendar-delete-error'),cancel=dialog.querySelector('[data-close]');
+ $('#calendar-delete-subject').textContent=label;
+ error.textContent='';
+ confirm.disabled=cancel.disabled=false;
+ confirm.onclick=async()=>{
+  if(busy)return;
+  const stamp=epoch;
+  confirm.disabled=cancel.disabled=true;
+  error.textContent='';
+  try{
+   await run(async request=>{
+    await trashAppointmentCalendar(file);
+    live(request);
+    files=files.filter(item=>item.id!==file.id);
+    if(editor?.file?.id===file.id){
+     editor=null;dirty=false;clearCalendarPrint();
+     $('#calendar-reading').replaceChildren();
+     $('#calendar-days').replaceChildren();
+     $('#calendar-empty').hidden=false;
+     setMode(false);title();
+    }
+    renderArchive();status('Calendar moved to Google Drive Trash.');
+    dialog.close();
+   });
+  }catch(failure){
+   if(stamp===epoch)error.textContent=failure.message;
+  }finally{
+   if(stamp===epoch)confirm.disabled=cancel.disabled=false;
   }
-  renderArchive();status('Calendar moved to Google Drive Trash.');
- }).catch(()=>{});
+ };
+ dialog.showModal();
+ cancel.focus();
 }
 async function refresh(stamp){const loaded=await listAppointmentCalendars();live(stamp);files=loaded;renderArchive();}
 async function openFile(id){await run(async stamp=>{status('Opening saved calendar…');const loaded=await readAppointmentCalendar(id);live(stamp);editor=loaded;dirty=false;fill();setMode(false);status('Saved calendar opened');});}
@@ -55,6 +74,15 @@ function refreshDays(){if(!editor)return;let excluded=0;const start=$('#calendar
 function collect(){if(!editor)throw new Error('Create or open a calendar first.');const user=getCurrentUser();if(!user)throw new Error('Reconnect to identify the calendar editor.');const c=structuredClone(editor.calendar);c.title=$('#calendar-name').value.trim();c.symbol=$('#calendar-symbols [aria-pressed="true"]')?.dataset.calendarSymbol||'star';c.weekStart=$('#calendar-week').value;c.notice=$('#calendar-notice').value;c.includeSaturday=$('#calendar-saturday').checked;c.includeSunday=$('#calendar-sunday').checked;c.appointments=[...document.querySelectorAll('#calendar-days .calendar-appointment')].map(row=>({id:row.dataset.id,day:+row.dataset.day,...Object.fromEntries([...row.querySelectorAll('[data-field]')].map(input=>[input.dataset.field,input.value.trim()]))})).filter(row=>Object.keys(APPOINTMENT_FIELDS).some(key=>row[key]));c.updatedAt=new Date().toISOString();c.updatedBy=user.name;c.updatedById=user.id;return validateCalendar(c);}
 async function save(stamp){const snapshot=collect(),previous=editor.file;status('Saving calendar to Drive…');const file=await saveAppointmentCalendar(snapshot,previous);live(stamp);editor={file,calendar:snapshot};dirty=false;title();setMode(false);hooks.activity(previous?'calendar.updated':'calendar.created','calendar',file.id,previous?'Appointment calendar updated':'Appointment calendar created');status('Calendar saved');try{await refresh(stamp);}catch(error){if(epoch===stamp)status('Calendar saved; archive refresh failed. '+error.message);}return snapshot;}
 async function print(mode){if(!editor||busy)return;run(async stamp=>{const snapshot=editing||!editor.file?await save(stamp):structuredClone(editor.calendar);live(stamp);status('Fitting a one-page '+(mode==='public'?'public portrait':'administrator landscape')+' copy…');await printCalendar(snapshot,mode);live(stamp);hooks.activity('calendar.print_requested','calendar',editor.file.id,mode==='public'?'Public appointment calendar print dialog requested':'Administrator appointment calendar print dialog requested');status('Print dialog requested — '+(mode==='public'?'public copy':'administrator copy'));}).catch(()=>{});}
-export function initCalendar(options){hooks=options;for(const [id,label] of CALENDAR_SYMBOLS){const b=make('button');b.type='button';b.dataset.calendarSymbol=id;b.title=label;b.setAttribute('aria-label',label);b.setAttribute('aria-pressed',String(id==='star'));b.append(calendarSymbol(document,id));b.onclick=()=>{for(const other of document.querySelectorAll('[data-calendar-symbol]'))other.setAttribute('aria-pressed',String(other===b));changed();};$('#calendar-symbols').append(b);}$('#calendar-edit').prepend(smallIcon('pencil'));$('#calendar-edit').onclick=()=>{if(!busy&&editor){fill();setMode(true);$('#calendar-name').focus();}};$('#calendar-view-button').onclick=()=>{if(!editor?.file){run(save).catch(()=>{});return;}switchTo(()=>{dirty=false;fill();setMode(false);status('Viewing saved calendar');});};$('#calendar-maker-icon').ondblclick=openCalendar;$('#calendar-maker-icon').onkeydown=event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();openCalendar();}};$('#calendar-new').onclick=()=>switchTo(startNew);$('#calendar-refresh').onclick=()=>run(refresh).catch(()=>{});$('#calendar-save').onclick=()=>run(save).catch(()=>{});$('#calendar-print-public').onclick=()=>print('public');$('#calendar-print-full').onclick=()=>print('administrator');$('#calendar-editor').addEventListener('input',()=>{changed();refreshDays();});for(const id of ['calendar-saturday','calendar-sunday'])$('#'+id).onchange=refreshDays;$('#calendar-week').onchange=()=>{try{$('#calendar-week').value=weekFor($('#calendar-week').value,editor.calendar.version);refreshDays();changed();}catch(error){status(error.message);}};$('#calendar-switch-save').onclick=async()=>{if(busy)return;const action=pendingAction,stamp=epoch;$('#calendar-switch-dialog').querySelectorAll('button').forEach(b=>b.disabled=true);try{await run(save);if(stamp!==epoch)return;$('#calendar-switch-dialog').close();pendingAction=null;await action?.();}catch(error){if(stamp===epoch)$('#calendar-switch-error').textContent=error.message;}finally{if(stamp!==epoch)return;$('#calendar-switch-dialog').querySelectorAll('button').forEach(b=>b.disabled=false);}};$('#calendar-switch-discard').onclick=()=>{dirty=false;const action=pendingAction;pendingAction=null;$('#calendar-switch-dialog').close();Promise.resolve(action?.()).catch(()=>{});};$('#calendar-switch-dialog').addEventListener('cancel',event=>{if(busy)event.preventDefault();else pendingAction=null;});$('#calendar-dialog').addEventListener('cancel',event=>{if(busy)event.preventDefault();});window.addEventListener('beforeunload',event=>{if(dirty||busy){event.preventDefault();event.returnValue='';}});}
-export function calendarSession(ready){if(ready){if(!active){active=true;epoch++;}return;}active=false;epoch++;busy=false;dirty=false;editing=false;editor=null;files=[];pendingAction=null;clearCalendarPrint();hooks.busy(false);for(const id of ['calendar-dialog','calendar-switch-dialog']){if($('#'+id).open)$('#'+id).close();document.querySelector(`#window-dock [data-window="${id}"]`)?.remove();}for(const id of ['calendar-days','calendar-archive','calendar-person-names','calendar-reading'])$('#'+id).replaceChildren();for(const id of ['calendar-name','calendar-week','calendar-notice'])$('#'+id).value='';$('#calendar-saturday').checked=false;$('#calendar-sunday').checked=false;for(const b of document.querySelectorAll('[data-calendar-symbol]'))b.setAttribute('aria-pressed',String(b.dataset.calendarSymbol==='star'));$('#calendar-title').textContent='Weekly Appts';$('#calendar-status').textContent='';$('#calendar-switch-error').textContent='';$('#calendar-weekend-note').textContent='';$('#calendar-editor').hidden=true;$('#calendar-reading').hidden=true;$('#calendar-empty').hidden=false;controls();}
+export function initCalendar(options){hooks=options;
+ const deleteDialog=$('#calendar-delete-dialog');
+ deleteDialog.addEventListener('cancel',event=>{if(busy)event.preventDefault();});
+ deleteDialog.addEventListener('close',()=>{
+  if(deleteDialog.open)return;
+  $('#calendar-delete-confirm').onclick=null;
+  $('#calendar-delete-subject').textContent='';
+  $('#calendar-delete-error').textContent='';
+ });
+ for(const [id,label] of CALENDAR_SYMBOLS){const b=make('button');b.type='button';b.dataset.calendarSymbol=id;b.title=label;b.setAttribute('aria-label',label);b.setAttribute('aria-pressed',String(id==='star'));b.append(calendarSymbol(document,id));b.onclick=()=>{for(const other of document.querySelectorAll('[data-calendar-symbol]'))other.setAttribute('aria-pressed',String(other===b));changed();};$('#calendar-symbols').append(b);}$('#calendar-edit').prepend(smallIcon('pencil'));$('#calendar-edit').onclick=()=>{if(!busy&&editor){fill();setMode(true);$('#calendar-name').focus();}};$('#calendar-view-button').onclick=()=>{if(!editor?.file){run(save).catch(()=>{});return;}switchTo(()=>{dirty=false;fill();setMode(false);status('Viewing saved calendar');});};$('#calendar-maker-icon').ondblclick=openCalendar;$('#calendar-maker-icon').onkeydown=event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();openCalendar();}};$('#calendar-new').onclick=()=>switchTo(startNew);$('#calendar-refresh').onclick=()=>run(refresh).catch(()=>{});$('#calendar-save').onclick=()=>run(save).catch(()=>{});$('#calendar-print-public').onclick=()=>print('public');$('#calendar-print-full').onclick=()=>print('administrator');$('#calendar-editor').addEventListener('input',()=>{changed();refreshDays();});for(const id of ['calendar-saturday','calendar-sunday'])$('#'+id).onchange=refreshDays;$('#calendar-week').onchange=()=>{try{$('#calendar-week').value=weekFor($('#calendar-week').value,editor.calendar.version);refreshDays();changed();}catch(error){status(error.message);}};$('#calendar-switch-save').onclick=async()=>{if(busy)return;const action=pendingAction,stamp=epoch;$('#calendar-switch-dialog').querySelectorAll('button').forEach(b=>b.disabled=true);try{await run(save);if(stamp!==epoch)return;$('#calendar-switch-dialog').close();pendingAction=null;await action?.();}catch(error){if(stamp===epoch)$('#calendar-switch-error').textContent=error.message;}finally{if(stamp!==epoch)return;$('#calendar-switch-dialog').querySelectorAll('button').forEach(b=>b.disabled=false);}};$('#calendar-switch-discard').onclick=()=>{dirty=false;const action=pendingAction;pendingAction=null;$('#calendar-switch-dialog').close();Promise.resolve(action?.()).catch(()=>{});};$('#calendar-switch-dialog').addEventListener('cancel',event=>{if(busy)event.preventDefault();else pendingAction=null;});$('#calendar-dialog').addEventListener('cancel',event=>{if(busy)event.preventDefault();});window.addEventListener('beforeunload',event=>{if(dirty||busy){event.preventDefault();event.returnValue='';}});}
+export function calendarSession(ready){if(ready){if(!active){active=true;epoch++;}return;}active=false;epoch++;busy=false;dirty=false;editing=false;editor=null;files=[];pendingAction=null;clearCalendarPrint();hooks.busy(false);for(const id of ['calendar-dialog','calendar-switch-dialog','calendar-delete-dialog']){if($('#'+id).open)$('#'+id).close();document.querySelector(`#window-dock [data-window="${id}"]`)?.remove();}for(const id of ['calendar-days','calendar-archive','calendar-person-names','calendar-reading'])$('#'+id).replaceChildren();for(const id of ['calendar-name','calendar-week','calendar-notice'])$('#'+id).value='';$('#calendar-saturday').checked=false;$('#calendar-sunday').checked=false;for(const b of document.querySelectorAll('[data-calendar-symbol]'))b.setAttribute('aria-pressed',String(b.dataset.calendarSymbol==='star'));$('#calendar-title').textContent='Weekly Appts';$('#calendar-status').textContent='';$('#calendar-switch-error').textContent='';$('#calendar-weekend-note').textContent='';$('#calendar-editor').hidden=true;$('#calendar-reading').hidden=true;$('#calendar-empty').hidden=false;controls();}
 export function openCalendar(){if(!active||!hasDriveAccess())return;showWindow($('#calendar-dialog'));if(!busy)run(async stamp=>{await refresh(stamp);if(!editor)status('Open a past calendar or choose + New calendar.');}).catch(()=>{});}
