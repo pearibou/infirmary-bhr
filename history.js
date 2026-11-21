@@ -1,6 +1,6 @@
 import {personSelectionLabel} from './model.js?v=0.31.1';
 import {printDocument,clearPrint} from './printing.js?v=0.31.1';
-import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.31.1';
+import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.31.9';
 import {readHistoryList,createHistoryList,addHistory,updateHistory,deleteHistory,resetHistorySource} from './history-api.js?v=fy2027';
 import {loadCatalog,searchCatalog,newHistory,reviseHistory,historyName} from './history-model.js?v=fy2027';
 import {showWindow,updateWindowTitle} from './windows.js?v=0.31.1';

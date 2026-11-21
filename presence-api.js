@@ -1,4 +1,4 @@
-import {presenceFilesRequest as request,uploadPresenceIdentity,getWorkspaceFolder,getDriveSessionEpoch} from './drive.js?v=0.31.1';
+import {presenceFilesRequest as request,uploadPresenceIdentity,getWorkspaceFolder,getDriveSessionEpoch} from './drive.js?v=0.31.9';
 import {validatePresenceIdentity,PRESENCE_TTL} from './presence-model.js?v=0.31.1';
 const folderType='application/vnd.google-apps.folder',json=value=>({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)});
 const safe=value=>{if(typeof value!=='string'||!/^[\w-]+$/.test(value))throw new Error('Invalid presence file ID.');return value;};

@@ -1,5 +1,5 @@
 import {makeTrashable,clearTrashSelection} from './trash.js?v=0.31.1';
-import {listCommunityRundowns,readCommunityRundown,saveCommunityRundown,trashCommunityRundown,getCurrentUser,hasDriveAccess} from './drive.js?v=0.31.1';
+import {listCommunityRundowns,readCommunityRundown,saveCommunityRundown,trashCommunityRundown,getCurrentUser,hasDriveAccess} from './drive.js?v=0.31.9';
 import {newRundown,validateRundown,rundownDate,rundownDateInput,rundownDateLabel} from './rundown-model.js?v=0.31.1';
 import {cleanNoteHtml} from './documents-model.js?v=0.31.1';
 import {personName,compareDirectoryPeople} from './model.js?v=0.31.1';

@@ -35,6 +35,9 @@ with sync_playwright() as p:
             if lost[0]:lost[0]=False;route.fulfill(status=503,json={'error':{'message':'Synthetic lost save reply'}});return
             route.fulfill(json=files[id]);return
         id=url.path.split('/')[-1]
+        if id in files and method=='PATCH':
+            assert request.post_data_json=={'trashed':True}
+            route.fulfill(json={**files.pop(id),'trashed':True});return
         if id in files:route.fulfill(json=contents[id] if params.get('alt')==['media'] else files[id]);return
         route.fulfill(status=404,json={'error':{'message':'Unknown synthetic route'}})
     page.route('https://www.googleapis.com/**',drive);ignore_event_log_projection(page)
@@ -102,6 +105,16 @@ with sync_playwright() as p:
     page.locator('#calendar-name').fill('Synthetic pending');page.locator('#calendar-new').click();page.locator('#calendar-switch-dialog [data-close]').click();assert page.locator('#calendar-name').input_value()=='Synthetic pending'
     page.set_viewport_size({'width':390,'height':844});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth')
     page.locator('#calendar-dialog [data-close]').click();icon.dblclick();assert page.locator('#calendar-name').input_value()=='Synthetic pending'
+    page.locator('#calendar-view-button').click();page.locator('#calendar-switch-discard').click()
+    page.locator('#calendar-refresh').click()
+    page.wait_for_function("!document.querySelector('#calendar-refresh').disabled")
+    page.once('dialog',lambda dialog:dialog.dismiss())
+    page.locator('.calendar-archive-delete').click()
+    assert saved_id in files
+    page.once('dialog',lambda dialog:dialog.accept())
+    page.locator('.calendar-archive-delete').click()
+    page.wait_for_function("document.querySelector('#calendar-status').textContent.includes('moved to Google Drive Trash')")
+    assert saved_id not in files and page.locator('#calendar-empty').is_visible()
     page.locator('#calendar-dialog [data-close]').click();page.locator('#logout-power').click();page.locator('#confirm-logout').click();page.wait_for_function("document.body.classList.contains('drive-locked')")
     assert page.locator('#calendar-days').text_content()=='' and page.locator('#calendar-archive').text_content()=='' and page.locator('#calendar-name').input_value()==''
     assert page.locator('#calendar-reading').text_content()==''

@@ -1,5 +1,5 @@
 import {initVitalTrends,openVitalTrends,clearVitalTrends} from './vital-trends.js?v=0.31.1';
-import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.31.1';
+import {hasDriveAccess,getCurrentUser} from './drive.js?v=0.31.9';
 import {readVitalList,createVitalList,addVital,updateVital,deleteVital,resetVitalsSource} from './vitals-api.js?v=0.31.3';
 import {GCS_OPTIONS,gcsTotal,gcsMeaning,EDITABLE_VITAL_FIELDS,newVital,reviseVital,compareVitals,latestDimensions,bodyMassIndex,heightText,weightText,vitalDetails,estimatedMap,localVitalInput,vitalInputUtc} from './vitals-model.js?v=0.31.3';
 import {compareDirectoryPeople,personSelectionLabel} from './model.js?v=0.31.1';

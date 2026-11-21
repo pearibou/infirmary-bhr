@@ -1,7 +1,7 @@
 import {drawVitalTrend} from './vital-trends-chart.js?v=0.31.1';
 import {organizationBranding} from './organization.js?v=0.31.1';
 // Print documents live only in an ephemeral same-origin frame, never in storage.
-import {readPersonPhoto} from './drive.js?v=0.31.1';
+import {readPersonPhoto} from './drive.js?v=0.31.9';
 import {cleanNoteHtml} from './documents-model.js?v=0.31.1';
 import {personName,personAgeLine} from './model.js?v=0.31.1';
 let frame=null,generation=0,photoUrl=null,restoreTitle=null;
