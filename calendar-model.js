@@ -24,3 +24,25 @@ export function newCalendar(user,week=sundayFor(todayInfirmary())){const now=new
 export function calendarContent(value){return {symbol:value.symbol||'star',version:value.version,id:value.id,title:value.title,weekStart:value.weekStart,notice:value.notice,includeSaturday:value.includeSaturday,includeSunday:value.includeSunday,appointments:value.appointments};}
 export function publicCalendar(value){validateCalendar(value);return {symbol:value.symbol||'star',version:value.version,title:value.title,weekStart:value.weekStart,notice:value.notice,includeSaturday:value.includeSaturday,includeSunday:value.includeSunday,appointments:value.appointments.map(({day,name,leaving,returning,area})=>({day,name,leaving,returning,area}))};}
 export function printableCalendar(value,mode){validateCalendar(value);if(!['public','administrator'].includes(mode))throw new Error('Choose a public or administrator copy.');const projected=mode==='public'?publicCalendar(value):{...publicCalendar(value),appointments:value.appointments.map(row=>({...row}))};projected.appointments=projected.appointments.filter(row=>dayIncluded(value,row.day));return projected;}
+
+// Calendar times are free text. Sort recognizable clock times and leave
+// entries without a recognizable time after the timed appointments.
+function clockMinutes(value){
+ const time=(value||'').trim().toLowerCase().replaceAll('.','');
+ if(time==='noon')return 720;
+ if(time==='midnight')return 0;
+ const match=time.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
+ if(!match)return Infinity;
+ const [,hours,minutes='0',period]=match;
+ const hour=Number(hours),minute=Number(minutes);
+ if(minute>59||hour>23||(period&&(hour<1||hour>12)))return Infinity;
+ return (period?hour%12+(period==='pm'?12:0):hour)*60+minute;
+}
+export function appointmentsForDay(appointments,day){
+ return appointments.filter(row=>row.day===day)
+  .map(row=>({row,departure:clockMinutes(row.leaving),returning:clockMinutes(row.returning)}))
+  .sort((a,b)=>a.departure===b.departure
+   ? (a.returning===b.returning?0:a.returning-b.returning)
+   : a.departure-b.departure)
+  .map(({row})=>row);
+}

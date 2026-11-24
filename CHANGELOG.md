@@ -1,5 +1,9 @@
 # Version history
 
+## 0.31.12 — 2026-11-24
+
+- Sort daily appointments by departure and then return time in the reader and print views.
+
 ## 0.31.11 — 2026-11-21
 
 - Record optional refill information when adding a medication, using the existing refill tracking sheet.

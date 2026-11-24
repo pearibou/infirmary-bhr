@@ -1,6 +1,6 @@
 import {organizationBranding} from './organization.js?v=0.31.1';
 import {calendarSymbol} from './calendar-symbols.js?v=0.31.1';
-import {printableCalendar,dayNames,dayIncluded,dayDate,dateLabel} from './calendar-model.js?v=0.31.9';
+import {printableCalendar,dayNames,dayIncluded,dayDate,dateLabel,appointmentsForDay} from './calendar-model.js?v=0.31.12';
 let frame=null,generation=0;
 export function clearCalendarPrint(){generation++;frame?.remove();frame=null;}
 const node=(doc,tag,text)=>{const e=doc.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
@@ -17,7 +17,7 @@ export async function printCalendar(calendar,mode){
  for(let day=0;day<7;day++){
   if(!dayIncluded(data,day))continue;
   const group=node(doc,'tbody'),heading=node(doc,'tr');heading.className='day-heading';const date=node(doc,'th');date.colSpan=4;date.append(doc.createTextNode(dayNames(data)[day].slice(0,3)),node(doc,'span',dateLabel(dayDate(data.weekStart,day))));date.querySelector('span').className='date';heading.append(date);if(full){const privateHead=node(doc,'th');privateHead.colSpan=3;privateHead.className='private-start';heading.append(privateHead);}group.append(heading);
-  const entries=data.appointments.filter(row=>row.day===day);for(const row of entries.length?entries:[null]){const tr=node(doc,'tr');tr.className='appointment-row'+(!row?' empty-row':'');for(const [i,key] of keys.slice(0,columns.length).entries()){const td=node(doc,'td',row?.[key]||'');if(i===0)td.className='name';if(full&&i>=4)td.classList.add('private-cell');if(full&&i===4)td.classList.add('private-start');tr.append(td);}group.append(tr);}table.append(group);
+  const entries=appointmentsForDay(data.appointments,day);for(const row of entries.length?entries:[null]){const tr=node(doc,'tr');tr.className='appointment-row'+(!row?' empty-row':'');for(const [i,key] of keys.slice(0,columns.length).entries()){const td=node(doc,'td',row?.[key]||'');if(i===0)td.className='name';if(full&&i>=4)td.classList.add('private-cell');if(full&&i===4)td.classList.add('private-start');tr.append(td);}group.append(tr);}table.append(group);
  }
  try{
   if(data.notice.trim()&&symbol.tagName==='IMG')try{await symbol.decode();}catch{throw new Error('The calendar medical symbol could not load. Retry printing.');}
