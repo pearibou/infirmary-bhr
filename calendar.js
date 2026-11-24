@@ -1,7 +1,7 @@
 import {CALENDAR_SYMBOLS,calendarSymbol} from './calendar-symbols.js?v=0.31.1';
 import {listAppointmentCalendars,readAppointmentCalendar,saveAppointmentCalendar,trashAppointmentCalendar,getCurrentUser,hasDriveAccess} from './drive.js?v=0.31.9';
-import {newCalendar,validateCalendar,calendarContent,weekFor,dayNames,dayIncluded,dayDate,dateLabel,DAY_NAMES,APPOINTMENT_FIELDS} from './calendar-model.js?v=0.31.9';
-import {printCalendar,clearCalendarPrint} from './calendar-print.js?v=0.31.9';
+import {newCalendar,validateCalendar,calendarContent,weekFor,dayNames,dayIncluded,dayDate,dateLabel,appointmentsForDay,DAY_NAMES,APPOINTMENT_FIELDS} from './calendar-model.js?v=0.31.12';
+import {printCalendar,clearCalendarPrint} from './calendar-print.js?v=0.31.12';
 import {smallIcon} from './icons-ui.js?v=0.31.1';
 import {showWindow,updateWindowTitle} from './windows.js?v=0.31.1';
 const $=s=>document.querySelector(s),make=(tag,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;return e;};
@@ -13,7 +13,7 @@ function setMode(value){editing=value;$('#calendar-editor').hidden=!editor||!edi
 function renderReading(){
  const c=editor.calendar,root=$('#calendar-reading');root.replaceChildren();const header=make('header'),name=make('h2',c.title),week=make('p','Week of '+dateLabel(c.weekStart));header.append(name,week);root.append(header);if(c.notice){const notice=make('div');notice.className='calendar-reading-notice';notice.append(calendarSymbol(document,c.symbol||'star'),make('span',c.notice));root.append(notice);}
  for(let day=0;day<7;day++){
-  const rows=c.appointments.filter(row=>row.day===day),included=dayIncluded(c,day);if(!included&&!rows.length)continue;
+  const rows=appointmentsForDay(c.appointments,day),included=dayIncluded(c,day);if(!included&&!rows.length)continue;
   const section=make('section');section.className='calendar-reading-day';section.dataset.day=day;const heading=make('h3',dayNames(c)[day]+' · '+dateLabel(dayDate(c.weekStart,day)));section.append(heading);if(!included){const warning=make('p','Not included in printed copies');warning.className='calendar-reading-excluded';section.append(warning);}
   if(!rows.length){const empty=make('p','No appointments');empty.className='muted';section.append(empty);}
   for(const row of rows){const card=make('article');card.className='calendar-reading-appointment';card.append(make('h4','• '+row.name));const publicInfo=make('dl'),privateInfo=make('dl');publicInfo.className='calendar-reading-public';privateInfo.className='calendar-reading-private';for(const key of ['leaving','returning','area','appointmentTime','reason','address'])if(row[key]){const list=['appointmentTime','reason','address'].includes(key)?privateInfo:publicInfo;list.append(make('dt',APPOINTMENT_FIELDS[key]),make('dd',row[key]));}if(publicInfo.children.length)card.append(publicInfo);if(privateInfo.children.length){const details=make('div');details.className='calendar-reading-admin';details.append(make('p','Administrator details'),privateInfo);card.append(details);}section.append(card);}
