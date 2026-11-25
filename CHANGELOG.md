@@ -1,5 +1,9 @@
 # Version history
 
+## 0.31.13 — 2026-11-25
+
+- Save chart-created clinical notes in the resident’s Drive folder and keep them off the desktop.
+
 ## 0.31.12 — 2026-11-24
 
 - Sort daily appointments by departure and then return time in the reader and print views.

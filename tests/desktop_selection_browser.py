@@ -30,7 +30,7 @@ with sync_playwright() as p:
  page.route('https://www.googleapis.com/**',backend)
  page.goto('http://localhost:8000');unlock_test_drive(page,open_records=False)
  assert page.locator('#drive-dialog').is_hidden()
- page.evaluate("async()=>{await (await import('./documents.js?v=0.31.1')).refreshFiles()}")
+ page.evaluate("async()=>{await (await import('./documents.js?v=0.31.13')).refreshFiles()}")
  page.locator('#desktop-icons .drive-file').first.wait_for();assert page.locator('#desktop-icons .drive-file').count()==4
  # Stickies move live without persisting intermediate positions, and cancellation restores them.
  sticky=page.locator('.sticky-note').first;initial=sticky.bounding_box()

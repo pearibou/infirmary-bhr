@@ -188,6 +188,14 @@ with sync_playwright() as p:
     chart_created=next(file for file in files.values() if file['name']=='Synthetic chart-created note')
     assert chart_created['appProperties']['personId']=='person' and chart_created['appProperties']['authorId']=='synthetic-staff'
     page.locator('.chart-documents button').filter(has_text='Synthetic chart-created note').wait_for()
+    resident_folder=files[chart_created['parents'][0]]
+    assert resident_folder['appProperties']['bhrResidentFolder']=='1'
+    assert resident_folder['appProperties']['personId']=='person'
+    assert page.locator('#desktop-icons [data-file-id="'+chart_created['id']+'"]').count()==0
+    assert contents[chart_created['id']]['html'].find('Synthetic chart entry text')>=0
+    page.locator('.chart-documents button').filter(has_text='Synthetic chart-created note').click()
+    page.locator('#rich-note-body').get_by_text('Synthetic chart entry text',exact=True).wait_for()
+    page.locator('#rich-note-dialog [data-close]').click()
     files.pop(chart_created['id']);contents.pop(chart_created['id'])
     files['newest-chart-note']=json.loads(json.dumps(files[noteid]));files['newest-chart-note'].update(id='newest-chart-note',name='Synthetic newest chart entry',createdTime='2099-01-01T00:00:00Z');files['newest-chart-note']['appProperties']['createdAt']='2099-01-01T00:00:00Z';contents['newest-chart-note']={**contents[noteid],'createdAt':'2099-01-01T00:00:00Z'}
     page.locator('.clinical-documents .notes-heading').get_by_role('button',name='↻ Refresh',exact=True).click();page.wait_for_function("document.querySelector('.chart-documents button')?.textContent.includes('Synthetic newest chart entry')")
