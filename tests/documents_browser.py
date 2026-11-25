@@ -180,6 +180,8 @@ with sync_playwright() as p:
     page.locator('#file-patient').select_option('person');page.locator('#file-action-confirm').click()
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert files[noteid]['appProperties']['personId']=='person'
+    nestedview.locator('[data-field=folder-files] [data-file-id="'+noteid+'"]').wait_for(state='hidden')
+    assert not files[noteid].get('trashed')
     page.locator('.folder-window[open]').evaluate_all("windows=>windows.forEach(el=>el.querySelector('[data-field=close]').click())")
     page.locator('.clinical-documents').get_by_role('button',name='+ New note',exact=True).click()
     page.locator('#rich-note-name').fill('Synthetic chart-created note')
@@ -244,10 +246,7 @@ with sync_playwright() as p:
     page.locator('#file-action-dialog [data-close]').click()
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic Folder').dblclick()
     topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').dblclick()
-    readonly=nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note');readonly.wait_for();readonly.click(button='right')
-    for action in ['rename','attach','trash']:assert page.locator(f'#file-context-menu [data-file-action="{action}"]').is_disabled()
-    assert readonly.get_attribute('draggable')=='false'
-    page.keyboard.press('Escape')
+    assert nestedview.locator('[data-field=folder-files] [data-file-id="'+noteid+'"]').count()==0
     open_drive(page);page.locator('#disconnect').click()
     assert body.text_content()==''
     assert page.locator('#resume-note-drafts').is_hidden() and page.locator('#note-drafts-list').text_content()==''
@@ -259,7 +258,7 @@ with sync_playwright() as p:
     page.wait_for_function("!document.body.classList.contains('drive-locked')");page.locator('#drive-dialog [data-close]').click();open_bhr(page)
     page.locator('#desktop-icons .drive-file').filter(has_text='Synthetic Folder').dblclick()
     topview.locator('[data-field=folder-files] .drive-file').filter(has_text='Nested').dblclick()
-    own=nestedview.locator('[data-field=folder-files] .drive-file').filter(has_text='Synthetic clinical note');own.wait_for();own.dblclick()
+    page.locator('.chart-documents button').filter(has_text='Synthetic clinical note').click()
     page.locator('#rich-note-edit').click();page.wait_for_function("document.querySelector('#rich-note-body').contentEditable==='true'");page.locator('#rich-note-trash').click();page.locator('#file-action-confirm').click()
     page.wait_for_function("!document.querySelector('#file-action-dialog').open")
     assert files[noteid]['trashed'] is True
