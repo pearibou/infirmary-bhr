@@ -3,7 +3,7 @@ import {smallIcon} from './icons-ui.js?v=0.31.1';
 import {printDocument} from './printing.js?v=0.31.1';
 import {registerWindow,showWindow,updateWindowTitle,bringToFront} from './windows.js?v=0.31.1';
 import {clearTrashSelection} from './trash.js?v=0.31.1';
-import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,getCurrentUser} from './drive.js?v=0.31.9';
+import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocument,createDesktopFolder,changeDesktopFile,ensureResidentFolder,getCurrentUser} from './drive.js?v=0.31.9';
 import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.31.1';
 const $=selector=>document.querySelector(selector),noteDialog=$('#rich-note-dialog'),folderTemplate=$('#file-browser-template'),context=$('#file-context-menu');
 let hooks,active=false,generation=0,refreshNumber=0,busy=false,editor=null,contextFile,contextView,actionFile,actionKind,dragged,dirty=false,renaming=false,refreshPending=false,editorRequest=0;
@@ -296,7 +296,16 @@ async function saveEditor(){
   const entry=editor,name=$('#rich-note-name').value.trim()||genericName(date),content={...entry.document,html,noteAt:date.toISOString(),updatedAt:new Date().toISOString()};
   setEditorBusy(true);$('#rich-note-error').textContent='Saving directly to Google Drive…';
   try{
-    await operation(async epoch=>{const saved=await saveDesktopDocument(entry.target,name,content,entry.file,entry.personId);if(epoch!==generation)return;record(entry.file?'updated':'created',saved,entry.personId);dirty=false;noteDrafts.delete(entry.key);editor={file:saved,document:content,target:entry.target,key:'file:'+saved.id};refreshDraftControls();setNoteMode(false);$('#rich-note-error').textContent='Note saved';focusNoteEditor();});
+    await operation(async epoch=>{
+      let target=entry.target;
+      if(!entry.file&&entry.personId){
+        const person=hooks.person(entry.personId);
+        if(!person)throw new Error('This person was removed from the directory. The note was not saved.');
+        target=(await ensureResidentFolder(person)).id;
+        if(epoch!==generation)return;
+        if(!hooks.person(entry.personId))throw new Error('This person was removed from the directory. The note was not saved.');
+      }
+      const saved=await saveDesktopDocument(target,name,content,entry.file,entry.personId);if(epoch!==generation)return;record(entry.file?'updated':'created',saved,entry.personId);dirty=false;noteDrafts.delete(entry.key);editor={file:saved,document:content,target,key:'file:'+saved.id};refreshDraftControls();setNoteMode(false);$('#rich-note-error').textContent='Note saved';focusNoteEditor();});
     await refreshFiles();hooks.chartChanged();
   }catch(error){if(active)$('#rich-note-error').textContent=error.message;}
   finally{setEditorBusy(false);}
