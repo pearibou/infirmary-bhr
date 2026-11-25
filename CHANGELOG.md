@@ -1,5 +1,9 @@
 # Version history
 
+## 0.31.14 — 2026-11-25
+
+- Hide the medication alert mark at zero and allow refill tracking to open above alerts. Hide chart-linked notes from the desktop and desktop folders.
+
 ## 0.31.13 — 2026-11-25
 
 - Save chart-created clinical notes in the resident’s Drive folder and keep them off the desktop.

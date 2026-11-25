@@ -7,6 +7,8 @@ import {listDesktopFiles,desktopFileMetadata,readDesktopDocument,saveDesktopDocu
 import {cleanNoteHtml,validateDocument,canManageDocument} from './documents-model.js?v=0.31.1';
 const $=selector=>document.querySelector(selector),noteDialog=$('#rich-note-dialog'),folderTemplate=$('#file-browser-template'),context=$('#file-context-menu');
 let hooks,active=false,generation=0,refreshNumber=0,busy=false,editor=null,contextFile,contextView,actionFile,actionKind,dragged,dirty=false,renaming=false,refreshPending=false,editorRequest=0;
+// Chart links remain readable through the chart, including older root-level notes.
+const desktopVisible=file=>file.appProperties?.kind!=='note'||!file.appProperties.personId;
 let desktopFiles=[],tooltipTimer,tooltipTarget,windowNumber=0;
 const folderViews=new Map(),noteDrafts=new Map();
 let openingEditor=false,noteEditing=false;
@@ -135,10 +137,10 @@ export async function refreshFiles(){
     })]);
     if(epoch!==generation||request!==refreshNumber)return;
     if(renaming||dragged||!context.hidden){refreshPending=true;return;}
-    desktopFiles=root;
+    desktopFiles=root.filter(desktopVisible);
     for(const result of results){if(folderViews.get(result.view.parent)!==result.view)continue;const view=result.view;
       if(result.error)view.error='Could not load folder: '+result.error;
-      else{view.files=result.files;view.file=result.file;view.error='';}
+      else{view.files=result.files.filter(desktopVisible);view.file=result.file;view.error='';}
     }
     const names=new Map([...root,...[...folderViews.values()].flatMap(view=>[view.file,...view.files])].map(file=>[file.id,file]));
     for(const view of folderViews.values())view.stack=view.stack.map(file=>names.get(file.id)||file);

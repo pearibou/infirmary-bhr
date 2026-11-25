@@ -165,11 +165,19 @@ with sync_playwright() as p:
     snapshot_alerts=copy.deepcopy(grids)
     page.locator('#refill-alert-toggle').click();page.wait_for_function("document.querySelector('#refill-alert-toggle').getAttribute('aria-busy')==='false'")
     assert page.locator('.refill-alert-card').count()==1 and page.locator('#refill-alert-count').inner_text()=='1'
+    assert page.locator('#refill-alert-mark').is_visible()
+    page.get_by_role('button',name='Refill history…',exact=True).click()
+    page.get_by_role('button',name='+ Record refill',exact=True).click()
+    page.locator('#refill-form').get_by_label('Rx number',exact=True).fill('Synthetic alert refill')
+    page.locator('#refill-cancel').click()
+    page.locator('#refills-dialog [data-close]').click()
+    assert page.locator('#refill-alert-dialog').is_visible()
     assert page.locator('.refill-alert-identity').inner_text()=='Smith, John G. · DOB: 01/21/1942'
     assert page.locator('.refill-alert-identity').evaluate('el=>getComputedStyle(el).fontWeight')=='400'
     assert 'No refills remaining' in page.locator('#refill-alert-content').inner_text() and 'SYNTHETIC PRIVATE PHARMACY' in page.locator('#refill-alert-content').inner_text()
     page.locator('#refill-alert-content').get_by_role('button',name='Acknowledge',exact=True).click()
     page.wait_for_function("!document.querySelector('#refill-alert-toggle').classList.contains('needs-attention') && !document.querySelector('#refill-alert-refresh').disabled")
+    assert page.locator('#refill-alert-mark').is_hidden()
     assert page.locator('#refill-alert-count').inner_text()=='0' and grids==snapshot_alerts
     assert page.locator('[data-alert-group=acknowledged] .refill-alert-card').count()==1 and page.locator('[data-alert-group=attention]').count()==0
     page.locator('#refill-alert-content').get_by_role('button',name='Refill requested…',exact=True).click();page.locator('#refill-alert-comment').fill('Synthetic pending request');page.locator('#refill-alert-action-form').get_by_role('button',name='Save',exact=True).click()
